@@ -7,6 +7,8 @@ import scala.reflect.runtime.universe._
  */
 trait Parser {
 
-  def parse(scalaContent: String): Tree
+  def parseContents(scalaContents: Seq[String]): Seq[Tree]
+
+  def parseContent(scalaContent: String): Tree
 
 }

@@ -7,10 +7,11 @@ import scala.tools.reflect.ToolBox
  * Phil on 21.09.15.
  */
 class ParserImpl extends Parser {
+  
+  override def parseContents(scalaContents: Seq[String]): Seq[Tree] = scalaContents.map(parseContent)
 
-  override def parse(scalaContent: String): Tree = {
+  override def parseContent(scalaContent: String): Tree = {
     val tb = scala.reflect.runtime.currentMirror.mkToolBox()
     tb.parse(scalaContent)
   }
-
 }
