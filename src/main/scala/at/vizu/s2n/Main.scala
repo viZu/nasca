@@ -1,7 +1,7 @@
 package at.vizu.s2n
 
 import at.vizu.s2n.args.ArgumentsParser
-import at.vizu.s2n.environment.Environment
+import at.vizu.s2n.environment.Environments
 import at.vizu.s2n.exception.ArgumentException
 
 /**
@@ -12,7 +12,7 @@ object Main {
   def main(args: Array[String]) {
     try {
       val arguments = ArgumentsParser.parseArguments(args)
-      val environment = Environment(arguments)
+      val environment = Environments(arguments)
       environment.compile(arguments)
     } catch {
       case ae: ArgumentException => Console.err.println(ae.getMessage)

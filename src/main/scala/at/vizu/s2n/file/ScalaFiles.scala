@@ -25,8 +25,10 @@ object ScalaFiles {
   }
 
   def checkFile(path: Path): Unit = {
-    if (Files.exists(path)) {
-      throw new ArgumentException(s"File '${path.toString}' does not exist")
+    if (!Files.exists(path)) {
+      throw new ArgumentException(s"Could not find file '${path.toString}'")
+    } else if (Files.isDirectory(path)) {
+      throw new ArgumentException(s"It was expected that '${path.toString}' is a file, but it was a directory")
     }
   }
 }
