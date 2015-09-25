@@ -9,7 +9,9 @@ import scala.tools.reflect.ToolBox
 trait ReflectParserComponent extends ParserComponent {
 
   class ReflectParser extends Parser {
-    override def parseContents(scalaContents: Seq[String]): Seq[Tree] = scalaContents.map(parseContent)
+    override def parseContents(scalaContents: Seq[(String, String)]): Seq[AST] = {
+      scalaContents.map(c => AST(c._1, parseContent(c._2)))
+    }
 
     override def parseContent(scalaContent: String): Tree = {
       val tb = scala.reflect.runtime.currentMirror.mkToolBox()

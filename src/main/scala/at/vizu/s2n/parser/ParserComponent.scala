@@ -11,7 +11,7 @@ trait ParserComponent {
   val parser: Parser
 
   trait Parser {
-    def parseContents(scalaContents: Seq[String]): Seq[Tree]
+    def parseContents(scalaContents: Seq[(String, String)]): Seq[AST]
 
     def parseContent(scalaContent: String): Tree
   }
