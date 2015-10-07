@@ -14,6 +14,7 @@ trait CppTypeSystemBuilderComponent extends TypeSystemBuilderComponent {
     override def build(trees: Seq[AST]): TypeSystem = {
       val traverser: TreeTraverser = new TreeTraverser
       trees.foreach { t =>
+        println(t.internalTree)
         println()
         println()
         println()
@@ -37,6 +38,16 @@ trait CppTypeSystemBuilderComponent extends TypeSystemBuilderComponent {
     override def traverse(tree: Tree): Unit = {
       super.traverse(tree)
       println(showRaw(tree))
+      println(tree.symbol)
+      tree match {
+        case d: DefDef => {
+          val flags: FlagSet = d.mods.flags
+          val f = Flag.PRIVATE | Flag.SEALED
+          val s = Flag.SEALED
+          println(flags)
+        }
+        case _ => print("")
+      }
       println("-------------------------------")
       println()
     }
