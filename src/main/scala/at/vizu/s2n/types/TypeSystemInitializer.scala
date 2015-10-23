@@ -1,31 +1,30 @@
-package at.vizu.s2n.types.symbol
+package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.symbol.util.TypeUtils
+import at.vizu.s2n.types.symbol.{Context, Field, Method, Param, Scope, ScopeInitializer, Type, TypeGatherer}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
 
 /**
- * Phil on 08.10.15.
+ * Phil on 23.10.15.
  */
-class SymbolTable(trees: Seq[AST]) {
+class TypeSystemInitializer {
   self: ScopeInitializer =>
 
-  /**
-   * Init SymbolTable
-   */
   private val rootScope: Scope = initScope
   private var currentScope = rootScope
-  initScopePhase1()
-  initScopePhase2()
-  validateTypes()
+  private var currentFile = ""
+  private var trees: Seq[AST] = Seq()
 
-  private var currentFile: String = ""
-
-  def checkTypes(tree: AST): Unit = {
-
+  def initTypeSystem(trees: Seq[AST]): Scope = {
+    this.trees = trees
+    initScopePhase1()
+    initScopePhase2()
+    validateTypes()
+    rootScope
   }
 
   /**
@@ -132,14 +131,12 @@ class SymbolTable(trees: Seq[AST]) {
     val parents = new ArrayBuffer[Type]
 
     override def traverse(tree: Tree): Unit = {
-
       tree match {
         case t: Template => buildMembers(t)
         case _@rest =>
           println("ClassMemberTraverser: " + rest.getClass.getName)
           super.traverse(rest)
       }
-
     }
 
     private def buildMembers(t: Template) = {
@@ -158,7 +155,6 @@ class SymbolTable(trees: Seq[AST]) {
         case _@rest => println("TemplateTraverser: " + rest.getClass.getName)
       }
     }
-
   }
 
   private def createMethod(d: DefDef): Method = {
@@ -200,4 +196,5 @@ class SymbolTable(trees: Seq[AST]) {
     rootScope.types.foreach(_.validate())
     rootScope.objects.foreach(_.validate())
   }
+
 }
