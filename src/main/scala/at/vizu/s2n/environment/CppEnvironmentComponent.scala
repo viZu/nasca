@@ -4,21 +4,21 @@ import java.nio.file.Path
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
+import at.vizu.s2n.generator.GeneratorComponent
 import at.vizu.s2n.parser.{AST, ParserComponent}
-import at.vizu.s2n.types.{TypeSystem, TypeSystemBuilderComponent}
+import at.vizu.s2n.types.TypeSystemComponent
 
 /**
  * Phil on 25.09.15.
  */
 trait CppEnvironmentComponent extends EnvironmentComponent {
-  this: ParserComponent with TypeSystemBuilderComponent =>
+  this: ParserComponent with TypeSystemComponent with GeneratorComponent =>
 
   class CppEnvironment extends Environment {
     override def compile(args: Arguments): Unit = {
       val contents: Seq[(String, String)] = readFileContents(args.files)
       val trees: Seq[AST] = parser.parseContents(contents)
-
-      val typeSystem: TypeSystem = typeSystemBuilder.build(trees)
+      typeSystem.checkTrees(trees)
     }
 
     private def readFileContents(files: Seq[Path]) = {
