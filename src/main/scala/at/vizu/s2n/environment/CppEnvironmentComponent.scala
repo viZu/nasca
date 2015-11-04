@@ -22,7 +22,9 @@ trait CppEnvironmentComponent extends EnvironmentComponent {
     }
 
     private def readFileContents(files: Seq[Path]) = {
-      files.map(_.toString).zip(ScalaFiles.readFiles(files))
+      val pathStrings: Seq[String] = files.map(_.toString)
+      println(s"Reading file contents: $pathStrings")
+      pathStrings.zip(ScalaFiles.readFiles(files))
     }
 
   }

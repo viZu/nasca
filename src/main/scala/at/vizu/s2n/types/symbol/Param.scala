@@ -3,6 +3,6 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 15.10.15.
  */
-case class Param(tpe: Type, name: String, hasDefaultVal: Boolean) extends Nameable {
+case class Param(ctx: Context, tpe: TType, name: String, hasDefaultVal: Boolean = false, mutable: Boolean = false) extends Nameable {
 
 }

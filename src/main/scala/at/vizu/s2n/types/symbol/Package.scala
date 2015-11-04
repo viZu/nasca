@@ -5,15 +5,15 @@ package at.vizu.s2n.types.symbol
  */
 case class Package(name: String) {
 
-  private var types: Seq[Type] = Seq()
+  private var types: Seq[TType] = Seq()
   private var subPackages: Seq[Package] = Seq()
 
-  def addType(tpe: Type): Unit = {
+  def addType(tpe: TType): Unit = {
     val pkgSequence: List[String] = tpe.name.split(".").toList
     addType(pkgSequence, tpe)
   }
 
-  private def addType(pkgSequence: List[String], tpe: Type): Unit = {
+  private def addType(pkgSequence: List[String], tpe: TType): Unit = {
     pkgSequence match {
       case head :: tail => findPackage(head).get.addType(tail, tpe)
       case Nil => types = types :+ tpe

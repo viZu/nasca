@@ -5,38 +5,48 @@ package at.vizu.s2n.types.symbol
  */
 trait Modifier
 
-case class Private() extends Modifier
+object Private extends Modifier
 
-case class PackagePrivate() extends Modifier
+object PackagePrivate extends Modifier
 
-case class Protected() extends Modifier
+object Protected extends Modifier
 
-case class Trait() extends Modifier
+object Trait extends Modifier
 
-case class Abstract() extends Modifier
+object Abstract extends Modifier
 
-case class Override() extends Modifier
+object Override extends Modifier
 
-case class Sealed() extends Modifier
+object Sealed extends Modifier
 
-case class Case() extends Modifier
+object Final extends Modifier
+
+object Case extends Modifier
+
+object Mutable extends Modifier
 
 trait Modifiable {
   def modifiers: Set[Modifier]
 
-  def isPrivate = modifiers.contains(Private())
+  def isPrivate = modifiers.contains(Private)
 
-  def isPackagePrivate = modifiers.contains(PackagePrivate())
+  def isPackagePrivate = modifiers.contains(PackagePrivate)
 
-  def isProtected = modifiers.contains(Protected())
+  def isProtected = modifiers.contains(Protected)
 
   def isPublic = !isPrivate && !isPackagePrivate && !isProtected
 
-  def isTrait = modifiers.contains(Trait())
+  def isTrait = modifiers.contains(Trait)
 
-  def isAbstract = modifiers.contains(Abstract())
+  def isAbstract = modifiers.contains(Abstract)
 
-  def isSealed = modifiers.contains(Sealed())
+  def isOverride = modifiers.contains(Override)
 
-  def isCase = modifiers.contains(Case())
+  def isSealed = modifiers.contains(Sealed)
+
+  def isFinal = modifiers.contains(Final)
+
+  def isCase = modifiers.contains(Case)
+
+  def isMutable = modifiers.contains(Mutable)
 }

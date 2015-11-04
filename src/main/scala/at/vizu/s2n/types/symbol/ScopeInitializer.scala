@@ -5,6 +5,6 @@ package at.vizu.s2n.types.symbol
  */
 trait ScopeInitializer {
 
-  def initScope: Scope
+  def initScope: TScope
 
 }

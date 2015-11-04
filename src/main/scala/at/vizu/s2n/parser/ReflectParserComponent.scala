@@ -1,5 +1,6 @@
 package at.vizu.s2n.parser
 
+import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 
@@ -9,13 +10,23 @@ import scala.tools.reflect.ToolBox
 trait ReflectParserComponent extends ParserComponent {
 
   class ReflectParser extends Parser {
+
+    //private val toolbox: ToolBox[scala.reflect.api.Universe] = scala.reflect.runtime.currentMirror.mkToolBox()
+
     override def parseContents(scalaContents: Seq[(String, String)]): Seq[AST] = {
-      scalaContents.map(c => AST(c._1, parseContent(c._2)))
+      println(s"Initializing scala compiler")
+      val temp = scala.reflect.runtime.currentMirror.mkToolBox()
+      val toolbox: ToolBox[JavaUniverse] = temp.asInstanceOf[ToolBox[JavaUniverse]]
+
+      scalaContents.map(c => {
+        val (filename, content) = c
+        println(s"Parsing content of file $filename")
+        AST(filename, parseContent(toolbox, content))
+      })
     }
 
-    override def parseContent(scalaContent: String): Tree = {
-      val tb = scala.reflect.runtime.currentMirror.mkToolBox()
-      tb.parse(scalaContent)
+    private def parseContent(toolbox: ToolBox[JavaUniverse], scalaContent: String): Tree = {
+      toolbox.parse(scalaContent).asInstanceOf[Tree]
     }
   }
 

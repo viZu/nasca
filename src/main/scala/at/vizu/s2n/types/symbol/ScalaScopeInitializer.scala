@@ -5,15 +5,32 @@ package at.vizu.s2n.types.symbol
  */
 trait ScalaScopeInitializer extends ScopeInitializer {
 
-  override def initScope: Scope = {
-    val scope: Scope = new Scope()
-    val a: Type = any()
-    val ar: Type = anyRef(a)
-    val av: Type = anyVal(a)
+  private lazy val ctx: Context = Context("", 0)
+  private lazy val any = new TType(name = "Any", pkg = "scala")
+  private lazy val anyVal = new TType(name = "AnyVal", pkg = "scala")
+  private lazy val anyRef = new TType(name = "AnyRef", pkg = "scala")
+  private lazy val numeric = new TType(name = "NumericPrimitive", pkg = "scala", mods = Seq(Trait))
+  private lazy val unit = new TType(name = "Unit", pkg = "scala", mods = Seq(Trait))
+  private lazy val boolean = new TType(name = "Boolean", pkg = "scala", mods = Seq(Trait))
+  private lazy val byte = new TType(name = "Byte", pkg = "scala", mods = Seq(Trait))
+  private lazy val short = new TType(name = "Short", pkg = "scala", mods = Seq(Trait))
+  private lazy val char = new TType(name = "Char", pkg = "scala", mods = Seq(Trait))
+  private lazy val int = new TType(name = "Int", pkg = "scala", mods = Seq(Trait))
+  private lazy val long = new TType(name = "Long", pkg = "scala", mods = Seq(Trait))
+  private lazy val float = new TType(name = "Float", pkg = "scala", mods = Seq(Trait))
+  private lazy val double = new TType(name = "Double", pkg = "scala", mods = Seq(Trait))
+
+  override def initScope: TScope = {
+    val scope: TScope = new TScope()
+    val a: TType = initAny()
+    val ar: TType = initAnyRef()
+    val av: TType = initAnyVal()
 
     val anys = Seq(a, ar, av)
-    val pris = primitives(av)
-    val allTypes = anys ++ pris
+    val numericPrimitive = initNumericPrimitive()
+    val pris = primitives()
+    val allTypes = anys ++ pris :+ numericPrimitive
+
     scope.addAllClasses(allTypes)
 
     allTypes foreach (t => {
@@ -23,93 +40,182 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     scope
   }
 
-  private def any() = {
+  private def initAny() = {
     //TODO Context
-    val any = new Type(name = "Any", pkg = "scala")
+    any.addMethod(Method(ctx, "$bang$eq", boolean, Seq(Final), Seq(Param(ctx, any, "arg0"))))
+    any.addMethod(Method(ctx, "$eq$eq", boolean, Seq(Final), Seq(Param(ctx, any, "arg0"))))
+    any.addMethod(Method(ctx, "equals", boolean, Seq(), Seq(Param(ctx, any, "arg0"))))
+    any.addMethod(Method(ctx, "hashcode", int, Seq(), Seq()))
+    //any.addMethod(Method(ctx, "toString", any, Seq(), Seq(Param(any, "arg0"))))
     any
   }
 
-  private def anyVal(any: Type) = {
+  private def initAnyVal() = {
     //TODO Context
-    val anyVal = new Type(name = "AnyVal", pkg = "scala")
     anyVal.parents = Seq(any)
     anyVal
   }
 
-  private def anyRef(any: Type) = {
+  private def initAnyRef() = {
     //TODO Context
-    val anyRef = new Type(name = "AnyRef", pkg = "scala")
     anyRef.parents = Seq(any)
+    anyRef.addMethod(Method(ctx, "eq", boolean, Seq(Final), Seq(Param(ctx, anyRef, "arg0"))))
+    anyRef.addMethod(Method(ctx, "ne", boolean, Seq(Final), Seq(Param(ctx, anyRef, "arg0"))))
     anyRef
   }
 
-  private def primitives(av: Type): Seq[Type] = {
-    primitiveAcc(av, unit, boolean, byte, short, char, int, long, float, double)
+  private def initNumericPrimitive() = {
+    numeric.parents = Seq()
+    numeric.addMethod(Method(ctx, "$less", boolean, Seq(Abstract), Seq(Param(ctx, numeric, "x"))))
+    numeric.addMethod(Method(ctx, "$less$eq", boolean, Seq(Abstract), Seq(Param(ctx, numeric, "x"))))
+    numeric.addMethod(Method(ctx, "$greater", boolean, Seq(Abstract), Seq(Param(ctx, numeric, "x"))))
+    numeric.addMethod(Method(ctx, "$greater$eq", boolean, Seq(Abstract), Seq(Param(ctx, numeric, "x"))))
+    numeric.addMethod(Method(ctx, "toByte", byte, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toShort", short, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toChar", char, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toInt", int, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toLong", long, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toFloat", float, Seq(Abstract), Seq()))
+    numeric.addMethod(Method(ctx, "toDouble", double, Seq(Abstract), Seq()))
+    numeric
   }
 
-  private def primitiveAcc(anyVal: Type, funs: (Type => Type)*): Seq[Type] = {
-    funs.map(f => f(anyVal))
+  private def primitives(): Seq[TType] = {
+    val d = initDouble()
+    val f = initFloat()
+    val l = initLong()
+    val i = initInt()
+    val c = initChar()
+    val s = initShort()
+    val by = initByte()
+    val b = initBoolean()
+    val u = initUnit()
+    Seq(d, f, l, i, c, s, by, b, u)
   }
 
-  private def unit(anyVal: Type) = {
+  private def initUnit() = {
     //TODO Context
-    val pri = new Type(name = "Unit", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    unit.parents = Seq(anyVal)
+    unit
   }
 
-  private def boolean(anyVal: Type) = {
+  private def initBoolean() = {
     //TODO Context
-    val pri = new Type(name = "Boolean", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    boolean.parents = Seq(anyVal)
+    boolean.addMethod(Method(ctx, "$less", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$less$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$greater", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$greater$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$bang$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$eq$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$amp$amp", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$bar$bar", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "unary_$bang", boolean, Seq(Abstract), Seq()))
+    boolean
   }
 
-  private def byte(anyVal: Type) = {
+  private def initByte() = {
     //TODO Context
-    val pri = new Type(name = "Byte", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    byte.parents = Seq(short)
+    byte.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract), Seq()))
+    calcMethods(byte, double, double)
+    calcMethods(byte, float, float)
+    calcMethods(byte, long, long)
+    calcMethods(byte, int, int)
+    calcMethods(byte, char, int)
+    calcMethods(byte, short, int)
+    calcMethods(byte, byte, int)
+    byte
   }
 
-  private def short(anyVal: Type) = {
+  private def initShort() = {
     //TODO Context
-    val pri = new Type(name = "Short", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    short.parents = Seq(int)
+    double.addMethod(Method(ctx, "unary_$minus", short, Seq(Abstract), Seq()))
+    calcMethods(short, double, double)
+    calcMethods(short, float, float)
+    calcMethods(short, long, long)
+    calcMethods(short, int, int)
+    calcMethods(short, char, int)
+    calcMethods(short, short, int)
+    calcMethods(short, byte, int)
+    short
   }
 
-  private def char(anyVal: Type) = {
+  private def initChar() = {
     //TODO Context
-    val pri = new Type(name = "Char", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    char.parents = Seq(int)
+    double.addMethod(Method(ctx, "unary_$minus", char, Seq(Abstract), Seq()))
+    calcMethods(char, double, double)
+    calcMethods(char, float, float)
+    calcMethods(char, long, long)
+    calcMethods(char, int, int)
+    calcMethods(char, char, int)
+    calcMethods(char, short, int)
+    calcMethods(char, byte, int)
+    char
   }
 
-  private def int(anyVal: Type) = {
+  private def initInt() = {
     //TODO Context
-    val pri = new Type(name = "Int", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    int.parents = Seq(long)
+    double.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract), Seq()))
+    calcMethods(int, double, double)
+    calcMethods(int, float, float)
+    calcMethods(int, long, long)
+    calcMethods(int, int, int)
+    calcMethods(int, char, int)
+    calcMethods(int, short, int)
+    calcMethods(int, byte, int)
+    int
   }
 
-  private def long(anyVal: Type) = {
+  private def initLong() = {
     //TODO Context
-    val pri = new Type(name = "Long", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    long.parents = Seq(float)
+    double.addMethod(Method(ctx, "unary_$minus", long, Seq(Abstract), Seq()))
+    calcMethods(long, double, double)
+    calcMethods(long, float, float)
+    calcMethods(long, long, long)
+    calcMethods(long, int, long)
+    calcMethods(long, char, long)
+    calcMethods(long, short, long)
+    calcMethods(long, byte, long)
+    long
   }
 
-  private def float(anyVal: Type) = {
-    val pri = new Type(name = "Float", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+  private def initFloat() = {
+    float.parents = Seq(double)
+    float.addMethod(Method(ctx, "unary_$minus", float, Seq(Abstract), Seq()))
+    calcMethods(float, double, double)
+    calcMethods(float, float, float)
+    calcMethods(float, long, float)
+    calcMethods(float, int, float)
+    calcMethods(float, char, float)
+    calcMethods(float, short, float)
+    calcMethods(float, byte, float)
+    float
   }
 
-  private def double(anyVal: Type) = {
+  private def initDouble() = {
     //TODO Context
-    val pri = new Type(name = "Double", pkg = "scala")
-    pri.parents = Seq(anyVal)
-    pri
+    double.parents = Seq(anyVal, numeric)
+    double.addMethod(Method(ctx, "unary_$minus", double, Seq(Abstract), Seq()))
+    calcMethods(double, double, double)
+    calcMethods(double, float, double)
+    calcMethods(double, long, double)
+    calcMethods(double, int, double)
+    calcMethods(double, char, double)
+    calcMethods(double, short, double)
+    calcMethods(double, byte, double)
+    double
+  }
+
+  private def calcMethods(appendTo: TType, tpe: TType, retTpe: TType) = {
+    appendTo.addMethod(Method(ctx, "$times", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$div", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$plus", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$minus", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$percent", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
   }
 }
