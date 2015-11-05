@@ -246,8 +246,6 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
 }
 
-class Test extends TScope
-
 object TScope {
   def apply(parent: TScope) = new TScope(Some(parent))
 

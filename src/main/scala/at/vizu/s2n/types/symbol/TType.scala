@@ -6,8 +6,8 @@ import at.vizu.s2n.exception.TypeException
  * Phil on 07.10.15.
  */
 
-case class TType(ctx: Context = Context("", 0), name: String,
-                pkg: String = "", mods: Seq[Modifier] = Seq()) extends Modifiable with Nameable {
+case class TType(ctx: Context = Context("", 0), simpleName: String,
+                 pkg: String = "", mods: Seq[Modifier] = Seq()) extends Modifiable with Nameable {
 
   private var methods: Seq[Method] = Seq()
   private var fields: Seq[Field] = Seq()
@@ -15,6 +15,8 @@ case class TType(ctx: Context = Context("", 0), name: String,
   var generics: Seq[GenericModifier] = Seq()
 
   lazy val modifiers: Set[Modifier] = Set() ++ mods
+
+  def name = fullClassName
 
   def findMethod(name: String, args: Seq[TType]): Option[Method] = {
     findMethodInSelf(name, args) orElse findMethodInSelfWithSuper(name, args) orElse findMethodInParents(name, args)
@@ -52,7 +54,7 @@ case class TType(ctx: Context = Context("", 0), name: String,
     parents.foreach(_.forEachType(f))
   }
 
-  def fullClassName = if (pkg.isEmpty) name else pkg + "." + name
+  def fullClassName = if (pkg.isEmpty) simpleName else pkg + "." + simpleName
 
   def addMethod(method: Method) = {
     val args: Seq[TType] = method.params.map(_.tpe)
@@ -61,11 +63,11 @@ case class TType(ctx: Context = Context("", 0), name: String,
       methods = methods :+ handleConstructor(method)
     } else {
       throw new TypeException(method.ctx.fileName, method.ctx.line,
-        s"Type $name already has a method ${method.name}(${TypeUtils.toString(args)})")
+        s"Type $fullClassName already has a method ${method.name}(${TypeUtils.toString(args)})")
     }
   }
 
-  def handleConstructor(m: Method) = {
+  private def handleConstructor(m: Method) = {
     if (m.constructor) Method(m.ctx, m.name, this, m.mods, m.params, m.constructor)
     else m
   }
@@ -73,7 +75,7 @@ case class TType(ctx: Context = Context("", 0), name: String,
   private def validateMethod(method: Method) = {
     if (method.isAbstract && !isAbstract && !isTrait) {
       throw new TypeException(method.ctx.fileName, method.ctx.line,
-        s"Type $name must either be abstract or implement abstract member ${method.name}")
+        s"Type $fullClassName must either be abstract or implement abstract member ${method.name}")
     }
   }
 
@@ -82,14 +84,14 @@ case class TType(ctx: Context = Context("", 0), name: String,
       fields = fields :+ field
     } else {
       throw new TypeException(field.ctx.fileName, field.ctx.line,
-        s"Type $name already has a field with name ${field.name}")
+        s"Type $fullClassName already has a field with name ${field.name}")
     }
   }
 
-  def validateField(field: Field) = {
+  private def validateField(field: Field) = {
     if (field.isAbstract && !isAbstract && !isTrait) {
       throw new TypeException(field.ctx.fileName, field.ctx.line,
-        s"Type $name must either be abstract or implement abstract member ${field.name}")
+        s"Type $fullClassName must either be abstract or implement abstract member ${field.name}")
     }
   }
 
@@ -97,7 +99,7 @@ case class TType(ctx: Context = Context("", 0), name: String,
     parents = parents :+ parent
   }
 
-  def validateParent(p: (TType, Int)) = {
+  private def validateParent(p: (TType, Int)) = {
     val (parent, index) = p
     if (index > 0 && !parent.isTrait && !isNullType) {
       throw new TypeException(ctx.fileName, ctx.line, s"Type ${parent.name} needs to be a trait to be mixed in")

@@ -17,8 +17,10 @@ trait CppEnvironmentComponent extends EnvironmentComponent {
   class CppEnvironment extends Environment {
     override def compile(args: Arguments): Unit = {
       val contents: Seq[(String, String)] = readFileContents(args.files)
-      val trees: Seq[AST] = parser.parseContents(contents)
-      typeSystem.checkTrees(trees)
+      if (contents.nonEmpty) {
+        val trees: Seq[AST] = parser.parseContents(contents)
+        typeSystem.checkTrees(trees)
+      }
     }
 
     private def readFileContents(files: Seq[Path]) = {
