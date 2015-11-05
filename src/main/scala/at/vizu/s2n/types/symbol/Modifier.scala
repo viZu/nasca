@@ -26,7 +26,7 @@ object Case extends Modifier
 object Mutable extends Modifier
 
 trait Modifiable {
-  def modifiers: Set[Modifier]
+  val modifiers: Set[Modifier]
 
   def isPrivate = modifiers.contains(Private)
 

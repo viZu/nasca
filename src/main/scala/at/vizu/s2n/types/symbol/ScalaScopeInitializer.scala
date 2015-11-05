@@ -9,6 +9,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private lazy val any = new TType(name = "Any", pkg = "scala")
   private lazy val anyVal = new TType(name = "AnyVal", pkg = "scala")
   private lazy val anyRef = new TType(name = "AnyRef", pkg = "scala")
+  private lazy val string = new TType(name = "String", pkg = "scala", mods = Seq(Trait))
   private lazy val numeric = new TType(name = "NumericPrimitive", pkg = "scala", mods = Seq(Trait))
   private lazy val unit = new TType(name = "Unit", pkg = "scala", mods = Seq(Trait))
   private lazy val boolean = new TType(name = "Boolean", pkg = "scala", mods = Seq(Trait))
@@ -19,6 +20,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private lazy val long = new TType(name = "Long", pkg = "scala", mods = Seq(Trait))
   private lazy val float = new TType(name = "Float", pkg = "scala", mods = Seq(Trait))
   private lazy val double = new TType(name = "Double", pkg = "scala", mods = Seq(Trait))
+  private lazy val nullTpe = new TType(name = "Null", pkg = "scala", mods = Seq(Trait))
 
   override def initScope: TScope = {
     val scope: TScope = new TScope()
@@ -27,9 +29,11 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     val av: TType = initAnyVal()
 
     val anys = Seq(a, ar, av)
+    val str = initString()
     val numericPrimitive = initNumericPrimitive()
     val pris = primitives()
-    val allTypes = anys ++ pris :+ numericPrimitive
+    val nullT = initNull()
+    val allTypes = anys ++ pris :+ numericPrimitive :+ str :+ nullT
 
     scope.addAllClasses(allTypes)
 
@@ -45,7 +49,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     any.addMethod(Method(ctx, "$bang$eq", boolean, Seq(Final), Seq(Param(ctx, any, "arg0"))))
     any.addMethod(Method(ctx, "$eq$eq", boolean, Seq(Final), Seq(Param(ctx, any, "arg0"))))
     any.addMethod(Method(ctx, "equals", boolean, Seq(), Seq(Param(ctx, any, "arg0"))))
-    any.addMethod(Method(ctx, "hashcode", int, Seq(), Seq()))
+    any.addMethod(Method(ctx, "hashCode", int, Seq(), Seq()))
     //any.addMethod(Method(ctx, "toString", any, Seq(), Seq(Param(any, "arg0"))))
     any
   }
@@ -62,6 +66,13 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     anyRef.addMethod(Method(ctx, "eq", boolean, Seq(Final), Seq(Param(ctx, anyRef, "arg0"))))
     anyRef.addMethod(Method(ctx, "ne", boolean, Seq(Final), Seq(Param(ctx, anyRef, "arg0"))))
     anyRef
+  }
+
+  private def initString() = {
+    string.parents = Seq(anyRef)
+    string.addMethod(Method(ctx, "$times", string, Seq(Abstract), Seq(Param(ctx, string, "x"))))
+    string.addMethod(Method(ctx, "$plus", string, Seq(Abstract), Seq(Param(ctx, string, "x"))))
+    string
   }
 
   private def initNumericPrimitive() = {
@@ -106,8 +117,8 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     boolean.addMethod(Method(ctx, "$less$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
     boolean.addMethod(Method(ctx, "$greater", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
     boolean.addMethod(Method(ctx, "$greater$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
-    boolean.addMethod(Method(ctx, "$bang$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
-    boolean.addMethod(Method(ctx, "$eq$eq", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$bang$eq", boolean, Seq(Abstract, Override), Seq(Param(ctx, boolean, "x"))))
+    boolean.addMethod(Method(ctx, "$eq$eq", boolean, Seq(Abstract, Override), Seq(Param(ctx, boolean, "x"))))
     boolean.addMethod(Method(ctx, "$amp$amp", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
     boolean.addMethod(Method(ctx, "$bar$bar", boolean, Seq(Abstract), Seq(Param(ctx, boolean, "x"))))
     boolean.addMethod(Method(ctx, "unary_$bang", boolean, Seq(Abstract), Seq()))
@@ -117,7 +128,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initByte() = {
     //TODO Context
     byte.parents = Seq(short)
-    byte.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract), Seq()))
+    byte.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract, Override), Seq()))
     calcMethods(byte, double, double)
     calcMethods(byte, float, float)
     calcMethods(byte, long, long)
@@ -131,7 +142,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initShort() = {
     //TODO Context
     short.parents = Seq(int)
-    double.addMethod(Method(ctx, "unary_$minus", short, Seq(Abstract), Seq()))
+    short.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract, Override), Seq()))
     calcMethods(short, double, double)
     calcMethods(short, float, float)
     calcMethods(short, long, long)
@@ -145,7 +156,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initChar() = {
     //TODO Context
     char.parents = Seq(int)
-    double.addMethod(Method(ctx, "unary_$minus", char, Seq(Abstract), Seq()))
+    char.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract, Override), Seq()))
     calcMethods(char, double, double)
     calcMethods(char, float, float)
     calcMethods(char, long, long)
@@ -159,7 +170,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initInt() = {
     //TODO Context
     int.parents = Seq(long)
-    double.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract), Seq()))
+    int.addMethod(Method(ctx, "unary_$minus", int, Seq(Abstract, Override), Seq()))
     calcMethods(int, double, double)
     calcMethods(int, float, float)
     calcMethods(int, long, long)
@@ -173,7 +184,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initLong() = {
     //TODO Context
     long.parents = Seq(float)
-    double.addMethod(Method(ctx, "unary_$minus", long, Seq(Abstract), Seq()))
+    long.addMethod(Method(ctx, "unary_$minus", long, Seq(Abstract, Override), Seq()))
     calcMethods(long, double, double)
     calcMethods(long, float, float)
     calcMethods(long, long, long)
@@ -186,7 +197,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
 
   private def initFloat() = {
     float.parents = Seq(double)
-    float.addMethod(Method(ctx, "unary_$minus", float, Seq(Abstract), Seq()))
+    float.addMethod(Method(ctx, "unary_$minus", float, Seq(Abstract, Override), Seq()))
     calcMethods(float, double, double)
     calcMethods(float, float, float)
     calcMethods(float, long, float)
@@ -200,7 +211,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   private def initDouble() = {
     //TODO Context
     double.parents = Seq(anyVal, numeric)
-    double.addMethod(Method(ctx, "unary_$minus", double, Seq(Abstract), Seq()))
+    double.addMethod(Method(ctx, "unary_$minus", double, Seq(Abstract, Override), Seq()))
     calcMethods(double, double, double)
     calcMethods(double, float, double)
     calcMethods(double, long, double)
@@ -212,10 +223,16 @@ trait ScalaScopeInitializer extends ScopeInitializer {
   }
 
   private def calcMethods(appendTo: TType, tpe: TType, retTpe: TType) = {
-    appendTo.addMethod(Method(ctx, "$times", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
-    appendTo.addMethod(Method(ctx, "$div", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
-    appendTo.addMethod(Method(ctx, "$plus", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
-    appendTo.addMethod(Method(ctx, "$minus", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
-    appendTo.addMethod(Method(ctx, "$percent", retTpe, Seq(Abstract), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$times", retTpe, Seq(Abstract, Override), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$plus", retTpe, Seq(Abstract, Override), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$div", retTpe, Seq(Abstract, Override), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$minus", retTpe, Seq(Abstract, Override), Seq(Param(ctx, tpe, "x"))))
+    appendTo.addMethod(Method(ctx, "$percent", retTpe, Seq(Abstract, Override), Seq(Param(ctx, tpe, "x"))))
   }
+
+  private def initNull() = {
+    nullTpe.parents = Seq(string)
+    nullTpe
+  }
+
 }

@@ -1,5 +1,7 @@
 package at.vizu.s2n.types.symbol
 
+import at.vizu.s2n.exception.TypeException
+
 /**
  * Phil on 07.10.15.
  */
@@ -54,13 +56,22 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    * Types
    */
 
-  def addClass(tpe: TType) = _types = _types :+ tpe
+  def addClass(tpe: TType) = {
+    if (findClassInCurrentScope(tpe.fullClassName).isEmpty) {
+      _types = _types :+ tpe
+    } else {
+      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
+        s"Class with qualifier ${tpe.fullClassName} already exists")
+    }
+  }
 
   def addAllClasses(tpes: Seq[TType]) = _types = _types ++ tpes
 
   def findClass(name: String): Option[TType] = {
     findClassWithName(name) orElse findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
   }
+
+  def findClassInCurrentScope(name: String) = _types.find(_.fullClassName == name)
 
   private def findClassWithName(name: String): Option[TType] = {
     _types.find(_.fullClassName == name) orElse findClassInParent(name)
@@ -88,10 +99,21 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    * Objects
    */
 
-  def addObject(obj: TType) = _objects = _objects :+ obj
+  def addObject(obj: TType) = {
+    if (findObjectInCurrentScope(obj.fullClassName).isEmpty) {
+      _objects = _objects :+ obj
+    } else {
+      throw new TypeException(obj.ctx.fileName, obj.ctx.line,
+        s"Object with qualifier ${obj.fullClassName} already exists")
+    }
+  }
 
   def findObject(name: String): Option[TType] = {
     findObjectWithName(name) orElse findObjectWithAlias(name)
+  }
+
+  def findObjectInCurrentScope(name: String): Option[TType] = {
+    _objects.find(_.fullClassName == name)
   }
 
   private def findObjectWithName(name: String): Option[TType] = {
@@ -112,12 +134,34 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    * Identifiers
    */
 
-  def add(identifier: Identifier) = _identifiers = _identifiers :+ identifier
+  def add(identifier: Identifier) = {
+    if (findIdentifierInCurrentScope(identifier.name).isEmpty) {
+      _identifiers = _identifiers :+ identifier
+    } else {
+      throw new TypeException(identifier.ctx.fileName, identifier.ctx.line,
+        s"Identifier with qualifier ${identifier.name} already exists in current scope")
+    }
+  }
 
   def addAllIdentifiers(identifiers: Seq[Identifier]) = this._identifiers = this._identifiers ++ identifiers
 
+
   def findIdentifier(name: String): Option[Identifier] = {
+    findIdentifierWithName(name) orElse findIdentifierWithAlias(name)
+  }
+
+  def findIdentifierWithName(name: String): Option[Identifier] = {
     findIdentifierInCurrentScope(name) orElse findIdentifierInParent(name)
+  }
+
+  /**
+    * For finding object identifier
+    * @param name
+    * @return
+    */
+  def findIdentifierWithAlias(name: String): Option[Identifier] = {
+    val alias: String = getTypeAlias(name)
+    findIdentifierInCurrentScope(alias) orElse findIdentifierInParent(alias)
   }
 
   def findIdentifierInParent(name: String) = parent.flatMap(_.findIdentifier(name))
@@ -150,13 +194,22 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    * Methods in scope
    */
 
-  def addMethod(method: Method) = _methods = _methods :+ method
+  def addMethod(method: Method) = {
+    val args: Seq[TType] = method.params.map(_.tpe)
+    if (findMethodInScopeMethods(method.name, args).isEmpty) {
+      _methods = _methods :+ method
+    } else {
+      throw new TypeException(method.ctx,
+        s"Method ${method.name}(${TypeUtils.toString(args)}) already exists in current scope")
+    }
+  }
 
   def findMethod(name: String, args: Seq[TType]): Option[Method] = {
     findMethodInScopeMethods(name, args) orElse findMethodInThis(name, args) orElse findApply(name, args)
   }
 
   private def findMethodInScopeMethods(name: String, args: Seq[TType]): Option[Method] = {
+    //TODO check return type too?
     _methods.find(m => m.name == name && m.checkArgs(args))
   }
 
@@ -165,10 +218,22 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
-    findClassWithAlias(name) match {
+    findObjectWithAlias(name) match {
       case Some(tpe) => tpe.findMethod("apply", args)
       case None => None
     }
+  }
+
+  /**
+    * Null Type
+    */
+
+  private def findNullType(): TType = {
+    findClass("scala.Null").get
+  }
+
+  private def addNullTypeAsSubType(tpe: TType): Unit = {
+    findNullType().addParent(tpe)
   }
 
   /**
@@ -180,6 +245,8 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   //def checkScope(tpe: Type) = findClass(tpe.fullClassName).isEmpty
 
 }
+
+class Test extends TScope
 
 object TScope {
   def apply(parent: TScope) = new TScope(Some(parent))

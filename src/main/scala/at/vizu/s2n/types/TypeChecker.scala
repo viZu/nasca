@@ -13,7 +13,6 @@ import scala.runtime.BoxedUnit
  */
 class TypeChecker(rootScope: TScope) {
 
-  lazy val unitType = rootScope.findClass("scala.Unit").get
   lazy val booleanType = rootScope.findClass("scala.Boolean").get
   var currentScope = rootScope
 
@@ -54,13 +53,13 @@ class TypeChecker(rootScope: TScope) {
     }
 
     private def handleImport(i: Import) = {
-      i.selectors.filter(s => s.name.toString != s.rename.toString)
-        .foreach(s => addTypeAlias(i.expr.toString(), s, i.pos.line))
+      i.selectors.foreach(s => addTypeAlias(i.expr.toString(), s, i.pos.line))
     }
 
     private def addTypeAlias(pkgName: String, selector: ImportSelector, line: Int): Unit = {
       val typeName: String = pkgName + "." + selector.name.toString
       currentScope.findClass(typeName)
+        .orElse(currentScope.findObject(typeName))
         .getOrElse(throw new TypeException(currentScope.currentFile, line, s"No type with name $typeName found"))
       currentScope.addTypeAlias(selector.rename.toString, typeName)
     }
@@ -85,43 +84,56 @@ class TypeChecker(rootScope: TScope) {
   private def checkValMember(scope: TScope, v: ValDef) = {
     val field: Field = TypeUtils.findField(scope, v)
     if (!field.isAbstract) {
-      scoped(scope, (s: TScope) => checkValOrDefBody(s, v.rhs, field.tpe))
+      scoped(scope, (s: TScope) => {
+        val returnType: Option[TType] = checkValOrDefBody(s, v.rhs, field.tpe)
+        returnType match {
+          case Some(tpe) => if (field.tpe == null) field.tpe = tpe
+          case None => if (field.tpe == null) throw new TypeException(scope.currentFile, v.pos.line,
+            s"Value definition ${v.name} requires a valid return type")
+        }
+      })
     }
   }
 
   private def checkDefMember(scope: TScope, d: DefDef) = {
     val method: Method = TypeUtils.findMethodForDef(scope, d)
-    if (!method.constructor) {
-      // TODO handle constructor
-      if (!method.isAbstract) {
-        val expected: TType = TypeUtils.findType(scope, d.tpt)
-        scoped(scope, (s: TScope) => checkValOrDefBody(s, d.rhs, expected))
-      }
+    if (!method.constructor && !method.isAbstract) {
+      val expected: TType = TypeUtils.findType(scope, d.tpt)
+      scoped(scope, (s: TScope) => {
+        addParamsToScope(s, method.params)
+        checkValOrDefBody(s, d.rhs, expected)
+      })
     }
   }
 
   private def checkReturnExpected(returned: Option[TType], expected: TType, line: Int, scope: TScope): Unit = {
-    if (returned.isDefined && returned.get != expected && !returned.get.hasParent(expected)) {
-      throw new TypeException(scope.currentFile, line,
-        s"type ${returned.get.fullClassName} did not match expected type ${expected.fullClassName}")
+    if (returned.isDefined && returned.get != null && returned.get != expected && !returned.get.hasParent(expected)) {
+      val msg =
+        s"""type mismatch;
+            found: ${returned.get.fullClassName}
+            expected: ${expected.fullClassName}""".stripMargin
+
+      throw new TypeException(scope.currentFile, line, msg)
     }
   }
 
   private def addParamsToScope(scope: TScope, params: Seq[Param]) = {
-    val childScope = scope.enterScope()
-    params.foreach(p => childScope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
-    childScope
+    params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
   }
 
-  private def checkValOrDefBody(scope: TScope, body: Tree, expectedType: TType): Unit = {
+  private def checkValOrDefBody(scope: TScope, body: Tree, expectedType: TType): Option[TType] = {
+    var expected = expectedType
     val returnType = checkBody(scope, body)
-    checkReturnExpected(returnType, expectedType, body.pos.line, scope)
+    if (expectedType == null && returnType.isDefined) expected = returnType.get // For type inference
+    checkReturnExpected(returnType, expected, body.pos.line, scope)
+    returnType
   }
 
   private def checkBody(scope: TScope, body: Tree): Option[TType] = {
     body match {
       case b: Block => Some(checkBlock(scope, b))
       case a: Apply => Some(checkApply(scope, a))
+      case s: Select => Some(checkSelect(scope, s))
       case i: Ident => Some(checkIdent(scope, i))
       case l: Literal => Some(checkLiteral(scope, l))
       case i: If => Some(checkIf(scope, i))
@@ -140,6 +152,7 @@ class TypeChecker(rootScope: TScope) {
       case a: Assign => checkAssign(scope, a)
       case d: DefDef => checkDef(scope, d)
       case a: Apply => checkApply(scope, a)
+      case s: Select => checkSelect(scope, s)
       case i: Ident => checkIdent(scope, i)
       case l: Literal => checkLiteral(scope, l)
       case i: If => checkIf(scope, i)
@@ -153,6 +166,7 @@ class TypeChecker(rootScope: TScope) {
       case v: ValDef => checkVal(scope, v)
       case d: DefDef => checkDef(scope, d)
       case a: Apply => checkApply(scope, a)
+      case s: Select => checkSelect(scope, s)
       case i: Ident => checkIdent(scope, i)
       case l: Literal => checkLiteral(scope, l)
       case i: If => checkIf(scope, i)
@@ -167,18 +181,28 @@ class TypeChecker(rootScope: TScope) {
       case s: Select =>
         val tpe: TType = checkQualifier(scope, s.qualifier)
         val args: Seq[TType] = checkArgs(scope, apply.args)
-        val methodName: String = s.name.toString
+        val selectName: String = s.name.toString
 
-        TypeUtils.findMethod(scope, methodName, s.pos.line, args, tpe).returnType
+        TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe).returnType
       case i: Ident =>
         checkIdent(scope, i)
     }
   }
 
+  private def checkSelect(scope: TScope, select: Select): TType = {
+    val tpe: TType = checkQualifier(scope, select.qualifier)
+    val selectName: String = select.name.toString
+
+    TypeUtils.findMethodOrFieldType(scope, selectName, select.pos.line, tpe)
+  }
+
   private def checkQualifier(scope: TScope, qualifier: Tree): TType = qualifier match {
     case l: Literal => TypeUtils.findType(scope, l)
+    case n: New => TypeUtils.findType(scope, n)
     case i: Ident => TypeUtils.findIdentifier(scope, i).tpe
     case a: Apply => checkApply(scope, a)
+    case t: This => scope.findThis()
+    case s: Select => checkSelect(scope, s)
   }
 
   private def checkArgs(scope: TScope, args: List[Tree]) = {
@@ -187,6 +211,7 @@ class TypeChecker(rootScope: TScope) {
       case l: Literal => checkLiteral(scope, l)
       case b: Block => checkBlock(scope, b)
       case a: Apply => checkApply(scope, a)
+      case s: Select => checkSelect(scope, s)
     })
   }
 
@@ -198,7 +223,11 @@ class TypeChecker(rootScope: TScope) {
       case None =>
         scope.findIdentifier(iName) match {
           case Some(i) => i.tpe
-          case None => throw new TypeException(scope.currentFile, ident.pos.line, s"value $iName not found")
+          case None =>
+            scope.findThis().findField(iName) match {
+              case Some(f) => f.tpe
+              case None => throw new TypeException(scope.currentFile, ident.pos.line, s"Value $iName not found")
+            }
         }
     }
   }
@@ -209,25 +238,27 @@ class TypeChecker(rootScope: TScope) {
 
   private def checkVal(scope: TScope, v: ValDef): TType = {
     val expected: TType = TypeUtils.findType(scope, v.tpt)
-    val childScope = scope.enterScope()
-    checkValOrDefBody(childScope, v.rhs, expected)
-    childScope.exitScope()
+    val returnTpe: Option[TType] = scoped(scope, checkValOrDefBody(_: TScope, v.rhs, expected))
+    returnTpe match {
+      case Some(tpe) => TypeUtils.createIdentifier(scope, v, tpe)
+      case None => throw new TypeException(scope.currentFile, v.pos.line,
+        s"Value definition ${v.name} requires a valid return type")
+    }
 
-    TypeUtils.createIdentifier(scope, v)
-
-    unitType
+    TypeUtils.unitType(scope)
   }
 
   private def checkDef(scope: TScope, d: DefDef): TType = {
     val expected: TType = TypeUtils.findType(scope, d.tpt)
-    val childScope = scope.enterScope()
-    checkValOrDefBody(childScope, d.rhs, expected)
-    childScope.exitScope()
 
     val m: Method = TypeUtils.createMethod(scope, d)
+    scoped(scope, (s: TScope) => {
+      addParamsToScope(s, m.params)
+      checkValOrDefBody(s, d.rhs, expected)
+    })
     scope.addMethod(m)
 
-    unitType
+    TypeUtils.unitType(scope)
   }
 
   /**
@@ -239,14 +270,13 @@ class TypeChecker(rootScope: TScope) {
   private def checkLabel(scope: TScope, l: LabelDef): TType = {
     l match {
       case LabelDef(n, _, t) =>
-        val childScope: TScope = scope.enterScope()
-        childScope.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, unitType, Seq()))
-        val tpe = t match {
-          case i: If => checkIf(childScope, i) // while
-          case b: Block => checkBlock(childScope, b) // do while
-        }
-        childScope.exitScope()
-        tpe
+        scoped(scope, (s: TScope) => {
+          s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Seq()))
+          t match {
+            case i: If => checkIf(s, i) // while
+            case b: Block => checkBlock(s, b) // do while
+          }
+        })
     }
   }
 
@@ -276,8 +306,16 @@ class TypeChecker(rootScope: TScope) {
   private def checkAssign(scope: TScope, a: Assign): TType = {
     val identifier = TypeUtils.findIdentifier(scope, a.lhs.asInstanceOf[Ident])
     if (!identifier.mutable) throw new TypeException(scope.currentFile, a.pos.line, "Reassignment to val")
-    scoped(scope, checkValOrDefBody(_, a.rhs, identifier.tpe))
-    unitType
+    scoped(scope, checkValOrDefBody(_: TScope, a.rhs, identifier.tpe))
+
+    TypeUtils.unitType(scope)
+  }
+
+  private def scoped(scope: TScope, f: TScope => Option[TType]) = {
+    val childScope: TScope = scope.enterScope()
+    val tpe = f(childScope)
+    childScope.exitScope()
+    tpe
   }
 
   private def scoped(scope: TScope, f: TScope => TType) = {

@@ -10,6 +10,9 @@ import scala.runtime.BoxedUnit
  */
 object TypeUtils {
 
+  private var unitTpe: TType = null
+  private var nullTpe: TType = null
+
   /**
    * Modifiers
    */
@@ -73,7 +76,9 @@ object TypeUtils {
     }
     typeTree match {
       case rt: RefTree => scope.findClass(rt.name.toString).getOrElse(throwTypeNotFound(rt.name.toString))
-      case id: ImplDef => scope.findClass(id.name.toString).getOrElse(throwTypeNotFound(id.name.toString))
+      case id: ImplDef =>
+        val tpeName: String = id.name.toString
+        scope.findClass(tpeName).orElse(scope.findObject(tpeName)).getOrElse(throwTypeNotFound(tpeName))
       case l: Literal => findTypeForLiteral(scope, l).getOrElse(throwTypeNotFound(l.value.value.getClass.getName))
       case t: This => scope.findThis()
       case n: New => findType(scope, n.tpt)
@@ -86,14 +91,20 @@ object TypeUtils {
   private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
     val tpeString = literal.value.value match {
       case i: Integer => "scala.Int"
-      case s: String => throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type String not supported")
+      case s: String => "scala.String"
       case d: java.lang.Double => "scala.Double"
       case b: java.lang.Boolean => "scala.Boolean"
       case c: Character => "scala.Char"
       case u: BoxedUnit => "scala.Unit"
+      case null => "scala.Null"
       case _@n => throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type ${n.getClass.getName} not supported")
     }
-    scope.findClass(tpeString)
+    if (tpeString != null) scope.findClass(tpeString) else Some(null)
+  }
+
+  def addClass(scope: TScope, tpe: TType) = {
+    nullType(scope).addParent(tpe)
+    scope.addClass(tpe)
   }
 
   /**
@@ -116,7 +127,7 @@ object TypeUtils {
   def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null): Method = {
     def throwMethodNotFound(methodName: String): Nothing = {
       val argList = TypeUtils.toString(args)
-      val msg = s"No method $methodName with arguments $argList found"
+      val msg = s"No method $methodName($argList) found"
       throw new TypeException(scope.currentFile, line, msg)
     }
     val tpe: TType = if (onType == null) scope.findThis() else onType
@@ -130,9 +141,14 @@ object TypeUtils {
         val tpe: TType = TypeUtils.findType(scope, v.tpt)
         Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
     }
+
+    val methodName: String = d.name.toString
     val retType = TypeUtils.findType(scope, d.tpt)
+    if (retType == null && !isConstructor(methodName)) {
+      throw new TypeException(ctx.fileName, ctx.line, s"A return type for Method $methodName is required ")
+    }
     //TODO check if Method exists in current scope
-    Method(ctx, d.name.toString, retType, TypeUtils.getModifiers(d.mods), params, TypeUtils.isConstructor(d.name.toString))
+    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, isConstructor(methodName))
   }
 
   /**
@@ -153,6 +169,15 @@ object TypeUtils {
     methodName == "<init>"
   }
 
+  def findMethodOrFieldType(scope: TScope, name: String, line: Int, onType: TType = null) = {
+    def throwMethodNotFound(selectName: String): Nothing = {
+      val msg = s"No value $selectName found"
+      throw new TypeException(scope.currentFile, line, msg)
+    }
+    val tpe: TType = if (onType == null) scope.findThis() else onType
+    tpe.findMethod(name, Seq()).map(_.returnType) orElse tpe.findField(name).map(_.tpe) getOrElse throwMethodNotFound(name)
+  }
+
   /**
    * Identifier
    */
@@ -167,8 +192,8 @@ object TypeUtils {
       .map(_.asIdentifier) getOrElse throwIdentifierNotFound(name)
   }
 
-  def createIdentifier(scope: TScope, v: ValDef) = {
-    val tpe: TType = TypeUtils.findType(scope, v.tpt)
+  def createIdentifier(scope: TScope, v: ValDef, givenTpe: TType = null) = {
+    val tpe: TType = if (givenTpe != null) givenTpe else TypeUtils.findType(scope, v.tpt)
     val name: String = v.name.toString
     if (scope.findIdentifierInCurrentScope(name).isEmpty) {
       scope.add(Identifier(Context(scope.currentFile, v.pos.line), v.name.toString, tpe, v.mods.hasFlag(Flag.MUTABLE)))
@@ -184,8 +209,8 @@ object TypeUtils {
   def toString(nameables: Seq[Nameable]) = nameables.map(_.name).mkString(", ")
 
   def findCommonBaseClass(scope: TScope, tpe1: TType, tpe2: TType): TType = {
-    val unitTpe: TType = scope.findClass("scala.Unit").get
-    if (tpe1 == unitTpe || tpe2 == unitTpe) unitTpe
+    val unit: TType = unitType(scope)
+    if (tpe1 == unit || tpe2 == unit) unit
     else {
       var foundType: TType = null
       tpe1.forEachType(t => {
@@ -196,10 +221,23 @@ object TypeUtils {
   }
 
   def findCommonBaseClass(scope: TScope, tpe1: Option[TType], tpe2: Option[TType]): TType = {
-    val unitTpe: TType = scope.findClass("scala.Unit").get
-    if (tpe1.isEmpty || tpe2.isEmpty) unitTpe
+    if (tpe1.isEmpty || tpe2.isEmpty) unitType(scope)
     else {
       findCommonBaseClass(scope, tpe1.get, tpe2.get)
     }
+  }
+
+  def unitType(scope: TScope) = {
+    if (unitTpe == null) {
+      unitTpe = scope.findClass("scala.Unit").get
+    }
+    unitTpe
+  }
+
+  def nullType(scope: TScope) = {
+    if (nullTpe == null) {
+      nullTpe = scope.findClass("scala.Null").get
+    }
+    nullTpe
   }
 }

@@ -5,6 +5,7 @@ import at.vizu.s2n.exception.TypeException
 /**
  * Phil on 07.10.15.
  */
+
 case class TType(ctx: Context = Context("", 0), name: String,
                 pkg: String = "", mods: Seq[Modifier] = Seq()) extends Modifiable with Nameable {
 
@@ -13,17 +14,17 @@ case class TType(ctx: Context = Context("", 0), name: String,
   var parents: Seq[TType] = Seq()
   var generics: Seq[GenericModifier] = Seq()
 
-  override def modifiers: Set[Modifier] = Set() ++ mods
+  lazy val modifiers: Set[Modifier] = Set() ++ mods
 
   def findMethod(name: String, args: Seq[TType]): Option[Method] = {
     findMethodInSelf(name, args) orElse findMethodInSelfWithSuper(name, args) orElse findMethodInParents(name, args)
   }
 
-  def findMethodInSelf(name: String, args: Seq[TType]): Option[Method] = {
+  private def findMethodInSelf(name: String, args: Seq[TType]): Option[Method] = {
     methods.find(m => m.name == name && m.checkArgs(args))
   }
 
-  def findMethodInSelfWithSuper(name: String, args: Seq[TType]): Option[Method] = {
+  private def findMethodInSelfWithSuper(name: String, args: Seq[TType]): Option[Method] = {
     methods.find(m => m.name == name && m.checkArgsSuperType(args))
   }
 
@@ -54,7 +55,19 @@ case class TType(ctx: Context = Context("", 0), name: String,
   def fullClassName = if (pkg.isEmpty) name else pkg + "." + name
 
   def addMethod(method: Method) = {
-    methods = methods :+ method
+    val args: Seq[TType] = method.params.map(_.tpe)
+    val methodFound = findMethod(method.name, args).isDefined
+    if (!methodFound || methodFound && method.isOverride) {
+      methods = methods :+ handleConstructor(method)
+    } else {
+      throw new TypeException(method.ctx.fileName, method.ctx.line,
+        s"Type $name already has a method ${method.name}(${TypeUtils.toString(args)})")
+    }
+  }
+
+  def handleConstructor(m: Method) = {
+    if (m.constructor) Method(m.ctx, m.name, this, m.mods, m.params, m.constructor)
+    else m
   }
 
   private def validateMethod(method: Method) = {
@@ -65,7 +78,12 @@ case class TType(ctx: Context = Context("", 0), name: String,
   }
 
   def addField(field: Field) = {
-    fields = fields :+ field
+    if (findField(field.name).isEmpty) {
+      fields = fields :+ field
+    } else {
+      throw new TypeException(field.ctx.fileName, field.ctx.line,
+        s"Type $name already has a field with name ${field.name}")
+    }
   }
 
   def validateField(field: Field) = {
@@ -81,7 +99,7 @@ case class TType(ctx: Context = Context("", 0), name: String,
 
   def validateParent(p: (TType, Int)) = {
     val (parent, index) = p
-    if (index > 0 && !parent.isTrait) {
+    if (index > 0 && !parent.isTrait && !isNullType) {
       throw new TypeException(ctx.fileName, ctx.line, s"Type ${parent.name} needs to be a trait to be mixed in")
     }
   }
@@ -91,4 +109,8 @@ case class TType(ctx: Context = Context("", 0), name: String,
     fields.foreach(validateField)
     parents.zipWithIndex.foreach(validateParent)
   }
+
+  private def isNullType = "scala.Null" == fullClassName
+
+  override def toString = fullClassName
 }

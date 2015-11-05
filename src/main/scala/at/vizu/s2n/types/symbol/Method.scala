@@ -15,5 +15,10 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
     filtered.size == argsToCheck.size // TODO optional params
   }
 
-  override def modifiers: Set[Modifier] = Set() ++ mods
+  lazy val modifiers: Set[Modifier] = Set() ++ mods
+
+  override def toString = {
+    val params = this.params.map(_.tpe)
+    s"$name(${TypeUtils.toString(params)})"
+  }
 }
