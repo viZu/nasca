@@ -9,8 +9,8 @@ import at.vizu.s2n.exception.ArgumentException
 object Environments {
 
   def apply(args: Arguments) = args.env match {
-    case "c++" => CppEnvironmentRegistry.environment
-    case "" => CppEnvironmentRegistry.environment
+    case "c++" => MWEnvironmentComponent.environment
+    case "" => MWEnvironmentComponent.environment
     case _ => throw new ArgumentException(s"Could not find compiler environment '${args.env}'")
   }
 

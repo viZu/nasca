@@ -3,7 +3,7 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 16.10.15.
  */
-trait ScalaScopeInitializer extends ScopeInitializer {
+class ScalaScopeInitializer extends ScopeInitializer {
 
   private lazy val ctx: Context = Context("", 0)
   private lazy val any = new TType(simpleName = "Any", pkg = "scala")
@@ -38,7 +38,7 @@ trait ScalaScopeInitializer extends ScopeInitializer {
     scope.addAllClasses(allTypes)
 
     allTypes foreach (t => {
-      scope.addTypeAlias(t.name, t.fullClassName)
+      scope.addTypeAlias(t.simpleName, t.name)
     })
 
     scope
