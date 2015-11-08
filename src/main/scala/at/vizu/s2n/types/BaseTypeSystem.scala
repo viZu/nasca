@@ -1,17 +1,17 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.parser.AST
+import at.vizu.s2n.types.result.ScalaFileWrapper
 import at.vizu.s2n.types.symbol.TScope
 
 /**
  * Phil on 06.11.15.
  */
-class BaseTypeSystem(typeSystemInitializer: TypeSystemInitializer) extends TypeSystem {
+class BaseTypeSystem(typeSystemInitializer: TypeSystemInitializer, typeChecker: ReflectTypeChecker) extends TypeSystem {
 
-  override def checkTrees(trees: Seq[AST]): Unit = {
+  override def checkTrees(trees: Seq[AST]): Seq[ScalaFileWrapper] = {
     val rootScope: TScope = typeSystemInitializer.initTypeSystem(trees)
-    val typeChecker: TypeChecker = new TypeChecker(rootScope)
-    trees.foreach(typeChecker.checkTypes)
+    trees.map(typeChecker.checkTypes(rootScope, _))
   }
 
 }

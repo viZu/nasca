@@ -7,4 +7,10 @@ trait ScopeInitializer {
 
   def initScope: TScope
 
+  def unitType: TType
+
+  def booleanType: TType
+
+  def nullType: TType
+
 }

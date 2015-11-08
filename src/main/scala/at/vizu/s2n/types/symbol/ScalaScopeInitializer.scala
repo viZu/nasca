@@ -3,24 +3,24 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 16.10.15.
  */
-class ScalaScopeInitializer extends ScopeInitializer {
+class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
-  private lazy val ctx: Context = Context("", 0)
-  private lazy val any = new TType(simpleName = "Any", pkg = "scala")
-  private lazy val anyVal = new TType(simpleName = "AnyVal", pkg = "scala")
-  private lazy val anyRef = new TType(simpleName = "AnyRef", pkg = "scala")
-  private lazy val string = new TType(simpleName = "String", pkg = "scala", mods = Seq(Trait))
-  private lazy val numeric = new TType(simpleName = "NumericPrimitive", pkg = "scala", mods = Seq(Trait))
-  private lazy val unit = new TType(simpleName = "Unit", pkg = "scala", mods = Seq(Trait))
-  private lazy val boolean = new TType(simpleName = "Boolean", pkg = "scala", mods = Seq(Trait))
-  private lazy val byte = new TType(simpleName = "Byte", pkg = "scala", mods = Seq(Trait))
-  private lazy val short = new TType(simpleName = "Short", pkg = "scala", mods = Seq(Trait))
-  private lazy val char = new TType(simpleName = "Char", pkg = "scala", mods = Seq(Trait))
-  private lazy val int = new TType(simpleName = "Int", pkg = "scala", mods = Seq(Trait))
-  private lazy val long = new TType(simpleName = "Long", pkg = "scala", mods = Seq(Trait))
-  private lazy val float = new TType(simpleName = "Float", pkg = "scala", mods = Seq(Trait))
-  private lazy val double = new TType(simpleName = "Double", pkg = "scala", mods = Seq(Trait))
-  private lazy val nullTpe = new TType(simpleName = "Null", pkg = "scala", mods = Seq(Trait))
+  lazy val ctx: Context = Context("", 0)
+  lazy val any = new TType(simpleName = "Any", pkg = "scala")
+  lazy val anyVal = new TType(simpleName = "AnyVal", pkg = "scala")
+  lazy val anyRef = new TType(simpleName = "AnyRef", pkg = "scala")
+  lazy val string = new TType(simpleName = "String", pkg = "scala", mods = Seq(Trait))
+  lazy val numeric = new TType(simpleName = "NumericPrimitive", pkg = "scala", mods = Seq(Trait))
+  lazy val unit = new TType(simpleName = "Unit", pkg = "scala", mods = Seq(Trait))
+  lazy val boolean = new TType(simpleName = "Boolean", pkg = "scala", mods = Seq(Trait))
+  lazy val byte = new TType(simpleName = "Byte", pkg = "scala", mods = Seq(Trait))
+  lazy val short = new TType(simpleName = "Short", pkg = "scala", mods = Seq(Trait))
+  lazy val char = new TType(simpleName = "Char", pkg = "scala", mods = Seq(Trait))
+  lazy val int = new TType(simpleName = "Int", pkg = "scala", mods = Seq(Trait))
+  lazy val long = new TType(simpleName = "Long", pkg = "scala", mods = Seq(Trait))
+  lazy val float = new TType(simpleName = "Float", pkg = "scala", mods = Seq(Trait))
+  lazy val double = new TType(simpleName = "Double", pkg = "scala", mods = Seq(Trait))
+  lazy val nullTpe = new TType(simpleName = "Null", pkg = "scala", mods = Seq(Trait))
 
   override def initScope: TScope = {
     val scope: TScope = new TScope()
@@ -235,4 +235,9 @@ class ScalaScopeInitializer extends ScopeInitializer {
     nullTpe
   }
 
+  override def unitType: TType = unit
+
+  override def booleanType: TType = boolean
+
+  override def nullType: TType = nullTpe
 }
