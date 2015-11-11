@@ -31,6 +31,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     override def traverse(tree: Tree): Unit = {
       tree match {
         case c: ImplDef =>
+          handleEnterChildScope()
           val thisTpe: TType = TypeUtils.findType(currentScope, c)
           checkImplementation(currentScope.enterScope(thisTpe), c)
           impls += getImplementation(c)
@@ -38,12 +39,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
           pkgBuilder.append(name.toString)
           super.traverse(tree)
         case i: Import =>
-          if (!scoped) {
-            currentScope = currentScope.enterScope()
-            currentScope.currentFile = ast.fileName
-            currentScope.currentPackage = packageName
-            scoped = true
-          }
+          handleEnterChildScope()
           handleImport(i)
           imports += i.toString()
         case _ => super.traverse(tree)
@@ -64,6 +60,15 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
         .orElse(currentScope.findObject(typeName))
         .getOrElse(throw new TypeException(currentScope.currentFile, line, s"No type with name $typeName found"))
       currentScope.addTypeAlias(selector.rename.toString, typeName)
+    }
+
+    private def handleEnterChildScope() = {
+      if (!scoped) {
+        currentScope = currentScope.enterScope()
+        currentScope.currentFile = ast.fileName
+        currentScope.currentPackage = packageName
+        scoped = true
+      }
     }
 
     private def getImplementation(implDef: ImplDef) = {
