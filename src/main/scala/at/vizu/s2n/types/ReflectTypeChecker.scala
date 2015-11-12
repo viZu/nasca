@@ -2,7 +2,7 @@ package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
 import at.vizu.s2n.parser.AST
-import at.vizu.s2n.types.result.{ClassImplementation, Implementation, ObjectImplementation, ScalaFileWrapper}
+import at.vizu.s2n.types.result._
 import at.vizu.s2n.types.symbol._
 
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +25,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   private class ClassTraverser(var currentScope: TScope, ast: AST) extends Traverser {
     val pkgBuilder = new ArrayBuffer[String]
     val impls = new ArrayBuffer[Implementation]
-    val imports = new ArrayBuffer[String]
+    val imports = new ArrayBuffer[ImportStmt]
     var scoped: Boolean = false
 
     override def traverse(tree: Tree): Unit = {
@@ -34,14 +34,14 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
           handleEnterChildScope()
           val thisTpe: TType = TypeUtils.findType(currentScope, c)
           checkImplementation(currentScope.enterScope(thisTpe), c)
-          impls += getImplementation(c)
+          impls += getImplementation(c, thisTpe)
         case PackageDef(Ident(name), subtree) =>
           pkgBuilder.append(name.toString)
           super.traverse(tree)
         case i: Import =>
           handleEnterChildScope()
           handleImport(i)
-          imports += i.toString()
+        //imports += i.toString()
         case _ => super.traverse(tree)
       }
     }
@@ -60,6 +60,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
         .orElse(currentScope.findObject(typeName))
         .getOrElse(throw new TypeException(currentScope.currentFile, line, s"No type with name $typeName found"))
       currentScope.addTypeAlias(selector.rename.toString, typeName)
+      imports += ImportStmt(pkgName, selector.name.toString, selector.rename.toString)
     }
 
     private def handleEnterChildScope() = {
@@ -71,10 +72,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
       }
     }
 
-    private def getImplementation(implDef: ImplDef) = {
+    private def getImplementation(implDef: ImplDef, tpe: TType) = {
       implDef match {
-        case c: ClassDef => ClassImplementation(c)
-        case m: ModuleDef => ObjectImplementation(m)
+        case c: ClassDef => ClassImplementation(c, tpe)
+        case m: ModuleDef => ObjectImplementation(m, tpe)
       }
     }
 
@@ -165,7 +166,6 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
   private def checkBlock(scope: TScope, block: Block): TType = {
     //TODO new Scope?
-    println(block)
     block.stats.foreach {
       case b: Block => checkBlock(scope, b)
       case v: ValDef => checkVal(scope, v)

@@ -22,6 +22,8 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   lazy val double = new TType(simpleName = "Double", pkg = "scala", mods = Seq(Trait))
   lazy val nullTpe = new TType(simpleName = "Null", pkg = "scala", mods = Seq(Trait))
 
+  lazy val primitives = Set(boolean, byte, short, char, int, long, float, double)
+
   override def initScope: TScope = {
     val scope: TScope = new TScope()
     val a: TType = initAny()
@@ -31,7 +33,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     val anys = Seq(a, ar, av)
     val str = initString()
     val numericPrimitive = initNumericPrimitive()
-    val pris = primitives()
+    val pris = initPrimitives()
     val nullT = initNull()
     val allTypes = anys ++ pris :+ numericPrimitive :+ str :+ nullT
 
@@ -91,7 +93,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     numeric
   }
 
-  private def primitives(): Seq[TType] = {
+  private def initPrimitives(): Seq[TType] = {
     val d = initDouble()
     val f = initFloat()
     val l = initLong()

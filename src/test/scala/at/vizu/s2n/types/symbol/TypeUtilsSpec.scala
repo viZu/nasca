@@ -20,5 +20,4 @@ class TypeUtilsSpec extends FlatSpec with Matchers {
   "TypeUtils.toString" should "return an empty String for an empty Seq" in {
     TypeUtils.toString(Seq()) should be("")
   }
-
 }

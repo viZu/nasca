@@ -18,7 +18,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
     val contents: Seq[(String, String)] = readFileContents(args.files)
     val trees: Seq[AST] = parser.parseContents(contents)
     val fileContents: Seq[ScalaFileWrapper] = typeSystem.checkTrees(trees)
-    generator.generateCode(fileContents)
+    generator.generateCode(args, fileContents)
   }
 
   private def readFileContents(files: Seq[Path]) = {

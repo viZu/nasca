@@ -21,4 +21,8 @@ trait BaseTypes {
   val double: TType
   val nullTpe: TType
 
+  val primitives: Set[TType]
+
+  def isPrimitive(tpe: TType) = primitives.contains(tpe)
+
 }

@@ -90,7 +90,7 @@ object TypeUtils {
 
   private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
     val tpeString = literal.value.value match {
-      case i: Integer => "scala.Int"
+      case i: Integer => findTypeForInteger(i)
       case s: String => "scala.String"
       case d: java.lang.Double => "scala.Double"
       case b: java.lang.Boolean => "scala.Boolean"
@@ -100,6 +100,16 @@ object TypeUtils {
       case _@n => throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type ${n.getClass.getName} not supported")
     }
     if (tpeString != null) scope.findClass(tpeString) else Some(null)
+  }
+
+  private def findTypeForInteger(i: Integer): String = {
+    if (i >= -128 && i <= 127) {
+      "scala.Byte"
+    } else if (i >= -32768 && i <= 32767) {
+      "scala.Short"
+    } else {
+      "scala.Int"
+    }
   }
 
   def addClass(scope: TScope, tpe: TType) = {
@@ -239,5 +249,12 @@ object TypeUtils {
       nullTpe = scope.findClass("scala.Null").get
     }
     nullTpe
+  }
+
+  val primitives = Set("scala.Boolean", "scala.Byte", "scala.Short", "scala.Char", "scala.Int", "scala.Long",
+    "scala.Float", "scala.Double")
+
+  def isPrimitive(tpe: TType): Boolean = {
+    primitives.contains(tpe.name)
   }
 }

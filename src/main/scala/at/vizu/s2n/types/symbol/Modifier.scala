@@ -49,4 +49,6 @@ trait Modifiable {
   def isCase = modifiers.contains(Case)
 
   def isMutable = modifiers.contains(Mutable)
+
+  def visibility = if (isPrivate) "private" else if (isProtected) "protected" else "public"
 }

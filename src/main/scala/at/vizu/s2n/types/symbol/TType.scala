@@ -9,8 +9,8 @@ import at.vizu.s2n.exception.TypeException
 case class TType(ctx: Context = Context("", 0), simpleName: String,
                  pkg: String = "", mods: Seq[Modifier] = Seq()) extends Modifiable with Nameable {
 
-  private var methods: Seq[Method] = Seq()
-  private var fields: Seq[Field] = Seq()
+  private var _methods: Seq[Method] = Seq()
+  private var _fields: Seq[Field] = Seq()
   var parents: Seq[TType] = Seq()
   var generics: Seq[GenericModifier] = Seq()
 
@@ -18,16 +18,20 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
 
   def name = fullClassName
 
+  def methods = _methods
+
+  def fields = _fields
+
   def findMethod(name: String, args: Seq[TType]): Option[Method] = {
     findMethodInSelf(name, args) orElse findMethodInSelfWithSuper(name, args) orElse findMethodInParents(name, args)
   }
 
   private def findMethodInSelf(name: String, args: Seq[TType]): Option[Method] = {
-    methods.find(m => m.name == name && m.checkArgs(args))
+    _methods.find(m => m.name == name && m.checkArgs(args))
   }
 
   private def findMethodInSelfWithSuper(name: String, args: Seq[TType]): Option[Method] = {
-    methods.find(m => m.name == name && m.checkArgsSuperType(args))
+    _methods.find(m => m.name == name && m.checkArgsSuperType(args))
   }
 
   private def findMethodInParents(name: String, args: Seq[TType]): Option[Method] = {
@@ -36,7 +40,7 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
   }
 
   def findField(name: String): Option[Field] = {
-    fields.find(_.name == name) orElse findFieldInParents(name)
+    _fields.find(_.name == name) orElse findFieldInParents(name)
   }
 
   private def findFieldInParents(name: String): Option[Field] = {
@@ -60,7 +64,7 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
     val args: Seq[TType] = method.params.map(_.tpe)
     val methodFound = findMethod(method.name, args).isDefined
     if (!methodFound || methodFound && method.isOverride) {
-      methods = methods :+ handleConstructor(method)
+      _methods = _methods :+ handleConstructor(method)
     } else {
       throw new TypeException(method.ctx.fileName, method.ctx.line,
         s"Type $fullClassName already has a method ${method.name}(${TypeUtils.toString(args)})")
@@ -81,7 +85,7 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
 
   def addField(field: Field) = {
     if (findField(field.name).isEmpty) {
-      fields = fields :+ field
+      _fields = _fields :+ field
     } else {
       throw new TypeException(field.ctx.fileName, field.ctx.line,
         s"Type $fullClassName already has a field with name ${field.name}")
@@ -107,8 +111,8 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
   }
 
   def validate() = {
-    methods.foreach(validateMethod)
-    fields.foreach(validateField)
+    _methods.foreach(validateMethod)
+    _fields.foreach(validateField)
     parents.zipWithIndex.foreach(validateParent)
   }
 

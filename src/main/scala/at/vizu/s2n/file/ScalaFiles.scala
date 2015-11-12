@@ -1,6 +1,6 @@
 package at.vizu.s2n.file
 
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, Paths}
 
 import at.vizu.s2n.exception.ArgumentException
 
@@ -54,5 +54,18 @@ object ScalaFiles {
     val newList = prepend.toString() :: lines ::: List(append.toString())
     val s: String = newList.mkString("\n")
     s
+  }
+
+  def createDirectory(directory: Path) = {
+    if (!Files.exists(directory)) {
+      Files.createDirectories(directory)
+    } else if (!Files.isDirectory(directory)) {
+      throw new RuntimeException(s"File $directory was no directory")
+    }
+  }
+
+  def writeToFile(directory: Path, fileName: String, content: String) = {
+    val path: Path = Paths.get(directory.toString, fileName)
+    Files.write(path, content.getBytes("utf-8"))
   }
 }
