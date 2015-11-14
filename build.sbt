@@ -13,5 +13,5 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 libraryDependencies += "com.softwaremill.macwire" %% "macros" % "1.0.1"
 
 assemblyJarName in assembly := "s2n.jar"
-
+test in assembly := {}
 mainClass in assembly := Some("at.vizu.s2n.Main")

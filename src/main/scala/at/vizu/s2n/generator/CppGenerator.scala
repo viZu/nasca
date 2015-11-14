@@ -1,34 +1,48 @@
 package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
-import at.vizu.s2n.file.ScalaFiles
-import at.vizu.s2n.types.result.ScalaFileWrapper
+import at.vizu.s2n.types.result.{ClassImplementation, ObjectImplementation, ScalaFileWrapper}
+import at.vizu.s2n.types.symbol.BaseTypes
 
 /**
  * Phil on 06.11.15.
  */
-class CppGenerator extends Generator {
-
-  type GeneratedFile = (String, String)
+class CppGenerator(baseTypes: BaseTypes) extends Generator {
 
   override def generateCode(args: Arguments, fileContents: Seq[ScalaFileWrapper]): Unit = {
+
     println("Generating header files...")
-    val headerFiles: Seq[GeneratedFile] = fileContents.flatMap(c => {
-      c.impls.map(i => {
-        val h = i.generateHeader(c.pkg, c.imports)
-        println(h._1)
-        h
+    generateHeaders(args, fileContents)
+
+    println("Generating source files...")
+    generateSourceFiles(args, fileContents)
+    ???
+  }
+
+  def generateHeaders(args: Arguments, fileContents: Seq[ScalaFileWrapper]) = {
+    val generators: Seq[HeaderFileGenerator] = getHeaderGenerators(fileContents)
+    generators.foreach(_.generateHeaderFile(args))
+  }
+
+  def getHeaderGenerators(fileContents: Seq[ScalaFileWrapper]) = {
+    fileContents.flatMap(c => {
+      c.impls.map({
+        case oi: ObjectImplementation => new ObjectHeaderFileGenerator(baseTypes, c.pkg, c.imports, oi)
+        case ci: ClassImplementation => new ClassHeaderFileGenerator(baseTypes, c.pkg, c.imports, ci)
       })
     })
+  }
 
-    println("Writing C++ files into output directory " + args.out.toString)
-    ScalaFiles.createDirectory(args.out)
+  def generateSourceFiles(args: Arguments, fileContents: Seq[ScalaFileWrapper]) = {
+    val generators = getSourceGenerators(fileContents)
+    generators.foreach(_.generateSourceFiles(args))
+  }
 
-    println("Writing header files...")
-    headerFiles.foreach(h => {
-      println(h._1)
-      ScalaFiles.writeToFile(args.out, h._1, h._2)
+  def getSourceGenerators(fileContents: Seq[ScalaFileWrapper]) = {
+    fileContents.flatMap(c => {
+      c.impls.map(new SourceFileGeneratorImpl(baseTypes, _))
     })
   }
+
 
 }

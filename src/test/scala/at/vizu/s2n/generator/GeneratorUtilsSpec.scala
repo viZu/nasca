@@ -29,15 +29,15 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename for type with no package" in {
-    GeneratorUtils.getCppTypeName(tpeWithOutPkg) should be("Type")
+    GeneratorUtils.getCppTypeName(baseTypes, tpeWithOutPkg) should be("Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename for type with package" in {
-    GeneratorUtils.getCppTypeName(tpeWithPkg) should be("test::Type")
+    GeneratorUtils.getCppTypeName(baseTypes, tpeWithPkg) should be("test::Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename for type with nested package" in {
-    GeneratorUtils.getCppTypeName(tpeWithNestedPkg) should be("test_a_b_c::Type")
+    GeneratorUtils.getCppTypeName(baseTypes, tpeWithNestedPkg) should be("test_a_b_c::Type")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer with no package" in {
@@ -66,32 +66,32 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with no package" in {
     val field = Field(ctx, Seq(), "aField", tpeWithOutPkg)
-    GeneratorUtils.generateFieldDefinition(field) should be(s"${sharedPtr}<Type> aField;")
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<Type> aField;")
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with package" in {
     val field = Field(ctx, Seq(), "aField", tpeWithPkg)
-    GeneratorUtils.generateFieldDefinition(field) should be(s"${sharedPtr}<test::Type> aField;")
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<test::Type> aField;")
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with nested package" in {
     val field = Field(ctx, Seq(), "aField", tpeWithNestedPkg)
-    GeneratorUtils.generateFieldDefinition(field) should be(s"${sharedPtr}<test_a_b_c::Type> aField;")
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<test_a_b_c::Type> aField;")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with no param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Seq(), Seq())
-    GeneratorUtils.generateMethodDefinition(method) should be(s"${sharedPtr}<Type> aMethod();")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod();")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with one param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Seq(), Seq(Param(ctx, tpeWithPkg, "a")))
-    GeneratorUtils.generateMethodDefinition(method) should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with two param" in {
     val method = Method(ctx, "aMethod", tpeWithPkg, Seq(), Seq(Param(ctx, tpeWithOutPkg, "a"), Param(ctx, tpeWithNestedPkg, "b")))
-    GeneratorUtils.generateMethodDefinition(method) should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
   }
 
   "GeneratorUtils.generateIncludes" should "return empty C++ Includes for no scala Imports" in {
@@ -101,7 +101,6 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   "GeneratorUtils.generateIncludes" should "return correct C++ Include for a single scala Import" in {
     GeneratorUtils.generateIncludes(Seq(ImportStmt("", "Type", ""))) should be(
       """#include "Type.h"
-        |
         | """.stripMargin)
   }
 
@@ -109,7 +108,6 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
     GeneratorUtils.generateIncludes(Seq(ImportStmt("", "Type", ""), ImportStmt("", "Type2", ""))) should be(
       """#include "Type.h"
         |#include "Type2.h"
-        |
         | """.stripMargin)
   }
 

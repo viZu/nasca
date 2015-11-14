@@ -153,6 +153,9 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   private def checkBody(scope: TScope, body: Tree): Option[TType] = {
     body match {
       case b: Block => Some(checkBlock(scope, b))
+      case v: ValDef => Some(checkVal(scope, v))
+      case d: DefDef => Some(checkDef(scope, d))
+      case a: Assign => Some(checkAssign(scope, a))
       case a: Apply => Some(checkApply(scope, a))
       case s: Select => Some(checkSelect(scope, s))
       case i: Ident => Some(checkIdent(scope, i))
@@ -325,11 +328,49 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   }
 
   private def checkAssign(scope: TScope, a: Assign): TType = {
-    val identifier = TypeUtils.findIdentifier(scope, a.lhs.asInstanceOf[Ident])
-    if (!identifier.mutable) throw new TypeException(scope.currentFile, a.pos.line, "Reassignment to val")
-    scoped(scope, checkValOrDefBody(_: TScope, a.rhs, identifier.tpe))
+    // TODO a.lhs might be select or apply
+    val tpe = a.lhs match {
+      case i: Ident => handleIdentAssign(scope, i)
+      case _ => handleFieldAssign(scope, a.lhs)
+    }
+
+    scoped(scope, checkValOrDefBody(_: TScope, a.rhs, tpe))
 
     TypeUtils.unitType(scope)
+  }
+
+  private def handleIdentAssign(scope: TScope, i: Ident): TType = {
+    val identifier = TypeUtils.findIdentifier(scope, i)
+    if (!identifier.mutable) throw new TypeException(scope.currentFile, i.pos.line, "Reassignment to val")
+    identifier.tpe
+  }
+
+  private def handleFieldAssign(scope: TScope, t: Tree): TType = {
+    t match {
+      case s: Select => handleSelectFieldAssign(scope, s)
+    }
+  }
+
+  private def handleSelectFieldAssign(scope: TScope, s: Select): TType = {
+    def handleSelectFieldAssignAcc(subSelect: Select): Field = {
+      subSelect.qualifier match {
+        case t: This =>
+          TypeUtils.findField(scope, subSelect.name.toString, t.pos.line, scope.findThis())
+        case i: Ident =>
+          val tpe: TType = checkIdent(scope, i)
+          TypeUtils.findField(scope, subSelect.name.toString, i.pos.line, tpe)
+        case subS: Select =>
+          val f: Field = handleSelectFieldAssignAcc(subS)
+          TypeUtils.findField(scope, subSelect.name.toString, subS.pos.line, f.tpe)
+      }
+    }
+    val field = handleSelectFieldAssignAcc(s)
+    checkFieldAssign(scope, s, field)
+  }
+
+  private def checkFieldAssign(scope: TScope, t: Tree, f: Field): TType = {
+    if (!f.isMutable) throw new TypeException(scope.currentFile, t.pos.line, "Reassignment to val")
+    f.tpe
   }
 
   private def scoped(scope: TScope, f: TScope => Option[TType]) = {

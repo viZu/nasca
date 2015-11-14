@@ -60,18 +60,16 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       //ln(tree.toString())
       tree match {
         case c: ClassDef =>
+          handleEnterChildScope()
           tpe = enhanceClass(packageName, c)
         case m: ModuleDef =>
+          handleEnterChildScope()
           tpe = enhanceObject(packageName, m)
         case PackageDef(Ident(name), subtree) =>
           pkgBuilder.append(name.toString)
           super.traverse(tree)
         case i: Import =>
-          if (!scoped) {
-            currentScope = currentScope.enterScope()
-            currentScope.currentPackage = packageName
-            scoped = true
-          }
+          handleEnterChildScope()
           handleImport(i)
         case _ => super.traverse(tree)
       }
@@ -79,6 +77,14 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
     def packageName = {
       pkgBuilder.mkString(".")
+    }
+
+    private def handleEnterChildScope() = {
+      if (!scoped) {
+        currentScope = currentScope.enterScope()
+        currentScope.currentPackage = packageName
+        scoped = true
+      }
     }
   }
 

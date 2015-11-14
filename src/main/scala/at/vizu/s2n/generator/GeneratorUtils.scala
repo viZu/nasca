@@ -1,7 +1,7 @@
 package at.vizu.s2n.generator
 
 import at.vizu.s2n.types.result.ImportStmt
-import at.vizu.s2n.types.symbol.{Field, Method, TType, TypeUtils}
+import at.vizu.s2n.types.symbol._
 
 /**
   * Phil on 11.11.15.
@@ -24,38 +24,38 @@ object GeneratorUtils {
     simpleTypeName + ".cpp"
   }
 
-  def generateCppTypeName(tpe: TType): String = {
-    if (TypeUtils.isPrimitive(tpe)) getPrimitiveName(tpe)
+  def generateCppTypeName(baseTypes: BaseTypes, tpe: TType): String = {
+    if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else generateSmartPtr(tpe)
   }
 
+  def getCppTypeName(baseTypes: BaseTypes, tpe: TType): String = {
+    if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
+    else getCppTypeName(tpe.pkg, tpe.simpleName)
+  }
   def generateSmartPtr(tpe: TType): String = s"${generateSmartPtr(tpe.pkg, tpe.simpleName)}"
 
   def generateSmartPtr(pkg: String, name: String): String = s"std::shared_ptr<${getCppTypeName(pkg, name)}>"
 
-  def getCppTypeName(tpe: TType): String = {
-    if (TypeUtils.isPrimitive(tpe)) getPrimitiveName(tpe)
-    else getCppTypeName(tpe.pkg, tpe.simpleName)
-  }
 
   def getCppTypeName(pkg: String, name: String): String = {
     if (pkg.isEmpty) name
     else pkg.replaceAll("\\.", "_") + "::" + name
   }
 
-  def generateConstructorDefinition(m: Method, typeName: String): String = {
-    val paramStrings: String = m.params.map(p => getCppTypeName(p.tpe)).mkString(", ")
+  def generateConstructorDefinition(baseTypes: BaseTypes, m: Method, typeName: String): String = {
+    val paramStrings: String = m.params.map(p => getCppTypeName(baseTypes, p.tpe)).mkString(", ")
     s"  $typeName($paramStrings);"
   }
 
-  def generateMethodDefinition(m: Method): String = {
-    val tpeName = generateCppTypeName(m.returnType)
-    val params = m.params.map(p => generateCppTypeName(p.tpe)).mkString(", ")
+  def generateMethodDefinition(baseTypes: BaseTypes, m: Method): String = {
+    val tpeName = generateCppTypeName(baseTypes, m.returnType)
+    val params = m.params.map(p => generateCppTypeName(baseTypes, p.tpe)).mkString(", ")
     s"  $tpeName ${m.name}($params);"
   }
 
-  def generateFieldDefinition(f: Field): String = {
-    s"  ${generateCppTypeName(f.tpe)} ${f.name};"
+  def generateFieldDefinition(baseTypes: BaseTypes, f: Field): String = {
+    s"  ${generateCppTypeName(baseTypes, f.tpe)} ${f.name};"
   }
 
   def generateIncludes(imports: Seq[ImportStmt]): String = {

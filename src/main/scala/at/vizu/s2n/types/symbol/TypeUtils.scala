@@ -104,7 +104,7 @@ object TypeUtils {
 
   private def findTypeForInteger(i: Integer): String = {
     if (i >= -128 && i <= 127) {
-      "scala.Byte"
+      "scala.Short" // C++ does not have a byte datatype
     } else if (i >= -32768 && i <= 32767) {
       "scala.Short"
     } else {
@@ -165,14 +165,18 @@ object TypeUtils {
    * Fields
    */
 
-  def findField(scope: TScope, v: ValDef, onType: TType = null) = {
-    def throwFieldNotFound(fieldName: String): Nothing = {
-      val msg = s"field $fieldName not found"
-      throw new TypeException(scope.currentFile, v.pos.line, msg)
+  def findField(scope: TScope, v: ValDef, onType: TType = null): Field = {
+    val fieldName: String = v.name.toString
+    findField(scope, fieldName, v.pos.line, onType)
+  }
+
+  def findField(scope: TScope, fieldName: String, line: Int, onType: TType): Field = {
+    def throwFieldNotFound(fieldName: String, tpe: TType): Nothing = {
+      val msg = s"value $fieldName is not a member of type ${tpe.name}"
+      throw new TypeException(scope.currentFile, line, msg)
     }
     val tpe: TType = if (onType == null) scope.findThis() else onType
-    val fieldName: String = v.name.toString
-    tpe.findField(fieldName) getOrElse throwFieldNotFound(fieldName)
+    tpe.findField(fieldName) getOrElse throwFieldNotFound(fieldName, tpe)
   }
 
   def isConstructor(methodName: String): Boolean = {
@@ -249,12 +253,5 @@ object TypeUtils {
       nullTpe = scope.findClass("scala.Null").get
     }
     nullTpe
-  }
-
-  val primitives = Set("scala.Boolean", "scala.Byte", "scala.Short", "scala.Char", "scala.Int", "scala.Long",
-    "scala.Float", "scala.Double")
-
-  def isPrimitive(tpe: TType): Boolean = {
-    primitives.contains(tpe.name)
   }
 }

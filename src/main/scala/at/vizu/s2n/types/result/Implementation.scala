@@ -1,6 +1,6 @@
 package at.vizu.s2n.types.result
 
-import at.vizu.s2n.types.symbol.TScope
+import at.vizu.s2n.types.symbol.TType
 
 /**
  * Phil on 06.11.15.
@@ -9,7 +9,6 @@ import at.vizu.s2n.types.symbol.TScope
  */
 trait Implementation {
 
-  def generateSource(scope: TScope, packageName: String, imports: Seq[ImportStmt]): (String, String)
+  def tpe: TType
 
-  def generateHeader(packageName: String, imports: Seq[ImportStmt]): (String, String)
 }
