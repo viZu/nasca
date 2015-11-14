@@ -23,7 +23,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
 
   private def readFileContents(files: Seq[Path]) = {
     val pathStrings: Seq[String] = files.map(_.toString)
-    println(s"Reading file contents: $pathStrings")
+    println( s"""Reading file contents: ${pathStrings.mkString(",")}""")
     pathStrings.zip(ScalaFiles.readFiles(files))
   }
 
