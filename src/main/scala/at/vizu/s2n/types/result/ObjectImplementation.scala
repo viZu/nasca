@@ -7,4 +7,6 @@ import scala.reflect.runtime.universe._
 /**
  * Phil on 06.11.15.
  */
-case class ObjectImplementation(module: ModuleDef, tpe: TType) extends ReflectImplementation
+case class ObjectImplementation(module: ModuleDef, tpe: TType) extends ReflectImplementation {
+  override def tree: ImplDef = module
+}

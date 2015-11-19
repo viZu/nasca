@@ -89,8 +89,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   }
 
   private def handleImport(i: Import) = {
-    i.selectors.filter(s => s.name.toString != s.rename.toString)
-      .foreach(s => addTypeAlias(i.expr.toString(), s, i.pos.line))
+    i.selectors.foreach(s => addTypeAlias(i.expr.toString(), s, i.pos.line))
   }
 
   private def addTypeAlias(pkgName: String, selector: ImportSelector, line: Int): Unit = {
@@ -122,7 +121,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       .orElse(throw new scala.RuntimeException(s"No type with name $className found")).get
 
     val traverser = new ClassMemberTraverser(m.impl)
-    traverser.buildMembers
+    traverser.buildMembers()
     traverser.fields.foreach(tpe.addField)
     traverser.methods.foreach(tpe.addMethod)
     traverser.parents.foreach(tpe.addParent)

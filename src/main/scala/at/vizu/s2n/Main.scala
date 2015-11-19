@@ -21,7 +21,7 @@ object Main {
       case iae: IllegalArgumentException => System.exit(0)
       case te: TypeException =>
         Console.err.println(te.formattedMessage)
-        te.printStackTrace()
+      //te.printStackTrace()
       case tb: ToolBoxError =>
         Console.err.println(tb.message)
 

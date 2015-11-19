@@ -1,5 +1,6 @@
 package at.vizu.s2n.generator
 
+import at.vizu.s2n.generator.handles.FieldInitializerHandle
 import at.vizu.s2n.types.result.ImportStmt
 import at.vizu.s2n.types.symbol._
 
@@ -7,6 +8,10 @@ import at.vizu.s2n.types.symbol._
   * Phil on 11.11.15.
   */
 object GeneratorUtils {
+
+  def getNameSpace(packageName: String): String = {
+    packageName.replaceAll("\\.", "_")
+  }
 
   def getHeaderFileName(tpe: TType): String = {
     getHeaderFileName(tpe.simpleName)
@@ -33,6 +38,7 @@ object GeneratorUtils {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else getCppTypeName(tpe.pkg, tpe.simpleName)
   }
+
   def generateSmartPtr(tpe: TType): String = s"${generateSmartPtr(tpe.pkg, tpe.simpleName)}"
 
   def generateSmartPtr(pkg: String, name: String): String = s"std::shared_ptr<${getCppTypeName(pkg, name)}>"
@@ -50,12 +56,22 @@ object GeneratorUtils {
 
   def generateMethodDefinition(baseTypes: BaseTypes, m: Method): String = {
     val tpeName = generateCppTypeName(baseTypes, m.returnType)
-    val params = m.params.map(p => generateCppTypeName(baseTypes, p.tpe)).mkString(", ")
+    val params = generateParamsString(baseTypes, m.params)
     s"  $tpeName ${m.name}($params);"
   }
 
+  def generateParamsString(baseTypes: BaseTypes, params: Seq[Param], withVars: Boolean = false) = {
+    params.map(p => {
+      generateCppTypeName(baseTypes, p.tpe) + (if (withVars) s" ${p.name}" else "")
+    }).mkString(", ")
+  }
+
   def generateFieldDefinition(baseTypes: BaseTypes, f: Field): String = {
-    s"  ${generateCppTypeName(baseTypes, f.tpe)} ${f.name};"
+    s"  ${generateCppTypeName(baseTypes, f.tpe)} ${f.name}"
+  }
+
+  def generateFieldInitializer(handle: FieldInitializerHandle): String = {
+    s" = ${handle.content};"
   }
 
   def generateIncludes(imports: Seq[ImportStmt]): String = {

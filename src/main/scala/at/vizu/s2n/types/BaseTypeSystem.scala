@@ -9,9 +9,9 @@ import at.vizu.s2n.types.symbol.TScope
  */
 class BaseTypeSystem(typeSystemInitializer: TypeSystemInitializer, typeChecker: ReflectTypeChecker) extends TypeSystem {
 
-  override def checkTrees(trees: Seq[AST]): Seq[ScalaFileWrapper] = {
+  override def checkTrees(trees: Seq[AST]): (TScope, Seq[ScalaFileWrapper]) = {
     val rootScope: TScope = typeSystemInitializer.initTypeSystem(trees)
-    trees.map(typeChecker.checkTypes(rootScope, _))
+    (rootScope, trees.map(typeChecker.checkTypes(rootScope, _)))
   }
 
 }

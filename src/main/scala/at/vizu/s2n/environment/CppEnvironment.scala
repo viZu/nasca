@@ -7,7 +7,6 @@ import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.Generator
 import at.vizu.s2n.parser.{AST, Parser}
 import at.vizu.s2n.types.TypeSystem
-import at.vizu.s2n.types.result.ScalaFileWrapper
 
 /**
  * Phil on 06.11.15.
@@ -17,8 +16,8 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
   override def compile(args: Arguments): Unit = {
     val contents: Seq[(String, String)] = readFileContents(args.files)
     val trees: Seq[AST] = parser.parseContents(contents)
-    val fileContents: Seq[ScalaFileWrapper] = typeSystem.checkTrees(trees)
-    generator.generateCode(args, fileContents)
+    val (scope, fileContents) = typeSystem.checkTrees(trees)
+    generator.generateCode(args, scope, fileContents)
   }
 
   private def readFileContents(files: Seq[Path]) = {

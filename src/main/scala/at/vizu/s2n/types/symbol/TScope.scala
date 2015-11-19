@@ -34,6 +34,9 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     this._currentFile.map(s => s).orElse(parent.flatMap(_.findCurrentFile))
   }
 
+  // TODO: Optimize?
+  def isEmptyScope(): Boolean = (_types ++ _objects ++ _identifiers ++ _methods).isEmpty
+
   def enterScope(): TScope = TScope(this)
 
   def enterScope(_this: TType): TScope = TScope(this, _this)
