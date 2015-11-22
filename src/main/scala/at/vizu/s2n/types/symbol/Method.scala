@@ -3,7 +3,8 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 07.10.15.
  */
-case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Seq(), constructor: Boolean = false)
+case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Seq(),
+                  constructor: Boolean = false, instanceMethod: Boolean = true)
   extends Modifiable with Nameable {
 
   def checkArgs(argsToCheck: Seq[TType]) = {

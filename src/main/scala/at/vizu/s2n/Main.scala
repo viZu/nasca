@@ -4,8 +4,6 @@ import at.vizu.s2n.args.ArgumentsParser
 import at.vizu.s2n.environment.Environments
 import at.vizu.s2n.exception.{ArgumentException, TypeException}
 
-import scala.tools.reflect.ToolBoxError
-
 /**
 *  Phil on 21.09.15.
 */
@@ -21,7 +19,7 @@ object Main {
       case iae: IllegalArgumentException => System.exit(0)
       case te: TypeException =>
         Console.err.println(te.formattedMessage)
-      //te.printStackTrace()
+        te.printStackTrace()
       case tb: ToolBoxError =>
         Console.err.println(tb.message)
 

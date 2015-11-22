@@ -14,8 +14,8 @@ object TypeUtils {
   private var nullTpe: TType = null
 
   /**
-   * Modifiers
-   */
+    * Modifiers
+    */
 
   def getModifiers(mods: Modifiers): Seq[Modifier] = {
     var modifiers: List[Modifier] = List[Modifier]()
@@ -66,8 +66,8 @@ object TypeUtils {
   }
 
   /**
-   * Types
-   */
+    * Types
+    */
 
   def findType(scope: TScope, typeTree: Tree): TType = {
     def throwTypeNotFound(typeName: String): Nothing = {
@@ -91,6 +91,7 @@ object TypeUtils {
   private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
     val tpeString = literal.value.value match {
       case i: Integer => findTypeForInteger(i)
+      case l: java.lang.Long => "scala.Long"
       case s: String => "scala.String"
       case d: java.lang.Double => "scala.Double"
       case b: java.lang.Boolean => "scala.Boolean"
@@ -118,8 +119,8 @@ object TypeUtils {
   }
 
   /**
-   * Methods
-   */
+    * Methods
+    */
 
   def findMethodForDef(scope: TScope, defdef: DefDef, onType: TType = null): Method = {
     val args: List[TType] = defdef.vparamss.head.map {
@@ -144,7 +145,7 @@ object TypeUtils {
     tpe.findMethod(name, args) getOrElse throwMethodNotFound(name)
   }
 
-  def createMethod(scope: TScope, d: DefDef): Method = {
+  def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val params: List[Param] = d.vparamss.head.map {
       case v: ValDef =>
@@ -158,12 +159,16 @@ object TypeUtils {
       throw new TypeException(ctx.fileName, ctx.line, s"A return type for Method $methodName is required ")
     }
     //TODO check if Method exists in current scope
-    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, isConstructor(methodName))
+    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, isConstructor(methodName), instanceMethod)
+  }
+
+  def addParamsToScope(scope: TScope, params: Seq[Param]) = {
+    params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
   }
 
   /**
-   * Fields
-   */
+    * Fields
+    */
 
   def findField(scope: TScope, v: ValDef, onType: TType = null): Field = {
     val fieldName: String = v.name.toString
@@ -193,8 +198,8 @@ object TypeUtils {
   }
 
   /**
-   * Identifier
-   */
+    * Identifier
+    */
 
   def findIdentifier(scope: TScope, i: Ident): Identifier = {
     def throwIdentifierNotFound(identName: String): Nothing = {
@@ -213,6 +218,42 @@ object TypeUtils {
       scope.add(Identifier(Context(scope.currentFile, v.pos.line), v.name.toString, tpe, v.mods.hasFlag(Flag.MUTABLE)))
     } else {
       throw new TypeException(scope.currentFile, v.pos.line, s"$name is already defined as value $name")
+    }
+  }
+
+  /**
+    * Member
+    */
+
+  def findIdent(scope: TScope, name: String, onType: TType = null): (Any) = {
+    scope.findMethod(name, Seq()) match {
+      case Some(m) => m
+      case None =>
+        scope.findIdentifier(name) match {
+          case Some(ident) => ident
+          case None =>
+            val tpe = if (onType != null) onType else scope.findThis()
+            tpe.findMethod(name, Seq()) match {
+              case Some(tMethod) => tMethod
+              case None =>
+                tpe.findField(name) match {
+                  case Some(tField) => tField
+                  case None => throw new RuntimeException("Todo")
+                }
+            }
+        }
+    }
+  }
+
+  def findMember(scope: TScope, name: String, onType: TType = null): Modifiable = {
+    val tpe = if (onType == null) scope.findThis() else onType
+    tpe.findMethod(name, Seq()) match {
+      case Some(tMethod) => tMethod
+      case None =>
+        tpe.findField(name) match {
+          case Some(tField) => tField
+          case None => throw new RuntimeException("Todo")
+        }
     }
   }
 

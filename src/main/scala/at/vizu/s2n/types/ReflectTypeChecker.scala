@@ -121,7 +121,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     if (!method.constructor && !method.isAbstract) {
       val expected: TType = TypeUtils.findType(scope, d.tpt)
       scoped(scope, (s: TScope) => {
-        addParamsToScope(s, method.params)
+        TypeUtils.addParamsToScope(s, method.params)
         checkValOrDefBody(s, d.rhs, expected)
       })
     }
@@ -136,10 +136,6 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
       throw new TypeException(scope.currentFile, line, msg)
     }
-  }
-
-  private def addParamsToScope(scope: TScope, params: Seq[Param]) = {
-    params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
   }
 
   private def checkValOrDefBody(scope: TScope, body: Tree, expectedType: TType): Option[TType] = {
@@ -277,7 +273,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
     val m: Method = TypeUtils.createMethod(scope, d)
     scoped(scope, (s: TScope) => {
-      addParamsToScope(s, m.params)
+      TypeUtils.addParamsToScope(s, m.params)
       checkValOrDefBody(s, d.rhs, expected)
     })
     scope.addMethod(m)

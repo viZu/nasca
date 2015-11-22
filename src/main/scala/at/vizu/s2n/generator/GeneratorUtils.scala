@@ -1,6 +1,6 @@
 package at.vizu.s2n.generator
 
-import at.vizu.s2n.generator.handles.FieldInitializerHandle
+import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle}
 import at.vizu.s2n.types.result.ImportStmt
 import at.vizu.s2n.types.symbol._
 
@@ -67,7 +67,8 @@ object GeneratorUtils {
   }
 
   def generateFieldDefinition(baseTypes: BaseTypes, f: Field): String = {
-    s"  ${generateCppTypeName(baseTypes, f.tpe)} ${f.name}"
+    val const = if (f.isMutable) "" else "const "
+    s"  $const${generateCppTypeName(baseTypes, f.tpe)} ${f.name}"
   }
 
   def generateFieldInitializer(handle: FieldInitializerHandle): String = {
@@ -84,9 +85,19 @@ object GeneratorUtils {
     }
   }
 
+  def generateScopeMethod(methodName: String): String = {
+    s"$methodName()"
+  }
+
   val primitiveNames = Map("String" -> "std::string", "Boolean" -> "bool", "Unit" -> "void")
 
   def getPrimitiveName(primitive: TType): String = {
     primitiveNames.getOrElse(primitive.simpleName, primitive.simpleName.toLowerCase)
+  }
+
+  def mergeGeneratorContexts(seq: Seq[GeneratorContext], seperator: String = "\n", endsWith: String = ""): GeneratorContext = {
+    val content: String = seq.filter(_.definedContent).map(_.content).mkString(seperator) + endsWith // remove empty contents
+    val handles: Seq[GeneratorHandle] = seq.flatMap(_.handles)
+    GeneratorContext(content, handles)
   }
 }

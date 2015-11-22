@@ -7,6 +7,14 @@ import at.vizu.s2n.generator.handles.GeneratorHandle
   */
 case class GeneratorContext(content: String = "", handles: Seq[GeneratorHandle] = Seq()) {
 
+  def emptyContent = content.trim.isEmpty
+
+  def definedContent = !emptyContent
+
+  def removeContent() = GeneratorContext(handles = this.handles)
+
+  def removeContent(handlesToAdd: Seq[GeneratorHandle]) = GeneratorContext(handles = this.handles ++ handlesToAdd)
+
   def enhance(content: String, handles: Seq[GeneratorHandle] = Seq()) = GeneratorContext(content, this.handles ++ handles)
 
   def enhance(handles: Seq[GeneratorHandle]) = GeneratorContext(content, this.handles ++ handles)

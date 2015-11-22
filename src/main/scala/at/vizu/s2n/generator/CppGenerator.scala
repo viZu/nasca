@@ -13,14 +13,9 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
 
   override def generateCode(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]): Unit = {
     println("Generating C++ files...")
-    val generatorPairs = getGeneratorTuples(scope, fileContents)
+    val generatorPairs = getGeneratorPairs(scope, fileContents)
     generatorPairs.foreach(tuple => invokeGenerators(args, tuple._1, tuple._2))
 
-    //    println("Generating header files...")
-    //    generateHeaders(args, fileContents)
-    //
-    //    println("Generating source files...")
-    //    generateSourceFiles(args, scope, fileContents)
     ???
   }
 
@@ -30,7 +25,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
     headerGenerator.generateHeaderFile(args, handles)
   }
 
-  def getGeneratorTuples(scope: TScope, fileContents: Seq[ScalaFileWrapper]): Seq[GeneratorPair] = {
+  def getGeneratorPairs(scope: TScope, fileContents: Seq[ScalaFileWrapper]): Seq[GeneratorPair] = {
     fileContents.flatMap(c => {
       c.impls.map({
         case oi: ObjectImplementation =>
@@ -54,39 +49,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
     imports.foreach(i => {
       classScope.addTypeAlias(i.rename, i.pkg + "." + i.name)
     })
+    classScope.addTypeAlias(impl.tpe.simpleName, impl.tpe.name)
     new SourceFileGeneratorImpl(baseTypes, classScope, impl)
   }
-
-  //  def generateHeaders(args: Arguments, fileContents: Seq[ScalaFileWrapper]) = {
-  //    val generators: Seq[HeaderFileGenerator] = getHeaderGenerators(fileContents)
-  //    generators.foreach(_.generateHeaderFile(args))
-  //  }
-  //
-  //  def getHeaderGenerators(fileContents: Seq[ScalaFileWrapper]) = {
-  //    fileContents.flatMap(c => {
-  //      c.impls.map({
-  //        case oi: ObjectImplementation => new ObjectHeaderFileGenerator(baseTypes, c.pkg, c.imports, oi)
-  //        case ci: ClassImplementation => new ClassHeaderFileGenerator(baseTypes, c.pkg, c.imports, ci)
-  //      })
-  //    })
-  //  }
-  //
-  //  def generateSourceFiles(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
-  //    val generators = getSourceGenerators(scope, fileContents)
-  //    generators.foreach(_.generateSourceFile(args))
-  //  }
-  //
-  //  def getSourceGenerators(scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
-  //    fileContents.flatMap(c => {
-  //      c.impls.map(i => {
-  //        val classScope: TScope = scope.enterScope(i.tpe)
-  //        c.imports.foreach(imp => {
-  //          classScope.addTypeAlias(imp.rename, imp.pkg + "." + imp.name)
-  //        })
-  //        new SourceFileGeneratorImpl(baseTypes, classScope, i)
-  //      })
-  //    })
-  //  }
-
-
 }

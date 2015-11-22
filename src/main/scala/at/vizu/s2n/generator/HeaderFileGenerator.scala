@@ -93,8 +93,7 @@ trait HeaderFileGenerator {
          |
          |$body
          |}""".stripMargin
-    }
-    else body
+    } else body
   }
 
   protected def groupMember() = {

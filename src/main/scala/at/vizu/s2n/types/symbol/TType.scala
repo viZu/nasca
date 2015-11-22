@@ -7,7 +7,7 @@ import at.vizu.s2n.exception.TypeException
  */
 
 case class TType(ctx: Context = Context("", 0), simpleName: String,
-                 pkg: String = "", mods: Seq[Modifier] = Seq()) extends Modifiable with Nameable {
+                 pkg: String = "", mods: Seq[Modifier] = Seq(), isObject: Boolean = false) extends Modifiable with Nameable {
 
   private var _methods: Seq[Method] = Seq()
   private var _fields: Seq[Field] = Seq()

@@ -21,17 +21,7 @@ case class MethodDefinitionHandle(method: Method) extends GeneratorHandle {
   def key = method.name
 }
 
-case class MethodHandle(name: String, paramsString: String, body: String) extends GeneratorHandle {
+case class MethodHandle(content: String) extends GeneratorHandle {
 
-
-  var methodNamePrepend = ""
-
-  def fullName = methodNamePrepend + "$$" + name
-
-  def key = name
-
-  def content: String = {
-    s"""$fullName($paramsString) $body"""
-  }
-
+  def key = ""
 }
