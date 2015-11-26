@@ -7,6 +7,10 @@ import at.vizu.s2n.generator.handles.GeneratorHandle
   */
 case class GeneratorContext(content: String = "", handles: Seq[GeneratorHandle] = Seq()) {
 
+  def isEmpty = emptyContent && handles.isEmpty
+
+  def isNonEmpty = !isEmpty
+
   def emptyContent = content.trim.isEmpty
 
   def definedContent = !emptyContent

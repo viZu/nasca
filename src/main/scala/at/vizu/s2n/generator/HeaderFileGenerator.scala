@@ -83,7 +83,7 @@ trait HeaderFileGenerator {
   protected def generateFieldDefinition(baseTypes: BaseTypes, field: Field) = {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
-      .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(";")
+      .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
   }
 
   protected def wrapBodyWithNamespace(pkg: String, body: String): String = {
@@ -97,8 +97,8 @@ trait HeaderFileGenerator {
   }
 
   protected def groupMember() = {
-    val methodsDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
-    val member: Seq[Modifiable] = selfType.methods ++ selfType.fields ++ methodsDefinitions
+    val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
+    val member: Seq[Modifiable] = selfType.methods ++ selfType.fields ++ methodDefinitions
     member.groupBy(_.visibility)
   }
 

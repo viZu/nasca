@@ -1,5 +1,5 @@
 package at.vizu.s2n.generator
-package path
+package expression
 
 import at.vizu.s2n.generator._
 import at.vizu.s2n.scala.reflect.api.InlineBlock

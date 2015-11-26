@@ -2,8 +2,8 @@ package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
+import at.vizu.s2n.generator.expression.Expression
 import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, MethodDefinitionHandle, MethodHandle}
-import at.vizu.s2n.generator.path.Expression
 import at.vizu.s2n.types.result.Implementation
 import at.vizu.s2n.types.symbol._
 
@@ -13,6 +13,8 @@ import scala.reflect.runtime.universe._
   * Phil on 12.11.15.
   */
 class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, implementation: Implementation) extends SourceFileGenerator {
+
+  lazy val classInitMethodName = "__init__class__" + implementation.tpe.simpleName
 
   def tpe = implementation.tpe
 
@@ -45,11 +47,17 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   }
 
   private def generateMember(scope: TScope): GeneratorContext = {
-    val members: List[GeneratorContext] = implementation.tree.impl.body.map({
+    val (memberTrees, constructorContent) = implementation.tree.impl.body.partition({
+      case v: ValOrDefDef => true
+      case _ => false
+    })
+
+    val initCtx: GeneratorContext = generateContructorInit(scope, constructorContent)
+
+    val members = (memberTrees.map({
       case d: DefDef => generateMethod(scope, d)
       case v: ValDef => generateField(scope, v)
-      case _ => null
-    }).filter(_ != null)
+    }) :+ initCtx).filter(_.isNonEmpty)
     GeneratorUtils.mergeGeneratorContexts(members, "\n\n") // remove unhandled member and contexts
   }
 
@@ -70,8 +78,9 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   private def generateFieldBody(scope: TScope, body: Tree, field: Field): GeneratorContext = {
     body match {
       case b: Block => generateInitMethod(scope, b, field.name, field.tpe).removeContent()
-      case _@s =>
-        val expr: Expression = Expression(_baseTypes, scope, s)
+      case EmptyTree => GeneratorContext()
+      case _ =>
+        val expr: Expression = Expression(_baseTypes, scope, body)
         val expression: GeneratorContext = generateExpression(scope, expr, returnable = false)
         val handle: GeneratorHandle = FieldInitializerHandle(field.name, expression.content)
         GeneratorContext(handles = Seq(handle))
@@ -131,29 +140,23 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   //    }
   //  }
 
-  //  private def generateLabelDef(scope: TScope, l: LabelDef): GeneratorContext = {
-  //    Expression(_baseTypes, scope, l).generate
-  //    l match {
-  //      case LabelDef(n, _, If(cond, body, _)) => generateWhile(scope, cond, body)
-  //      case LabelDef(n, _, Block(body, If(cond, _, _))) => generateDoWhile(scope, cond, body)
-  //    }
-  //  }
-
-  //  private def generateWhile(scope: TScope, cond: Tree, body: Tree): GeneratorContext = {
-  //    val bodyContext: GeneratorContext = forceGenerateBlock(scope, body)
-  //    val condition = cond.toString() // TODO generate condition
-  //    bodyContext.enhance(s"while($condition) $bodyContext")
-  //  }
-  //
-  //  private def generateDoWhile(scope: TScope, cond: Tree, bodyList: List[Tree]): GeneratorContext = {
-  //    val bodyContext = forceGenerateListBlock(scope, bodyList)
-  //    val condition = cond.toString() // TODO generate condition
-  //    bodyContext.enhance(s"do ${bodyContext.content} while ($condition)")
-  //  }
-
-  private def generateConstructorContent(): String = {
-    ""
+  private def generateContructorInit(scope: TScope, constructorContent: List[Tree]): GeneratorContext = {
+    constructorContent match {
+      case Nil => generateConstructorInitBlock(scope, Expression.wrapInBlock(EmptyTree))
+      case _ =>
+        val block: Block = Expression.wrapInBlock(constructorContent)
+        generateConstructorInitBlock(scope, block)
+    }
   }
+
+  private def generateConstructorInitBlock(scope: TScope, body: Block) = {
+    val mdHandle = generateInitMethodHandle(classInitMethodName, _baseTypes.unit)
+    val methodCtx = generateMethod(scope, body, _baseTypes.unit, classInitMethodName)
+    val mHandle = MethodHandle(methodCtx.content)
+
+    methodCtx.enhance("", Seq(mHandle, mdHandle))
+  }
+
 
   private def scoped(parentScope: TScope, f: TScope => GeneratorContext): GeneratorContext = {
     val childScope: TScope = parentScope.enterScope()

@@ -142,8 +142,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       }
       t.body.foreach {
         case d: DefDef => methods += createMethod(d)
-        case v: ValDef =>
-          fields += createField(v)
+        case v: ValDef => fields += createField(v)
         case _@rest => println("TemplateTraverser: " + rest.getClass.getName)
       }
     }

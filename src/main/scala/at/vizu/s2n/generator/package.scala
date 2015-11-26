@@ -1,6 +1,6 @@
 package at.vizu.s2n
 
-import at.vizu.s2n.generator.path.Expression
+import at.vizu.s2n.generator.expression.Expression
 
 /**
   * Phil on 20.11.15.
@@ -18,7 +18,7 @@ package object generator {
 
   private def generateGeneratorCtx(expr: Expression): GeneratorContext = {
     val ctx = expr.generate
-    if (expr.skipSemiColon) ctx
+    if (expr.skipSemiColon || ctx.content.endsWith(";")) ctx
     else ctx.enhance(ctx.content + ";")
   }
 

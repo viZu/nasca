@@ -27,7 +27,8 @@ object TypeUtils {
         //TODO which package?
         modifiers = PackagePrivate :: modifiers
       }
-      if (mods.hasFlag(Flag.PRIVATE)) {
+      if (mods.hasFlag(Flag.PRIVATE) && !mods.hasFlag(Flag.PARAMACCESSOR)) {
+        // TODO PARAMACCESSOR -> generate Getter/Setter?
         modifiers = Private :: modifiers
       }
       if (mods.hasFlag(Flag.PROTECTED)) {
