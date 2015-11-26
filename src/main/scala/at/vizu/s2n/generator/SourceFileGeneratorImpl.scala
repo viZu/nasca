@@ -2,7 +2,7 @@ package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
-import at.vizu.s2n.generator.expression.Expression
+import at.vizu.s2n.generator.expression.{ConstructorExpression, Expression}
 import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, MethodDefinitionHandle, MethodHandle}
 import at.vizu.s2n.types.result.Implementation
 import at.vizu.s2n.types.symbol._
@@ -63,11 +63,16 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
 
   private def generateMethod(scope: TScope, d: DefDef): GeneratorContext = {
     val method: Method = TypeUtils.findMethodForDef(scope, d)
-    if (method.constructor) return GeneratorContext()
-    scoped(scope, (s: TScope) => {
-      TypeUtils.addParamsToScope(s, method.params)
-      generateMethod(s, d.rhs, method.returnType, method.name, method.params)
-    })
+    if (method.constructor) generateConstructor(scope, method)
+    else
+      scoped(scope, (s: TScope) => {
+        TypeUtils.addParamsToScope(s, method.params)
+        generateMethod(s, d.rhs, method.returnType, method.name, method.params)
+      })
+  }
+
+  private def generateConstructor(scope: TScope, method: Method): GeneratorContext = {
+    ConstructorExpression(_baseTypes, method, classInitMethodName).generate
   }
 
   private def generateField(scope: TScope, v: ValDef): GeneratorContext = {
