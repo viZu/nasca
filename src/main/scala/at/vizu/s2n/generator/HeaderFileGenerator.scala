@@ -76,11 +76,11 @@ trait HeaderFileGenerator {
       case m: Method =>
         if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
         else GeneratorUtils.generateMethodDefinition(baseTypes, m)
-      case f: Field => generateMethodDefinition(baseTypes, f)
+      case f: Field => generateFieldDefinition(baseTypes, f)
     }
   }
 
-  protected def generateMethodDefinition(baseTypes: BaseTypes, field: Field) = {
+  protected def generateFieldDefinition(baseTypes: BaseTypes, field: Field) = {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(";")

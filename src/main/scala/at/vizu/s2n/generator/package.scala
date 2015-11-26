@@ -12,7 +12,14 @@ package object generator {
   implicit def stringToGeneratorContext(str: String): GeneratorContext = GeneratorContext(str)
 
   def generateExpressionChain(path: Path, seperator: String = "", endsWith: String = ""): GeneratorContext = {
-    GeneratorUtils.mergeGeneratorContexts(path.map(_.generate), "")
+    //val endsW = if(path.isEmpty || path.last.skipSemiColon) endsWith else endsWith + ";"
+    GeneratorUtils.mergeGeneratorContexts(path.map(generateGeneratorCtx), seperator, endsWith)
+  }
+
+  private def generateGeneratorCtx(expr: Expression): GeneratorContext = {
+    val ctx = expr.generate
+    if (expr.skipSemiColon) ctx
+    else ctx.enhance(ctx.content + ";")
   }
 
 }

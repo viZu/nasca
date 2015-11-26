@@ -4,6 +4,8 @@ import at.vizu.s2n.args.ArgumentsParser
 import at.vizu.s2n.environment.Environments
 import at.vizu.s2n.exception.{ArgumentException, TypeException}
 
+import _root_.scala.tools.reflect.ToolBoxError
+
 /**
 *  Phil on 21.09.15.
 */

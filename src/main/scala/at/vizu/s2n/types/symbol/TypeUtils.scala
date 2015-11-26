@@ -104,6 +104,7 @@ object TypeUtils {
   }
 
   private def findTypeForInteger(i: Integer): String = {
+    //TODO: if the given integer is forced to be a short -> return short, else -> return Int
     if (i >= -128 && i <= 127) {
       "scala.Short" // C++ does not have a byte datatype
     } else if (i >= -32768 && i <= 32767) {

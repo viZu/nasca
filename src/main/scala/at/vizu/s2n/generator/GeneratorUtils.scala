@@ -95,8 +95,10 @@ object GeneratorUtils {
     primitiveNames.getOrElse(primitive.simpleName, primitive.simpleName.toLowerCase)
   }
 
-  def mergeGeneratorContexts(seq: Seq[GeneratorContext], seperator: String = "\n", endsWith: String = ""): GeneratorContext = {
-    val content: String = seq.filter(_.definedContent).map(_.content).mkString(seperator) + endsWith // remove empty contents
+  def mergeGeneratorContexts(seq: Seq[GeneratorContext], seperator: String = "\n",
+                             endsWith: String = "", givenContent: String = null): GeneratorContext = {
+    val content: String = if (givenContent != null) givenContent
+    else seq.filter(_.definedContent).map(expr => expr.content).mkString(seperator) + endsWith // remove empty contents
     val handles: Seq[GeneratorHandle] = seq.flatMap(_.handles)
     GeneratorContext(content, handles)
   }
