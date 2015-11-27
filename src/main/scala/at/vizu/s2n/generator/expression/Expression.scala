@@ -17,6 +17,11 @@ trait Expression {
 
   def generate: GeneratorContext
 
+  def generateReturn: GeneratorContext = {
+    val g = generate
+    g.enhance("return " + g.content)
+  }
+
   def skipSemiColon: Boolean
 }
 
@@ -359,6 +364,8 @@ case class InlineDefExpression(baseTypes: BaseTypes, method: Method, body: BaseB
   }
 
   override def skipSemiColon: Boolean = false
+
+  override def generateReturn: GeneratorContext = generate
 }
 
 case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMethodName: String) extends Expression {
@@ -393,6 +400,8 @@ case class ValDefExpression(baseTypes: BaseTypes, varName: String, rhs: Expressi
   }
 
   override def skipSemiColon: Boolean = false
+
+  override def generateReturn: GeneratorContext = generate
 }
 
 case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression {
@@ -406,6 +415,8 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
   }
 
   override def skipSemiColon: Boolean = false
+
+  override def generateReturn: GeneratorContext = generate
 }
 
 case class WhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Expression) extends Expression {
@@ -419,6 +430,8 @@ case class WhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Exp
   }
 
   override def skipSemiColon: Boolean = true
+
+  override def generateReturn: GeneratorContext = generate
 }
 
 case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Expression) extends Expression {
@@ -432,6 +445,8 @@ case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: E
   }
 
   override def skipSemiColon: Boolean = true
+
+  override def generateReturn: GeneratorContext = generate
 }
 
 case class ChainedExpression(path: Path) extends Expression {
@@ -448,4 +463,6 @@ case class EmptyExpression(unit: TType) extends Expression {
   override def generate: GeneratorContext = GeneratorContext()
 
   override def skipSemiColon: Boolean = true
+
+  override def generateReturn: GeneratorContext = generate
 }
