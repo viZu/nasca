@@ -449,6 +449,14 @@ case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: E
   override def generateReturn: GeneratorContext = generate
 }
 
+case class IfExpression(baseTypes: BaseTypes, condExpr: Expression, thenP: Expression, elseP: Expression) extends Expression {
+  override def prevTpe: TType = ???
+
+  override def generate: GeneratorContext = ???
+
+  override def skipSemiColon: Boolean = ???
+}
+
 case class ChainedExpression(path: Path) extends Expression {
   override def prevTpe: TType = path.last.prevTpe
 
