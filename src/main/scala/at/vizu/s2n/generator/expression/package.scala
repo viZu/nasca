@@ -10,4 +10,13 @@ package object expression {
     Seq(pathElement)
   }
 
+  val operatorMapping = Map("\\$plus" -> "+", "\\$less" -> "<", "\\$greater" -> ">", "\\$band" -> "!", "$eq" -> "=",
+    "\\$times" -> "*", "\\$amp" -> "&", "\\$bar" -> "|", "\\$div" -> "/", "\\$minus" -> "-",
+    "\\$percent" -> "%")
+
+  def prettifyOperator(op: String) = {
+    operatorMapping.foldLeft(op) {
+      case (tmp, (from, to)) => tmp.replaceAll(from, to)
+    }
+  }
 }

@@ -1,12 +1,12 @@
 package at.vizu.s2n.generator
 package expression
 
-import at.vizu.s2n.generator._
 import at.vizu.s2n.scala.reflect.api.InlineBlock
 import at.vizu.s2n.types.TypeInference
 import at.vizu.s2n.types.symbol._
 
 import scala.reflect.runtime.universe._
+import scala.runtime.BoxedUnit
 
 /**
   * Phil on 20.11.15.
@@ -47,6 +47,8 @@ object Expression {
       generateAssignExpression(baseTypes, scope, a)
     case l: LabelDef =>
       generateLabelDefExpression(baseTypes, scope, l)
+    case i: If =>
+      generateIfExpression(baseTypes, scope, i)
     case EmptyTree =>
       println("Empty Tree!")
       EmptyExpression(baseTypes.unit)
@@ -69,6 +71,7 @@ object Expression {
   def wrapInlineBlockIfBlock(t: Tree): Any = {
     t match {
       case b: Block => InlineBlock(b)
+      case i: If => InlineBlock(wrapInBlock(i))
       case _ => t
     }
   }
@@ -130,6 +133,25 @@ object Expression {
       val blockExpr = getBlockExpression(baseTypes, childScope, block, returnable = true)
       InlineDefExpression(baseTypes, nestedMethod, blockExpr)
     })
+  }
+
+  def generateIfExpression(baseTypes: BaseTypes, scope: TScope, i: If) = {
+    val (parts, elseExp) = generateIfParts(baseTypes, scope, i, Vector())
+    IfExpression(baseTypes, scope, parts, elseExp)
+  }
+
+  def generateIfParts(baseTypes: BaseTypes, scope: TScope, i: If, parts: Vector[IfPart]): (Vector[IfPart], Expression) = {
+    val condExp = Expression(baseTypes, scope, i.cond)
+    val thenBlock = wrapInBlock(i.thenp)
+    val thenExp = Expression(baseTypes, scope, thenBlock)
+    val ifPart = IfPart(condExp, thenExp)
+    i.elsep match {
+      case ei: If => generateIfParts(baseTypes, scope, ei, parts :+ ifPart)
+      case Literal(Constant(b: BoxedUnit)) => (parts, EmptyExpression(baseTypes.unit))
+      case _ =>
+        val elseBlock = wrapInBlock(i.elsep)
+        (parts :+ ifPart, Expression(baseTypes, scope, elseBlock))
+    }
   }
 
   def getBlockExpression(baseTypes: BaseTypes, scope: TScope, t: Any, returnable: Boolean = false) = {
@@ -230,247 +252,4 @@ object Expression {
     expr
   }
 
-}
-
-case class IdentExpression(tpe: TType, expr: String) extends Expression {
-  def prevTpe = tpe
-
-  def generate = {
-    expr
-  }
-
-  override def skipSemiColon: Boolean = false
-}
-
-case class LiteralExpression(tpe: TType, literal: String) extends Expression {
-
-  def prevTpe = tpe
-
-  def generate = {
-    s"$literal"
-  }
-
-  override def skipSemiColon: Boolean = false
-}
-
-case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expression] = Seq()) extends Expression {
-  def prevTpe = tpe
-
-  def generate = {
-    val cppName = GeneratorUtils.getCppTypeName(baseTypes, tpe)
-    val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ", ")
-    val sharedPtrName = GeneratorUtils.generateCppTypeName(baseTypes, tpe)
-    paramsContext.enhance(s"$sharedPtrName(new $cppName(${paramsContext.content}))")
-  }
-
-  override def skipSemiColon: Boolean = false
-}
-
-case class NestedExpression(tpe: TType, varName: String, member: Modifiable, params: Seq[Expression] = Seq()) extends Expression {
-  def prevTpe = tpe
-
-  def generate: GeneratorContext = {
-    member match {
-      case f: Field => generateFieldCallOnType(tpe, varName, f)
-      case m: Method => generateMethodCallOnType(tpe, varName, m, params)
-    }
-  }
-
-  private def generateMethodCallOnType(tpe: TType, varName: String, m: Method, params: Seq[Expression]): GeneratorContext = {
-    val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ", ")
-    val paramsContent: String = paramsContext.content
-    if (isOperator()) {
-      val prettyOperator = m.name
-      paramsContext.enhance(s"$varName $prettyOperator $paramsContent")
-    } else if (isNonPointerCall()) {
-      paramsContext.enhance(s"$varName.${m.name}($paramsContent)")
-    } else {
-      val call = if (tpe.isObject) s"$varName->getInstance()->" else s"$varName->"
-      paramsContext.enhance(s"$call${m.name}($paramsContent)")
-    }
-  }
-
-  private def generateFieldCallOnType(tpe: TType, varName: String, f: Field): GeneratorContext = {
-    val call = if (isNonPointerCall()) "." else "->"
-    s"$varName$call${f.name}"
-  }
-
-  private def isOperator(): Boolean = false
-
-  private def isNonPointerCall(): Boolean = false
-
-  override def skipSemiColon: Boolean = true
-}
-
-abstract class BaseBlockExpression(stats: List[Expression], expr: Expression, returnable: Boolean = false) extends Expression {
-  override def prevTpe: TType = expr.prevTpe
-
-  override def generate: GeneratorContext = {
-    val statsStats = generateExpressionChain(stats, "\n")
-    val bodyCtxList = Seq(statsStats, generateExpr())
-    val bodyCtx: GeneratorContext = GeneratorUtils.mergeGeneratorContexts(bodyCtxList, "\n  ")
-    generateContentStr(bodyCtx)
-  }
-
-  protected def generateContentStr(bodyCtx: GeneratorContext): GeneratorContext
-
-  private def generateExpr() = {
-    val exprGenerate: GeneratorContext = expr.generate
-    val exprContent: String = exprGenerate.content
-    exprGenerate.enhance(generateExprString(exprContent, returnable, expr.skipSemiColon))
-  }
-
-  private def generateExprString(exprContent: String, returnable: Boolean, skipSemicolon: Boolean) = {
-    val exprString1 = if (returnable) "return " + exprContent else exprContent
-    if (skipSemiColon) exprString1 else exprString1
-  }
-
-}
-
-case class BlockExpression(stats: List[Expression], expr: Expression, returnable: Boolean = false)
-  extends BaseBlockExpression(stats, expr, returnable) {
-  protected def generateContentStr(bodyCtx: GeneratorContext) = {
-    val contentStr =
-      s"""{
-          |  ${bodyCtx.content}
-          |}""".stripMargin
-    bodyCtx.enhance(contentStr)
-  }
-
-  override def skipSemiColon: Boolean = true
-}
-
-case class InlineBlockExpression(stats: List[Expression], expr: Expression, returnable: Boolean = false)
-  extends BaseBlockExpression(stats, expr, returnable) {
-  protected def generateContentStr(bodyCtx: GeneratorContext) = {
-    val contentStr =
-      s"""[&]() {
-          |  ${bodyCtx.content}
-          |}()""".stripMargin
-    bodyCtx.enhance(contentStr)
-  }
-
-  override def skipSemiColon: Boolean = false
-}
-
-case class InlineDefExpression(baseTypes: BaseTypes, method: Method, body: BaseBlockExpression) extends Expression {
-  override def prevTpe: TType = method.returnType
-
-  override def generate: GeneratorContext = {
-    val bodyCtx: GeneratorContext = body.generate
-    val paramsString = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
-    val contentStr = s"auto ${method.name} = [&]($paramsString) ${bodyCtx.content}"
-    bodyCtx.enhance(contentStr)
-  }
-
-  override def skipSemiColon: Boolean = false
-
-  override def generateReturn: GeneratorContext = generate
-}
-
-case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMethodName: String) extends Expression {
-  override def prevTpe: TType = method.returnType
-
-  override def generate: GeneratorContext = {
-    val typeName = GeneratorUtils.getCppTypeName(prevTpe.pkg, prevTpe.simpleName)
-    val paramsString: String = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
-    val initMethodCall = s"this->$initMethodName()"
-    val expressions: Seq[Expression] = (method.params.map(p => s"this->${p.name} = ${p.name}") :+ initMethodCall
-      ).map(LiteralExpression(baseTypes.unit, _))
-    val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")
-    val content: String =
-      s"""$typeName::${prevTpe.simpleName}($paramsString) {
-         |  ${ctx.content}
-         |}""".stripMargin
-    ctx.enhance(content)
-  }
-
-  override def skipSemiColon: Boolean = true
-}
-
-case class ValDefExpression(baseTypes: BaseTypes, varName: String, rhs: Expression) extends Expression {
-  override def prevTpe: TType = null
-
-  override def generate: GeneratorContext = {
-    val varTpe = rhs.prevTpe
-    val lhs = s"${GeneratorUtils.generateCppTypeName(baseTypes, varTpe)} $varName"
-    val rhsCtx = rhs.generate
-    val defString = s"$lhs = ${rhsCtx.content}"
-    rhsCtx.enhance(defString)
-  }
-
-  override def skipSemiColon: Boolean = false
-
-  override def generateReturn: GeneratorContext = generate
-}
-
-case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression {
-  override def prevTpe: TType = null
-
-  override def generate: GeneratorContext = {
-    val lhsCtx = lhs.generate
-    val rhsCtx = rhs.generate
-    val generated = s"${lhsCtx.content} = ${rhsCtx.content}"
-    GeneratorUtils.mergeGeneratorContexts(Seq(lhsCtx, rhsCtx), givenContent = generated)
-  }
-
-  override def skipSemiColon: Boolean = false
-
-  override def generateReturn: GeneratorContext = generate
-}
-
-case class WhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Expression) extends Expression {
-  override def prevTpe: TType = baseTypes.unit
-
-  override def generate: GeneratorContext = {
-    val condCtx = condExpr.generate
-    val bodyCtx = body.generate
-    val content = s"while(${condCtx.content}) ${bodyCtx.content}"
-    GeneratorUtils.mergeGeneratorContexts(Seq(condCtx, bodyCtx), givenContent = content)
-  }
-
-  override def skipSemiColon: Boolean = true
-
-  override def generateReturn: GeneratorContext = generate
-}
-
-case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Expression) extends Expression {
-  override def prevTpe: TType = baseTypes.unit
-
-  override def generate: GeneratorContext = {
-    val condCtx = condExpr.generate
-    val bodyCtx = body.generate
-    val content = s"do ${bodyCtx.content} while (${condCtx.content})"
-    GeneratorUtils.mergeGeneratorContexts(Seq(condCtx, bodyCtx), givenContent = content)
-  }
-
-  override def skipSemiColon: Boolean = true
-
-  override def generateReturn: GeneratorContext = generate
-}
-
-case class IfExpression(baseTypes: BaseTypes, condExpr: Expression, thenP: Expression, elseP: Expression) extends Expression {
-  override def prevTpe: TType = ???
-
-  override def generate: GeneratorContext = ???
-
-  override def skipSemiColon: Boolean = ???
-}
-
-case class ChainedExpression(path: Path) extends Expression {
-  override def prevTpe: TType = path.last.prevTpe
-
-  override def generate: GeneratorContext = generateExpressionChain(path)
-
-  override def skipSemiColon: Boolean = false
-}
-
-case class EmptyExpression(unit: TType) extends Expression {
-  override def prevTpe: TType = unit
-
-  override def generate: GeneratorContext = GeneratorContext()
-
-  override def skipSemiColon: Boolean = true
-
-  override def generateReturn: GeneratorContext = generate
 }

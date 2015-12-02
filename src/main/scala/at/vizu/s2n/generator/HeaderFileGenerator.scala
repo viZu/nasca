@@ -102,9 +102,8 @@ trait HeaderFileGenerator {
     member.groupBy(_.visibility)
   }
 
-  private def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Seq[T] = {
-    handlesMap.getOrElse(clazz, Map()).values
-      .map(_.asInstanceOf[T]).toSeq
+  private def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {
+    handlesMap.getOrElse(clazz, Map()).values.map(_.asInstanceOf[T])
   }
 
   private def getHandlesMap[T <: GeneratorHandle](clazz: Class[T]): Map[String, T] = {
