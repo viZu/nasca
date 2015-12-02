@@ -15,9 +15,11 @@ case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMetho
     val initMethodCall = s"this->$initMethodName()"
     val expressions: Seq[Expression] = (method.params.map(p => s"this->${p.name} = ${p.name}") :+ initMethodCall
       ).map(LiteralExpression(baseTypes.unit, _))
+    val initializers = method.params.map(p => s"${p.name}(${p.name})").mkString(", ")
+    val initializer = if (initializers.nonEmpty) s": $initializers " else ""
     val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")
     val content: String =
-      s"""$typeName::${prevTpe.simpleName}($paramsString) {
+      s"""$typeName::${prevTpe.simpleName}($paramsString) $initializer{
          |  ${ctx.content}
          |}""".stripMargin
     ctx.enhance(content)

@@ -33,7 +33,8 @@ trait HeaderFileGenerator {
     ScalaFiles.createDirectory(args.out)
 
     println("Writing header file " + name)
-    ScalaFiles.writeToFile(args.out, name, content)
+    val prettyContent = CodePrettifier.prettify(content)
+    ScalaFiles.writeToFile(args.out, name, prettyContent)
   }
 
   protected def generateHeaderContent(pkg: String): String = {
@@ -49,26 +50,28 @@ trait HeaderFileGenerator {
   }
 
   protected def generateSections(): String = {
-    groupMember().map(p => generateSection(p._1, p._2)).mkString("\n")
+    groupMember().map(p => generateSection(p._1, p._2)).mkString("\n\n")
   }
 
   protected def generateSection(visibility: String, members: Seq[Modifiable]): String = {
     visibility match {
       case "public" => generatePublicSection(members)
+      case "protected" => generateProtectedSection(members)
       case _ => generateVisibilitySection(visibility, members)
     }
   }
 
   protected def generateVisibilitySection(visibility: String, members: Seq[Modifiable]): String = {
-    val member: String = members.map(generateMember).mkString("\n")
-    s"""$visibility:
-       |$member
-     """.stripMargin
+    val memberStr = if (members.isEmpty) "" else "\n" + members.map(generateMember).mkString("\n")
+    s"""$visibility:$memberStr""".stripMargin
   }
 
   protected def generatePublicSection(members: Seq[Modifiable]): String = {
-    val publicSection: String = generateVisibilitySection("public", members)
-    publicSection
+    generateVisibilitySection("public", members)
+  }
+
+  protected def generateProtectedSection(members: Seq[Modifiable]): String = {
+    generateVisibilitySection("protected", members)
   }
 
   protected def generateMember(member: Modifiable) = {
@@ -102,11 +105,11 @@ trait HeaderFileGenerator {
     member.groupBy(_.visibility)
   }
 
-  private def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {
+  protected def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {
     handlesMap.getOrElse(clazz, Map()).values.map(_.asInstanceOf[T])
   }
 
-  private def getHandlesMap[T <: GeneratorHandle](clazz: Class[T]): Map[String, T] = {
+  protected def getHandlesMap[T <: GeneratorHandle](clazz: Class[T]): Map[String, T] = {
     handlesMap.getOrElse(clazz, Map()).asInstanceOf[Map[String, T]]
   }
 }

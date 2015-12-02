@@ -112,7 +112,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   def findObject(name: String): Option[TType] = {
-    findObjectWithName(name) orElse findObjectWithAlias(name)
+    findObjectWithName(name) orElse findObjectWithAlias(name) orElse findObjectWithCurrentPackage(name)
   }
 
   def findObjectInCurrentScope(name: String): Option[TType] = {
@@ -130,6 +130,15 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def findObjectInParent(name: String): Option[TType] = {
     parent.flatMap(_.findObject(name))
+  }
+
+  private def findObjectWithCurrentPackage(name: String): Option[TType] = {
+    findCurrentPackage match {
+      case Some(pkg) =>
+        val withPackage = pkg + "." + name
+        _objects.find(_.fullClassName == withPackage) orElse findObjectInParent(withPackage)
+      case None => None
+    }
   }
 
 

@@ -76,13 +76,14 @@ object GeneratorUtils {
   }
 
   def generateIncludes(imports: Seq[ImportStmt]): String = {
-    if (imports.isEmpty) ""
+    val includes = if (imports.isEmpty) ""
     else {
       imports.map(i => {
         val headerFile = getHeaderFileName(i.name)
         s"""#include "$headerFile"""" + "\n"
       }).mkString
     }
+    """#include <memory>""" + "\n" + includes
   }
 
   def generateScopeMethod(methodName: String): String = {

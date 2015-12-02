@@ -11,9 +11,9 @@ package object generator {
 
   implicit def stringToGeneratorContext(str: String): GeneratorContext = GeneratorContext(str)
 
-  def generateExpressionChain(path: Path, seperator: String = "", endsWith: String = ""): GeneratorContext = {
+  def generateExpressionChain(path: Path, separator: String = "", endsWith: String = ""): GeneratorContext = {
     //val endsW = if(path.isEmpty || path.last.skipSemiColon) endsWith else endsWith + ";"
-    GeneratorUtils.mergeGeneratorContexts(path.map(generateGeneratorCtx), seperator, endsWith)
+    GeneratorUtils.mergeGeneratorContexts(path.map(generateGeneratorCtx), separator, endsWith)
   }
 
   private def generateGeneratorCtx(expr: Expression): GeneratorContext = {

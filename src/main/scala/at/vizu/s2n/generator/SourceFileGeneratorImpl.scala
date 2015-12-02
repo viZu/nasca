@@ -27,7 +27,8 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
     val context = generateContent(classScope)
 
     println("Writing source file " + name)
-    ScalaFiles.writeToFile(args.out, name, context.content)
+    val prettyContent = CodePrettifier.prettify(context.content)
+    ScalaFiles.writeToFile(args.out, name, prettyContent)
     context.handles
   }
 
@@ -124,26 +125,6 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
     val content: String = if (returnable) "return " + exprCtx.content else exprCtx.content
     exprCtx.enhance(content)
   }
-
-  private def generateIf(scope: TScope, i: If): GeneratorContext = {
-    val condition = i.cond.toString() // TODO generate condition
-    val thenBody = i.thenp
-    s"if(condition) "
-  }
-
-  //  private def generateThenPart(scope: TScope, thenP: Tree): GeneratorContext = {
-  //    forceGenerateBlock(scope, thenP)
-  //  }
-  //
-  //  private def generateElsePart(scope: TScope, elseP: Tree): GeneratorContext = {
-  //    elseP match {
-  //      case l: Literal => l.value.value match {
-  //        case bu: BoxedUnit => ""
-  //        case _ => forceGenerateBlock(scope, l)
-  //      }
-  //      case _ => forceGenerateBlock(scope, elseP)
-  //    }
-  //  }
 
   private def generateContructorInit(scope: TScope, constructorContent: List[Tree]): GeneratorContext = {
     constructorContent match {

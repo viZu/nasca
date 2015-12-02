@@ -1,7 +1,8 @@
 package at.vizu.s2n.generator
 
+import at.vizu.s2n.generator.handles.MethodDefinitionHandle
 import at.vizu.s2n.types.result.{ImportStmt, ObjectImplementation}
-import at.vizu.s2n.types.symbol.{BaseTypes, Modifiable, TType}
+import at.vizu.s2n.types.symbol._
 
 /**
   * Phil on 12.11.15.
@@ -17,15 +18,32 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
 
   override protected def imports: Seq[ImportStmt] = _imports
 
+  override protected def generateProtectedSection(members: Seq[Modifiable]): String = {
+    val tpeName = selfType.simpleName
+    val protectedMember =
+      s"""
+         |  $tpeName();                           // Don't implement
+         |  $tpeName($tpeName const &);              // Don't implement
+         |  void operator=($tpeName const &);        // Don't implement
+     """.stripMargin
+    super.generateProtectedSection(members) + protectedMember
+  }
+
   override protected def generatePublicSection(members: Seq[Modifiable]): String = {
     val staticPtr = s"static ${GeneratorUtils.generateSmartPtr(selfType)}"
     val getInstance: String =
-      s"""$staticPtr getInstance() {
-         |  $staticPtr instance = std::make_shared<${GeneratorUtils.getCppTypeName(baseTypes, selfType)}>();
-         |  return instance;
-         |}
-         |""".stripMargin
-    getInstance + super.generatePublicSection(members)
+      s"""
+         |
+         |  $staticPtr getInstance() {
+         |    $staticPtr instance = std::make_shared<${GeneratorUtils.getCppTypeName(baseTypes, selfType)}>();
+         |    return instance;
+         |  }""".stripMargin
+    super.generatePublicSection(members) + getInstance
   }
 
+  override protected def groupMember(): Map[String, Seq[Modifiable]] = {
+    val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
+    val member: Seq[Modifiable] = selfType.methods.filter(!_.constructor) ++ selfType.fields ++ methodDefinitions
+    member.groupBy(_.visibility) + ("protected" -> Seq())
+  }
 }

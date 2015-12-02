@@ -16,6 +16,10 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
     val generatorPairs = getGeneratorPairs(scope, fileContents)
     generatorPairs.foreach(tuple => invokeGenerators(args, tuple._1, tuple._2))
 
+    if (args.main.isNonEmpty) {
+      val mainGenerator = getMainClassGenerator(args, scope, fileContents)
+      mainGenerator.generateMainFile(args)
+    }
     ???
   }
 
@@ -51,5 +55,13 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
     })
     classScope.addTypeAlias(impl.tpe.simpleName, impl.tpe.name)
     new SourceFileGeneratorImpl(baseTypes, classScope, impl)
+  }
+
+  def getMainClassGenerator(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]): MainFileGenerator = {
+    fileContents
+      .flatMap(_.impls)
+      .find(_.tpe.simpleName == args.main)
+      .map(new CppMainFileGenerator(scope, _))
+      .getOrElse(throw new GeneratorException(s"Class with name ${args.main} not found"))
   }
 }

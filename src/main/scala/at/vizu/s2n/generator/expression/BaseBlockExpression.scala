@@ -32,8 +32,8 @@ abstract class BaseBlockExpression(stats: List[Expression], expr: Expression, re
     exprGenerate.enhance(generateExprString(exprContent, expr.skipSemiColon))
   }
 
-  private def generateExprString(exprContent: String, skipSemicolon: Boolean) = {
-    if (skipSemiColon) exprContent else exprContent + ";"
+  private def generateExprString(exprContent: String, skipSemiColon: Boolean) = {
+    if (skipSemiColon || exprContent.endsWith(";")) exprContent else exprContent + ";"
   }
 
 }

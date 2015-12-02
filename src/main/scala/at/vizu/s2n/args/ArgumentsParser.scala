@@ -23,9 +23,12 @@ object ArgumentsParser {
       opt[File]('o', "out") valueName "<directory>" action { (x, a) =>
         a.copy(out = x.toPath)
       } text s"sets the output folder - default '${Paths.get("").toAbsolutePath.toString}'"
+      opt[String]('m', "mainClass") valueName "<mainClass>" required() action { (x, a) =>
+        a.copy(main = x)
+      } text "main class for execution - required"
     }
     optParser.parse(rawArgs, Arguments()) match {
-      case Some(Arguments(_, Seq(), _)) => throw new IllegalArgumentException
+      case Some(Arguments(_, Seq(), _, _)) => throw new IllegalArgumentException
       case Some(args) => args
       case _ => throw new IllegalArgumentException
     }
