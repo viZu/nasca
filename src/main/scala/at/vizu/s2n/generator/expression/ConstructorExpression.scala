@@ -7,10 +7,10 @@ import at.vizu.s2n.types.symbol.{BaseTypes, Method, TType}
   * Phil on 29.11.15.
   */
 case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMethodName: String) extends Expression {
-  override def prevTpe: TType = method.returnType
+  override def exprTpe: TType = method.returnType
 
   override def generate: GeneratorContext = {
-    val typeName = GeneratorUtils.getCppTypeName(prevTpe.pkg, prevTpe.simpleName)
+    val typeName = GeneratorUtils.getCppTypeName(exprTpe.pkg, exprTpe.simpleName)
     val paramsString: String = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
     val initMethodCall = s"this->$initMethodName()"
     val expressions: Seq[Expression] = (method.params.map(p => s"this->${p.name} = ${p.name}") :+ initMethodCall
@@ -19,7 +19,7 @@ case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMetho
     val initializer = if (initializers.nonEmpty) s": $initializers " else ""
     val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")
     val content: String =
-      s"""$typeName::${prevTpe.simpleName}($paramsString) $initializer{
+      s"""$typeName::${exprTpe.simpleName}($paramsString) $initializer{
          |  ${ctx.content}
          |}""".stripMargin
     ctx.enhance(content)

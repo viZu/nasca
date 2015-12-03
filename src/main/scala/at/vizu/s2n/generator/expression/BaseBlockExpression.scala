@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.TType
   * Phil on 29.11.15.
   */
 abstract class BaseBlockExpression(stats: List[Expression], expr: Expression, returnable: Boolean = false) extends Expression {
-  override def prevTpe: TType = expr.prevTpe
+  override def exprTpe: TType = expr.exprTpe
 
   override def generate: GeneratorContext = {
     generateAcc(returnable)

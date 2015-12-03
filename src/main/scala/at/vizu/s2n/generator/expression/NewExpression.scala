@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.{BaseTypes, TType}
   * Phil on 29.11.15.
   */
 case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expression] = Seq()) extends Expression {
-  def prevTpe = tpe
+  def exprTpe = tpe
 
   def generate = {
     val cppName = GeneratorUtils.getCppTypeName(baseTypes, tpe)

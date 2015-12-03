@@ -7,10 +7,10 @@ import at.vizu.s2n.types.symbol.{BaseTypes, TType}
   * Phil on 29.11.15.
   */
 case class ValDefExpression(baseTypes: BaseTypes, varName: String, rhs: Expression) extends Expression {
-  override def prevTpe: TType = null
+  override def exprTpe: TType = null
 
   override def generate: GeneratorContext = {
-    val varTpe = rhs.prevTpe
+    val varTpe = rhs.exprTpe
     val lhs = s"${GeneratorUtils.generateCppTypeName(baseTypes, varTpe)} $varName"
     val rhsCtx = rhs match {
       case b: BaseBlockExpression => rhs.generateReturn

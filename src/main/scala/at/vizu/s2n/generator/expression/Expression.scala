@@ -1,10 +1,10 @@
 package at.vizu.s2n.generator
 package expression
 
-import at.vizu.s2n.scala.reflect.api.InlineBlock
 import at.vizu.s2n.types.TypeInference
 import at.vizu.s2n.types.symbol._
 
+import scala.reflect.api.InlineBlock
 import scala.reflect.runtime.universe._
 import scala.runtime.BoxedUnit
 
@@ -13,7 +13,7 @@ import scala.runtime.BoxedUnit
   */
 
 trait Expression {
-  def prevTpe: TType
+  def exprTpe: TType
 
   def generate: GeneratorContext
 
@@ -32,9 +32,11 @@ object Expression {
       val tpe = TypeUtils.findType(scope, l)
       LiteralExpression(tpe, l.value.value.toString)
     case a: Apply =>
-      ChainedExpression(generateApplyExpression(baseTypes, scope, a))
+      val path: Path = generateApplyExpression(baseTypes, scope, a)
+      ChainedExpression(path)
     case s: Select =>
-      ChainedExpression(generateSelectExpression(baseTypes, scope, s))
+      val path: Path = generateSelectExpression(baseTypes, scope, s)
+      ChainedExpression(path)
     case i: Ident =>
       generateIdentExpression(baseTypes, scope, i)
     case InlineBlock(_) | Block(_, _) =>
@@ -202,7 +204,7 @@ object Expression {
         val last: NestedExpression = prevPath.last.asInstanceOf[NestedExpression]
 
         val newLast: NestedExpression = last.copy(params = params)
-        prevPath.drop(1) :+ newLast
+        prevPath.dropRight(1) :+ newLast
       case Apply(i: Ident, _) =>
         Seq(generateIdentExpression(baseTypes, scope, i))
     }
@@ -212,18 +214,21 @@ object Expression {
     select match {
       case Select(s: Select, n) =>
         val prevPath: Path = generateSelectExpression(baseTypes, scope, s)
-        val tpe = getType(prevPath.last.prevTpe)
-        val member: Modifiable = if (method != null) method else TypeUtils.findMember(scope, n.toString, tpe)
-        val elem = NestedExpression(tpe, "", member)
+        val prevTpe = prevPath.last.exprTpe
+        val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, prevTpe)
+        val elem = NestedExpression(prevTpe, "", member)
         prevPath :+ elem
       case Select(a: Apply, n) =>
-        generateApplyExpression(baseTypes, scope, a)
+        val prevPath = generateApplyExpression(baseTypes, scope, a)
+        val prevTpe = prevPath.last.exprTpe
+        val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, prevTpe)
+        val elem = NestedExpression(prevTpe, "", member)
+        prevPath :+ elem
       case Select(l: Literal, n) =>
         val lTpe = TypeUtils.findType(scope, l)
-        val member: Modifiable = if (method != null) method else TypeUtils.findMember(scope, n.toString, lTpe)
+        val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, lTpe)
         Seq(NestedExpression(lTpe, l.value.value.toString, member))
       case Select(i: Ident, n) =>
-        val iName: String = i.name.toString
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
         val tpe = TypeUtils.findIdentifier(scope, i).tpe
         val member = if (method != null) method else TypeUtils.findIdent(scope, n.toString, tpe)
@@ -235,13 +240,6 @@ object Expression {
         }
       case Select(t: This, n) =>
         Seq(NestedExpression(scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
-    }
-  }
-
-  private def getType(modifiable: Modifiable): TType = {
-    modifiable match {
-      case m: Method => m.returnType
-      case f: Field => f.tpe
     }
   }
 

@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.TType
   * Phil on 29.11.15.
   */
 case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression {
-  override def prevTpe: TType = null
+  override def exprTpe: TType = null
 
   override def generate: GeneratorContext = {
     val lhsCtx = lhs.generate

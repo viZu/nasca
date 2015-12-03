@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.TType
   */
 case class LiteralExpression(tpe: TType, literal: String) extends Expression {
 
-  def prevTpe = tpe
+  def exprTpe = tpe
 
   def generate = {
     s"$literal"

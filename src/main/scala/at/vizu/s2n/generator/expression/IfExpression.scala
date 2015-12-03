@@ -7,8 +7,8 @@ import at.vizu.s2n.types.symbol.{BaseTypes, TScope, TType, TypeUtils}
   * Phil on 29.11.15.
   */
 case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart], elseP: Expression) extends Expression {
-  override def prevTpe: TType = {
-    TypeUtils.findCommonBaseClass(scope, ifParts.head.body.prevTpe, elseP.prevTpe)
+  override def exprTpe: TType = {
+    TypeUtils.findCommonBaseClass(scope, ifParts.head.body.exprTpe, elseP.exprTpe)
   }
 
   override def generate: GeneratorContext = generateAcc(false)

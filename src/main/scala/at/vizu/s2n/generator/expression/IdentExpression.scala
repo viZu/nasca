@@ -6,7 +6,7 @@ import at.vizu.s2n.types.symbol.TType
   * Phil on 29.11.15.
   */
 case class IdentExpression(tpe: TType, expr: String) extends Expression {
-  def prevTpe = tpe
+  def exprTpe = tpe
 
   def generate = {
     expr

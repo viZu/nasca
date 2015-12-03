@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.{BaseTypes, Method, TType}
   * Phil on 29.11.15.
   */
 case class InlineDefExpression(baseTypes: BaseTypes, method: Method, body: BaseBlockExpression) extends Expression {
-  override def prevTpe: TType = method.returnType
+  override def exprTpe: TType = method.returnType
 
   override def generate: GeneratorContext = {
     val bodyCtx: GeneratorContext = body.generate

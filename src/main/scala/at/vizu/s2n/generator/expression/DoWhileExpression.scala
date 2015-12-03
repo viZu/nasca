@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol.{BaseTypes, TType}
   * Phil on 29.11.15.
   */
 case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: Expression) extends Expression {
-  override def prevTpe: TType = baseTypes.unit
+  override def exprTpe: TType = baseTypes.unit
 
   override def generate: GeneratorContext = {
     val condCtx = condExpr.generate

@@ -5,7 +5,7 @@ package at.vizu.s2n.types.symbol
  */
 case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Seq(),
                   constructor: Boolean = false, instanceMethod: Boolean = true)
-  extends Modifiable with Nameable {
+  extends Member {
 
   def checkArgs(argsToCheck: Seq[TType]) = {
     params.map(_.tpe) == argsToCheck
@@ -22,4 +22,6 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
     val params = this.params.map(_.tpe)
     s"$name(${TypeUtils.toString(params)})"
   }
+
+  override def tpe: TType = returnType
 }

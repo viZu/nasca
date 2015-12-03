@@ -6,13 +6,13 @@ import at.vizu.s2n.types.symbol._
 /**
   * Phil on 29.11.15.
   */
-case class NestedExpression(tpe: TType, varName: String, member: Modifiable, params: Seq[Expression] = Seq()) extends Expression {
-  def prevTpe = tpe
+case class NestedExpression(prevTpe: TType, varName: String, member: Member, params: Seq[Expression] = Seq()) extends Expression {
+  def exprTpe = member.tpe
 
   def generate: GeneratorContext = {
     member match {
-      case f: Field => generateFieldCallOnType(tpe, varName, f)
-      case m: Method => generateMethodCallOnType(tpe, varName, m, params)
+      case f: Field => generateFieldCallOnType(prevTpe, varName, f)
+      case m: Method => generateMethodCallOnType(prevTpe, varName, m, params)
     }
   }
 

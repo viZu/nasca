@@ -1,4 +1,4 @@
-package at.vizu.s2n.scala.reflect.api
+package scala.reflect.api
 
 import scala.reflect.runtime.universe._
 

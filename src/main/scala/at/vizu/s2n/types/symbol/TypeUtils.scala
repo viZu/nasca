@@ -247,7 +247,7 @@ object TypeUtils {
     }
   }
 
-  def findMember(scope: TScope, name: String, onType: TType = null): Modifiable = {
+  def findMember(scope: TScope, name: String, onType: TType = null): Member = {
     val tpe = if (onType == null) scope.findThis() else onType
     tpe.findMethod(name, Seq()) match {
       case Some(tMethod) => tMethod

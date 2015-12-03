@@ -53,7 +53,7 @@ trait HeaderFileGenerator {
     groupMember().map(p => generateSection(p._1, p._2)).mkString("\n\n")
   }
 
-  protected def generateSection(visibility: String, members: Seq[Modifiable]): String = {
+  protected def generateSection(visibility: String, members: Seq[Member]): String = {
     visibility match {
       case "public" => generatePublicSection(members)
       case "protected" => generateProtectedSection(members)
@@ -61,20 +61,20 @@ trait HeaderFileGenerator {
     }
   }
 
-  protected def generateVisibilitySection(visibility: String, members: Seq[Modifiable]): String = {
+  protected def generateVisibilitySection(visibility: String, members: Seq[Member]): String = {
     val memberStr = if (members.isEmpty) "" else "\n" + members.map(generateMember).mkString("\n")
     s"""$visibility:$memberStr""".stripMargin
   }
 
-  protected def generatePublicSection(members: Seq[Modifiable]): String = {
+  protected def generatePublicSection(members: Seq[Member]): String = {
     generateVisibilitySection("public", members)
   }
 
-  protected def generateProtectedSection(members: Seq[Modifiable]): String = {
+  protected def generateProtectedSection(members: Seq[Member]): String = {
     generateVisibilitySection("protected", members)
   }
 
-  protected def generateMember(member: Modifiable) = {
+  protected def generateMember(member: Member) = {
     member match {
       case m: Method =>
         if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
@@ -101,7 +101,7 @@ trait HeaderFileGenerator {
 
   protected def groupMember() = {
     val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
-    val member: Seq[Modifiable] = selfType.methods ++ selfType.fields ++ methodDefinitions
+    val member: Seq[Member] = selfType.methods ++ selfType.fields ++ methodDefinitions
     member.groupBy(_.visibility)
   }
 
