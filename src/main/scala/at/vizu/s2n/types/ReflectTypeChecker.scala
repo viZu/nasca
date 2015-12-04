@@ -204,7 +204,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
         TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe).returnType
       case i: Ident =>
-        checkIdent(scope, i)
+        val args = checkArgs(scope, apply.args)
+        checkIdent(scope, i, args)
     }
   }
 
@@ -234,10 +235,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     })
   }
 
-  private def checkIdent(scope: TScope, ident: Ident): TType = {
+  private def checkIdent(scope: TScope, ident: Ident, params: Seq[TType] = Seq()): TType = {
     val iName: String = ident.name.toString
     //TODO: check if field?
-    scope.findMethod(iName, Seq()) match {
+    scope.findMethod(iName, params) match {
       case Some(m) => m.returnType
       case None =>
         scope.findIdentifier(iName) match {

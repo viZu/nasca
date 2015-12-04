@@ -222,7 +222,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def findMethodInScopeMethods(name: String, args: Seq[TType]): Option[Method] = {
     //TODO check return type too?
-    _methods.find(m => m.name == name && m.checkArgs(args))
+    _methods.find(m => m.name == name && m.checkArgsSuperType(args)) orElse findMethodInScopeMethodsInParent(name, args)
   }
 
   private def findMethodInThis(name: String, args: Seq[TType]): Option[Method] = {
@@ -234,6 +234,10 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
       case Some(tpe) => tpe.findMethod("apply", args)
       case None => None
     }
+  }
+
+  private def findMethodInScopeMethodsInParent(name: String, args: Seq[TType]): Option[Method] = {
+    parent.flatMap(_.findMethodInScopeMethods(name, args))
   }
 
   /**

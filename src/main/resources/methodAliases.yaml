@@ -1,0 +1,13 @@
+methodAliases:
+  - __root__:
+      println:
+        - params: []
+          replaceWith: "std::cout << std::endl"
+
+        - params: ["scala.Any"]
+          replaceWith: "std::cout << {{0}} << std::endl"
+
+      print:
+        - params: ["scala.Any"]
+          replaceWith: "std::cout << {{0}}"
+

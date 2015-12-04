@@ -25,3 +25,9 @@ case class MethodHandle(content: String) extends GeneratorHandle {
 
   def key = ""
 }
+
+case class IncludeHandle(cppInclude: String) extends GeneratorHandle {
+  def key = cppInclude
+
+  def content = s"#import $cppInclude"
+}

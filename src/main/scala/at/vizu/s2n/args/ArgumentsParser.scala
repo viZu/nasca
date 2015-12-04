@@ -20,15 +20,18 @@ object ArgumentsParser {
       opt[String]('e', "env") valueName "<environment>" optional() action { (x, a) =>
         a.copy(env = x)
       } text "compiler environment - default 'c++'"
-      opt[File]('o', "out") valueName "<directory>" action { (x, a) =>
+      opt[File]('o', "out") valueName "<directory>" optional() action { (x, a) =>
         a.copy(out = x.toPath)
       } text s"sets the output folder - default '${Paths.get("").toAbsolutePath.toString}'"
       opt[String]('m', "mainClass") valueName "<mainClass>" required() action { (x, a) =>
         a.copy(main = x)
       } text "main class for execution - required"
+      opt[String]('n', "binaryName") valueName "<binaryName>" optional() action { (x, a) =>
+        a.copy(binName = x)
+      } text "name for the binary - default 'binary'"
     }
     optParser.parse(rawArgs, Arguments()) match {
-      case Some(Arguments(_, Seq(), _, _)) => throw new IllegalArgumentException
+      case Some(Arguments(_, Seq(), _, _, _)) => throw new IllegalArgumentException
       case Some(args) => args
       case _ => throw new IllegalArgumentException
     }

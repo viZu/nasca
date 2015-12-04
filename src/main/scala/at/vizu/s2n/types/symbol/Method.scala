@@ -4,7 +4,7 @@ package at.vizu.s2n.types.symbol
  * Phil on 07.10.15.
  */
 case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Seq(),
-                  constructor: Boolean = false, instanceMethod: Boolean = true)
+                  constructor: Boolean = false, instanceMethod: Boolean = true, operator: Boolean = false)
   extends Member {
 
   def checkArgs(argsToCheck: Seq[TType]) = {
@@ -12,8 +12,14 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
   }
 
   def checkArgsSuperType(argsToCheck: Seq[TType]) = {
-    val filtered: Seq[Boolean] = argsToCheck.zipWithIndex.map(a => a._1.hasParent(params(a._2).tpe)).filter(_ == true)
-    filtered.size == params.size // TODO optional params
+    // TODO optional params
+    if (argsToCheck.size != params.size) false
+    else {
+      val definedParams = params.map(_.tpe)
+      TypeUtils.areParamsApplicable(definedParams, argsToCheck)
+      //val filtered: Seq[Boolean] = argsToCheck.zipWithIndex.map(a => a._1.hasParent(params(a._2).tpe)).filter(_ == true)
+      //filtered.size == params.size
+    }
   }
 
   lazy val modifiers: Set[Modifier] = Set() ++ mods

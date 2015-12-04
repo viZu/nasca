@@ -1,6 +1,7 @@
 package at.vizu.s2n.generator
 package expression
 
+import at.vizu.s2n.conf.GlobalConfig
 import at.vizu.s2n.types.TypeInference
 import at.vizu.s2n.types.symbol._
 
@@ -173,16 +174,41 @@ object Expression {
     (stats, expr)
   }
 
-  private def generateIdentExpression(baseTypes: BaseTypes, scope: TScope, ident: Ident): Expression = {
+  private def generateIdentExpression(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: List[Tree] = List()): Expression = {
     val iName: String = ident.name.toString
-    TypeUtils.findIdent(scope, iName.toString) match {
+    val argTypes = TypeInference.getTypes(baseTypes, scope, args)
+    TypeUtils.findIdent(scope, iName.toString, withParams = argTypes) match {
       case m: Method =>
-        if (m.instanceMethod) IdentExpression(m.returnType, s"this->$iName()")
-        else IdentExpression(m.returnType, s"$iName()")
-      case i: Identifier => IdentExpression(i.tpe, s"$iName")
+        val argExpr: Seq[Expression] = args.map(arg => Expression(baseTypes, scope, arg))
+        val methodInvocation = generateMethodInvocation(scope, m, argExpr)
+        if (m.instanceMethod) {
+          val tmp = methodInvocation.enhance(s"this->${methodInvocation.content}")
+          IdentExpression(m.returnType, tmp)
+        } else IdentExpression(m.returnType, methodInvocation)
       case f: Field => IdentExpression(f.tpe, s"this->$iName")
+      case i: Identifier => IdentExpression(i.tpe, s"$iName")
       case _ => throw new RuntimeException("TODO")
     }
+  }
+
+  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression]): GeneratorContext = {
+    if (hasInvocationHandle(scope, method)) executeInvocationHandle(scope, method, params)
+    else {
+      val paramsAsString = params.map(_.generate.content).mkString
+      s"${method.name}($paramsAsString)"
+    }
+  }
+
+  private def hasInvocationHandle(scope: TScope, method: Method): Boolean = {
+    val paramTypes = method.params.map(_.tpe)
+    GlobalConfig.invocationConfig.hasInvocationHandle(scope, "", method.name, paramTypes)
+  }
+
+  private def executeInvocationHandle(scope: TScope, method: Method, params: Seq[Expression]): GeneratorContext = {
+    val paramTypes = method.params.map(_.tpe)
+    val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, "", method.name, paramTypes)
+    val paramsAsString = params.map(_.generate.content).toList
+    handle(paramsAsString)
   }
 
   private def generateApplyExpression(baseTypes: BaseTypes, scope: TScope, apply: Apply): Path = {
@@ -205,8 +231,14 @@ object Expression {
 
         val newLast: NestedExpression = last.copy(params = params)
         prevPath.dropRight(1) :+ newLast
-      case Apply(i: Ident, _) =>
-        Seq(generateIdentExpression(baseTypes, scope, i))
+      case Apply(i: Ident, pList) =>
+        val expr = TypeUtils.findIdent(scope, i.name.toString) match {
+          //          case m: Method if !m.instanceMethod =>
+          //            val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
+          //            NestedExpression(null, "", m, params)
+          case _ => generateIdentExpression(baseTypes, scope, i, apply.args)
+        }
+        Seq(expr)
     }
   }
 
@@ -216,30 +248,30 @@ object Expression {
         val prevPath: Path = generateSelectExpression(baseTypes, scope, s)
         val prevTpe = prevPath.last.exprTpe
         val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, prevTpe)
-        val elem = NestedExpression(prevTpe, "", member)
+        val elem = NestedExpression(scope, prevTpe, "", member)
         prevPath :+ elem
       case Select(a: Apply, n) =>
         val prevPath = generateApplyExpression(baseTypes, scope, a)
         val prevTpe = prevPath.last.exprTpe
         val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, prevTpe)
-        val elem = NestedExpression(prevTpe, "", member)
+        val elem = NestedExpression(scope, prevTpe, "", member)
         prevPath :+ elem
       case Select(l: Literal, n) =>
         val lTpe = TypeUtils.findType(scope, l)
         val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, lTpe)
-        Seq(NestedExpression(lTpe, l.value.value.toString, member))
+        Seq(NestedExpression(scope, lTpe, l.value.value.toString, member))
       case Select(i: Ident, n) =>
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
         val tpe = TypeUtils.findIdentifier(scope, i).tpe
         val member = if (method != null) method else TypeUtils.findIdent(scope, n.toString, tpe)
         member match {
-          case m: Method => Seq(NestedExpression(scope.findThis(), identCtx.content, m))
-          case i: Identifier => Seq(NestedExpression(i.tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
-          case f: Field => Seq(NestedExpression(scope.findThis(), identCtx.content, f))
+          case m: Method => Seq(NestedExpression(scope, scope.findThis(), identCtx.content, m))
+          case i: Identifier => Seq(NestedExpression(scope, i.tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
+          case f: Field => Seq(NestedExpression(scope, scope.findThis(), identCtx.content, f))
           case _ => throw new RuntimeException("Todo")
         }
       case Select(t: This, n) =>
-        Seq(NestedExpression(scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
+        Seq(NestedExpression(scope, scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
     }
   }
 

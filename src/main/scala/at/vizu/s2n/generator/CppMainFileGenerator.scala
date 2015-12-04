@@ -27,6 +27,7 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
 
   private def generateContent(): String = {
     s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}"
+        |#include <iostream>
         |
        |int main(int argc, char **argv) {
         |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName)}::getInstance()->main();

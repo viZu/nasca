@@ -1,5 +1,6 @@
 package at.vizu.s2n.environment
 
+import at.vizu.s2n.ext.compiler.CppCompilerComponent
 import at.vizu.s2n.generator.CppGeneratorComponent
 import at.vizu.s2n.parser.ReflectParserComponent
 import at.vizu.s2n.types.ReflectTypeSystemComponent
@@ -10,7 +11,8 @@ import at.vizu.s2n.types.ReflectTypeSystemComponent
 object CppEnvironmentComponent
   extends ReflectParserComponent
   with ReflectTypeSystemComponent
-  with CppGeneratorComponent {
+  with CppGeneratorComponent
+  with CppCompilerComponent {
 
   import com.softwaremill.macwire._
 

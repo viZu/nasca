@@ -25,4 +25,9 @@ case class GeneratorContext(content: String = "", handles: Seq[GeneratorHandle] 
 
   def enhance(handle: GeneratorHandle) = GeneratorContext(content, this.handles :+ handle)
 
+  def removeHandles[T <: GeneratorHandle](clazz: Class[T]) = {
+    val newHandles = this.handles.filter(_.getClass != clazz)
+    GeneratorContext(content, newHandles)
+  }
+
 }

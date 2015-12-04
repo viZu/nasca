@@ -20,7 +20,6 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
       val mainGenerator = getMainClassGenerator(args, scope, fileContents)
       mainGenerator.generateMainFile(args)
     }
-    ???
   }
 
 

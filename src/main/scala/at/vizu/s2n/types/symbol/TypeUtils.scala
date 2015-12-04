@@ -76,7 +76,7 @@ object TypeUtils {
       throw new TypeException(scope.currentFile, typeTree.pos.line, msg)
     }
     typeTree match {
-      case rt: RefTree => scope.findClass(rt.name.toString).getOrElse(throwTypeNotFound(rt.name.toString))
+      case rt: RefTree => findClass(scope, rt.name.toString, rt.pos.line)
       case id: ImplDef =>
         val tpeName: String = id.name.toString
         scope.findClass(tpeName).orElse(scope.findObject(tpeName)).getOrElse(throwTypeNotFound(tpeName))
@@ -87,6 +87,18 @@ object TypeUtils {
       case tt: TypeTree => null
       case _@other => throw new RuntimeException(s"Unknown Typetree: ${showRaw(other)}")
     }
+  }
+
+  def findClasses(scope: TScope, types: Seq[String]): Seq[TType] = {
+    types.map(findClass(scope, _))
+  }
+
+  def findClass(scope: TScope, className: String, pos: Int = 0): TType = {
+    def throwTypeNotFound(): Nothing = {
+      val msg = s"value $className not found"
+      throw new TypeException(scope.currentFile, pos, msg)
+    }
+    scope.findClass(className).getOrElse(throwTypeNotFound())
   }
 
   private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
@@ -164,8 +176,17 @@ object TypeUtils {
     Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, isConstructor(methodName), instanceMethod)
   }
 
+  /**
+    * Params
+    */
+
   def addParamsToScope(scope: TScope, params: Seq[Param]) = {
     params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
+  }
+
+  def areParamsApplicable(definedParams: Seq[TType], actualParams: Seq[TType]): Boolean = {
+    val filtered: Seq[Boolean] = actualParams.zipWithIndex.map(a => a._1.hasParent(definedParams(a._2))).filter(_ == true)
+    filtered.size == definedParams.size
   }
 
   /**
@@ -227,15 +248,15 @@ object TypeUtils {
     * Member
     */
 
-  def findIdent(scope: TScope, name: String, onType: TType = null): (Any) = {
-    scope.findMethod(name, Seq()) match {
+  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Seq()): (Any) = {
+    scope.findMethod(name, withParams) match {
       case Some(m) => m
       case None =>
         scope.findIdentifier(name) match {
           case Some(ident) => ident
           case None =>
             val tpe = if (onType != null) onType else scope.findThis()
-            tpe.findMethod(name, Seq()) match {
+            tpe.findMethod(name, withParams) match {
               case Some(tMethod) => tMethod
               case None =>
                 tpe.findField(name) match {

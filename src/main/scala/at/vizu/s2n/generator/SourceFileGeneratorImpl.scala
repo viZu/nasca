@@ -3,7 +3,7 @@ package at.vizu.s2n.generator
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.expression.{ConstructorExpression, Expression}
-import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, MethodDefinitionHandle, MethodHandle}
+import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.result.Implementation
 import at.vizu.s2n.types.symbol._
 
@@ -34,7 +34,16 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
 
   private def generateContent(scope: TScope): GeneratorContext = {
     val context = generateContentAcc(scope)
-    context.enhance( s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}"""" + "\n\n" + context.content)
+    context.enhance(
+      s"""${generateIncludes(context.handles)}
+         |
+         |${context.content}""".stripMargin).removeHandles(classOf[IncludeHandle])
+  }
+
+  private def generateIncludes(handles: Seq[GeneratorHandle]) = {
+    val includeHandles = handles.collect({ case ih: IncludeHandle => ih }).distinct
+    val includeHeader = s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}""""
+    (includeHeader +: includeHandles.map(_.content)).mkString("\n")
   }
 
   private def generateContentAcc(scope: TScope): GeneratorContext = {
