@@ -207,7 +207,7 @@ object Expression {
   private def executeInvocationHandle(scope: TScope, method: Method, params: Seq[Expression]): GeneratorContext = {
     val paramTypes = method.params.map(_.tpe)
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, "", method.name, paramTypes)
-    val paramsAsString = params.map(_.generate.content).toList
+    val paramsAsString = params.map(_.generate.content)
     handle(paramsAsString)
   }
 

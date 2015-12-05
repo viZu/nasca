@@ -70,6 +70,10 @@ case class TType(ctx: Context = Context("", 0), simpleName: String,
     else parents.exists(_.hasParent(tpe))
   }
 
+  def isAssignableFrom(other: TType): Boolean = {
+    other.hasParent(this)
+  }
+
   def forEachType(f: TType => Unit): Unit = {
     f(this)
     parents.foreach(_.forEachType(f))

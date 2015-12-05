@@ -31,9 +31,9 @@ class ClassInvocations(val className: String) {
 
 case class MethodInvocationWithParams(methodIncov: MethodInvocationHandle, paramTypes: Seq[String]) {
 
-  private[conf] var invocation: List[String] => GeneratorContext = null
+  private[conf] var invocation: Seq[String] => GeneratorContext = null
 
-  def handleAs(func: List[String] => GeneratorContext) = {
+  def handleAs(func: Seq[String] => GeneratorContext) = {
     invocation = func
     methodIncov.add(this)
   }

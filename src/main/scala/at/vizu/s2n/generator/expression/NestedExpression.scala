@@ -66,7 +66,7 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
       case f: Field => Vector()
     }
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
-    val paramsAsString = params.map(_.generate.content).toList
+    val paramsAsString = params.map(_.generate.content)
     handle(paramsAsString)
   }
 
