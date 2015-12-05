@@ -216,7 +216,7 @@ object Expression {
       case Apply(Select(ne: New, n), pList) =>
         val tpe: TType = TypeUtils.findType(scope, ne)
         val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
-        Seq(NewExpression(baseTypes, tpe, params))
+        Vector(NewExpression(baseTypes, tpe, params))
       case Apply(s: Select, pList) =>
         val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
         val prevPath: Path = if (params.nonEmpty) {
@@ -238,7 +238,7 @@ object Expression {
           //            NestedExpression(null, "", m, params)
           case _ => generateIdentExpression(baseTypes, scope, i, apply.args)
         }
-        Seq(expr)
+        Vector(expr)
     }
   }
 
@@ -259,19 +259,19 @@ object Expression {
       case Select(l: Literal, n) =>
         val lTpe = TypeUtils.findType(scope, l)
         val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, lTpe)
-        Seq(NestedExpression(scope, lTpe, l.value.value.toString, member))
+        Vector(NestedExpression(scope, lTpe, l.value.value.toString, member))
       case Select(i: Ident, n) =>
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
         val tpe = TypeUtils.findIdentifier(scope, i).tpe
         val member = if (method != null) method else TypeUtils.findIdent(scope, n.toString, tpe)
         member match {
-          case m: Method => Seq(NestedExpression(scope, scope.findThis(), identCtx.content, m))
-          case i: Identifier => Seq(NestedExpression(scope, i.tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
-          case f: Field => Seq(NestedExpression(scope, scope.findThis(), identCtx.content, f))
+          case m: Method => Vector(NestedExpression(scope, scope.findThis(), identCtx.content, m))
+          case i: Identifier => Vector(NestedExpression(scope, i.tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
+          case f: Field => Vector(NestedExpression(scope, scope.findThis(), identCtx.content, f))
           case _ => throw new RuntimeException("Todo")
         }
       case Select(t: This, n) =>
-        Seq(NestedExpression(scope, scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
+        Vector(NestedExpression(scope, scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
     }
   }
 

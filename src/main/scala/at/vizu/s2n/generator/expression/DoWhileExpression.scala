@@ -13,7 +13,7 @@ case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: E
     val condCtx = condExpr.generate
     val bodyCtx = body.generate
     val content = s"do ${bodyCtx.content} while (${condCtx.content});"
-    GeneratorUtils.mergeGeneratorContexts(Seq(condCtx, bodyCtx), givenContent = content)
+    GeneratorUtils.mergeGeneratorContexts(Vector(condCtx, bodyCtx), givenContent = content)
   }
 
   override def skipSemiColon: Boolean = true

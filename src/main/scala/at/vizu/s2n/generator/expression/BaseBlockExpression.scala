@@ -19,7 +19,7 @@ abstract class BaseBlockExpression(stats: List[Expression], expr: Expression, re
 
   private def generateAcc(isReturnable: Boolean): GeneratorContext = {
     val statsStats = generateExpressionChain(stats, "\n")
-    val bodyCtxList = Seq(statsStats, generateExpr(isReturnable))
+    val bodyCtxList = Vector(statsStats, generateExpr(isReturnable))
     val bodyCtx: GeneratorContext = GeneratorUtils.mergeGeneratorContexts(bodyCtxList, "\n  ")
     generateContentStr(bodyCtx)
   }

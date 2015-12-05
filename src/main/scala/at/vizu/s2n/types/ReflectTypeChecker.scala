@@ -235,7 +235,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     })
   }
 
-  private def checkIdent(scope: TScope, ident: Ident, params: Seq[TType] = Seq()): TType = {
+  private def checkIdent(scope: TScope, ident: Ident, params: Seq[TType] = Vector()): TType = {
     val iName: String = ident.name.toString
     //TODO: check if field?
     scope.findMethod(iName, params) match {
@@ -244,7 +244,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
         scope.findIdentifier(iName) match {
           case Some(i) => i.tpe
           case None =>
-            scope.findThis().findField(iName) match {
+            val thisTpe: TType = scope.findThis()
+            thisTpe.findField(thisTpe, iName) match {
               case Some(f) => f.tpe
               case None => throw new TypeException(scope.currentFile, ident.pos.line, s"Value $iName not found")
             }
@@ -292,7 +293,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     l match {
       case LabelDef(n, _, t) =>
         scoped(scope, (s: TScope) => {
-          s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Seq()))
+          s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Vector()))
           t match {
             case i: If => checkIf(s, i) // while
             case b: Block => checkBlock(s, b) // do while

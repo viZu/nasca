@@ -7,7 +7,7 @@ package at.vizu.s2n.generator
 package object expression {
 
   implicit def pathElementToPath(pathElement: Expression): Path = {
-    Seq(pathElement)
+    Vector(pathElement)
   }
 
   val operatorMapping = Map("\\$plus" -> "+", "\\$less" -> "<", "\\$greater" -> ">", "\\$band" -> "!", "$eq" -> "=",

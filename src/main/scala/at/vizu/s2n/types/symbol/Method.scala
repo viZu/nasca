@@ -3,7 +3,7 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 07.10.15.
  */
-case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Seq(),
+case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Vector(),
                   constructor: Boolean = false, instanceMethod: Boolean = true, operator: Boolean = false)
   extends Member {
 

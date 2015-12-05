@@ -5,8 +5,8 @@ package at.vizu.s2n.types.symbol
  */
 case class Package(name: String) {
 
-  private var types: Seq[TType] = Seq()
-  private var subPackages: Seq[Package] = Seq()
+  private var types: Seq[TType] = Vector()
+  private var subPackages: Seq[Package] = Vector()
 
   def addType(tpe: TType): Unit = {
     val pkgSequence: List[String] = tpe.name.split(".").toList

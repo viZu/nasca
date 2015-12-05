@@ -98,7 +98,7 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
         val expr: Expression = Expression(_baseTypes, scope, body)
         val expression: GeneratorContext = generateExpression(scope, expr, returnable = false)
         val handle: GeneratorHandle = FieldInitializerHandle(field.name, expression.content)
-        GeneratorContext(handles = Seq(handle))
+        GeneratorContext(handles = Vector(handle))
     }
   }
 
@@ -109,15 +109,15 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
     val privateMethodHandle = generateInitMethodHandle(initMethodName, varTpe)
     val generatedMethod = generateMethod(scope, b, varTpe, initMethodName)
     val methodHandle = MethodHandle(generatedMethod.content)
-    generatedMethod.enhance(initMethodName, Seq(initializerHandle, privateMethodHandle, methodHandle))
+    generatedMethod.enhance(initMethodName, Vector(initializerHandle, privateMethodHandle, methodHandle))
   }
 
   private def generateInitMethodHandle(methodName: String, fieldTpe: TType) = {
-    val m: Method = Method(Context("", 0), methodName, fieldTpe, Seq(Private))
+    val m: Method = Method(Context("", 0), methodName, fieldTpe, Vector(Private))
     MethodDefinitionHandle(m)
   }
 
-  private def generateMethod(scope: TScope, rhs: Tree, returnType: TType, methodName: String, params: Seq[Param] = Seq()): GeneratorContext = {
+  private def generateMethod(scope: TScope, rhs: Tree, returnType: TType, methodName: String, params: Seq[Param] = Vector()): GeneratorContext = {
     val cppMethodName = getMethodName(methodName)
     val rhsBlock: Block = Expression.wrapInBlock(rhs)
     val methodBody: GeneratorContext = Expression.getBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).generate //  generateMethodBody(scope, rhs, _baseTypes.unit != returnType)
@@ -149,7 +149,7 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
     val methodCtx = generateMethod(scope, body, _baseTypes.unit, classInitMethodName)
     val mHandle = MethodHandle(methodCtx.content)
 
-    methodCtx.enhance("", Seq(mHandle, mdHandle))
+    methodCtx.enhance("", Vector(mHandle, mdHandle))
   }
 
 

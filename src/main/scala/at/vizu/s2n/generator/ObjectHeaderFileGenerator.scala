@@ -44,6 +44,6 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
   override protected def groupMember(): Map[String, Seq[Member]] = {
     val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
     val member: Seq[Member] = selfType.methods.filter(!_.constructor) ++ selfType.fields ++ methodDefinitions
-    member.groupBy(_.visibility) + ("protected" -> Seq())
+    member.groupBy(_.visibility) + ("protected" -> Vector())
   }
 }

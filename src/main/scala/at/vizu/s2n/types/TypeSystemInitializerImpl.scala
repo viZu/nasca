@@ -14,7 +14,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
   private val rootScope: TScope = scopeInitializer.initScope
   private var currentScope = rootScope
-  private var trees: Seq[AST] = Seq()
+  private var trees: Seq[AST] = Vector()
 
   override def initTypeSystem(trees: Seq[AST]): TScope = {
     println("Initializing type system")

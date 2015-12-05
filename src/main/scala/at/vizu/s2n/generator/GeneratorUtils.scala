@@ -83,7 +83,7 @@ object GeneratorUtils {
         s"""#include "$headerFile"""" + "\n"
       }).mkString
     }
-    """#include <memory>""" + "\n" + includes
+    Vector( """#include <memory>""", includes).filter(!_.isEmpty).mkString("\n")
   }
 
   def generateScopeMethod(methodName: String): String = {

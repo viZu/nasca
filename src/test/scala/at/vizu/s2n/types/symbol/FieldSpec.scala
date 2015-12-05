@@ -8,14 +8,14 @@ import org.scalatest._
 class FieldSpec extends FlatSpec with Matchers {
 
   val tpe = TType(Context("test", 0), "FieldType", "test")
-  val field = Field(Context("test", 0), Seq(Private, Abstract), "field", tpe)
-  val mutableField = Field(Context("test", 0), Seq(Private, Mutable), "field", tpe)
+  val field = Field(Context("test", 0), Vector(Private, Abstract), "field", tpe)
+  val mutableField = Field(Context("test", 0), Vector(Private, Mutable), "field", tpe)
 
   "Field.asIdentifier" should "return correct Identifier" in {
-    field.asIdentifier should be(Identifier(Context("test", 0), "field", tpe, mutable = false))
+    field.asIdentifier should be(Identifier(Context("test", 0), "field", tpe, mutable = false, fromField = true))
   }
 
   "a mutable Field.asIdentifier" should "return correct mutable Identifier" in {
-    mutableField.asIdentifier should be(Identifier(Context("test", 0), "field", tpe, mutable = true))
+    mutableField.asIdentifier should be(Identifier(Context("test", 0), "field", tpe, mutable = true, fromField = true))
   }
 }

@@ -226,12 +226,13 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def findMethodInThis(name: String, args: Seq[TType]): Option[Method] = {
-    findThis().findMethod(name, args)
+    val thisTpe: TType = findThis()
+    thisTpe.findMethod(thisTpe, name, args)
   }
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
     findObjectWithAlias(name) match {
-      case Some(tpe) => tpe.findMethod("apply", args)
+      case Some(tpe) => tpe.findMethod(findThis(), "apply", args)
       case None => None
     }
   }

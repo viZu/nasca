@@ -68,7 +68,7 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
   private def checkIfParamsAreSame(scope: TScope, paramStrings: Seq[String], actualParams: Seq[TType]): Boolean = {
     if (paramStrings.size != actualParams.size) false
     else {
-      val definedParams: Seq[TType] = TypeUtils.findClasses(scope, paramStrings)
+      val definedParams = TypeUtils.findClasses(scope, paramStrings)
       TypeUtils.areParamsApplicable(definedParams, actualParams)
     }
   }

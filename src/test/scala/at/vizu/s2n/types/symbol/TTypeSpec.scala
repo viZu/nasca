@@ -48,36 +48,36 @@ class TTypeSpec extends FlatSpec with Matchers {
   initDType()
 
   "AType findMethod" should "return its method with correct name and correct params" in {
-    aType.findMethod("aMethod", Seq(string, string)) should be(Some(aMethod))
-    aType.findMethod("aaMethod", Seq(string, string)) should be(Some(aaMethod))
+    aType.findMethod(aType, "aMethod", Seq(string, string)) should be(Some(aMethod))
+    aType.findMethod(aType, "aaMethod", Seq(string, string)) should be(Some(aaMethod))
   }
 
   "AType findMethod" should "return no method with incorrect name and/or incorrect params" in {
-    aType.findMethod("bMethod", Seq(string, string)) should be(None)
-    aType.findMethod("aaMethod", Seq(string, int)) should be(None)
+    aType.findMethod(aType, "bMethod", Seq(string, string)) should be(None)
+    aType.findMethod(aType, "aaMethod", Seq(string, int)) should be(None)
   }
 
   "AType findMethod" should "return super method with correct name and correct params" in {
-    aType.findMethod("sMethod", Seq(string)) should be(Some(sMethod))
-    aType.findMethod("tMethod", Seq(int, string)) should be(Some(tMethod))
+    aType.findMethod(aType, "sMethod", Seq(string)) should be(Some(sMethod))
+    aType.findMethod(aType, "tMethod", Seq(int, string)) should be(Some(tMethod))
   }
 
   "AType findMethod" should "return no method with incorrect name and incorrect params for super method" in {
-    aType.findMethod("sMethod", Seq(int)) should be(None)
-    aType.findMethod("ttMethod", Seq(int, string)) should be(None)
+    aType.findMethod(aType, "sMethod", Seq(int)) should be(None)
+    aType.findMethod(aType, "ttMethod", Seq(int, string)) should be(None)
   }
 
   "AType findField" should "return field with correct name" in {
-    aType.findField("aField") should be(Some(aField))
+    aType.findField(aType, "aField") should be(Some(aField))
   }
 
   "AType findField" should "return no field with incorrect name" in {
-    aType.findField("bField") should be(None)
+    aType.findField(aType, "bField") should be(None)
   }
 
   "AType findField" should "return super field with correct name" in {
-    aType.findField("tField") should be(Some(tField))
-    aType.findField("sField") should be(Some(sField))
+    aType.findField(aType, "tField") should be(Some(tField))
+    aType.findField(aType, "sField") should be(Some(sField))
   }
 
   "AType hasParent" should "return true for Trait and Supertype" in {
@@ -117,7 +117,7 @@ class TTypeSpec extends FlatSpec with Matchers {
 
   "EType addMethod tMethod" should "add the method to the type" in {
     eType.addMethod(tMethod)
-    eType.findMethod(tMethod.name, tMethod.params.map(_.tpe)) should be(Some(tMethod))
+    eType.findMethod(aType, tMethod.name, tMethod.params.map(_.tpe)) should be(Some(tMethod))
   }
 
   "EType addMethod tMethod a second time" should "throw a TypeException" in {
@@ -126,7 +126,7 @@ class TTypeSpec extends FlatSpec with Matchers {
 
   "EType addField tField" should "add the field to the type" in {
     eType.addField(tField)
-    eType.findField(tField.name) should be(Some(tField))
+    eType.findField(eType, tField.name) should be(Some(tField))
   }
 
   "EType addField tField a second time" should "throw a TypeException" in {

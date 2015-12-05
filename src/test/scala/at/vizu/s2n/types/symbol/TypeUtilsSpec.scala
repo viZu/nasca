@@ -14,10 +14,10 @@ class TypeUtilsSpec extends FlatSpec with Matchers {
     val dType = TType(ctx, "DType", "b")
     val eType = TType(ctx, "EType", "c")
     val fType = TType(ctx, "FType", "d")
-    TypeUtils.toString(Seq(bType, cType, dType, eType, fType)) should be("BType, a.CType, b.DType, c.EType, d.FType")
+    TypeUtils.toString(Vector(bType, cType, dType, eType, fType)) should be("BType, a.CType, b.DType, c.EType, d.FType")
   }
 
   "TypeUtils.toString" should "return an empty String for an empty Seq" in {
-    TypeUtils.toString(Seq()) should be("")
+    TypeUtils.toString(Vector()) should be("")
   }
 }

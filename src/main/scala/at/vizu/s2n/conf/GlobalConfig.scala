@@ -27,10 +27,10 @@ object GlobalConfig {
         }
       })
     }
-    MethodInvocationHandleConfig(Seq(root))
+    MethodInvocationHandleConfig(Vector(root))
   }
 
   private def getPrintCtx(content: String): GeneratorContext = {
-    GeneratorContext(content, Seq(IncludeHandle("<iostream>")))
+    GeneratorContext(content, Vector(IncludeHandle("<iostream>")))
   }
 }

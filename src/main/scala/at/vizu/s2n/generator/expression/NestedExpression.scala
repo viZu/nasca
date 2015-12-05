@@ -8,7 +8,7 @@ import at.vizu.s2n.types.symbol._
   * Phil on 29.11.15.
   */
 case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
-                            member: Member, params: Seq[Expression] = Seq()) extends Expression {
+                            member: Member, params: Seq[Expression] = Vector()) extends Expression {
   lazy val exprTpe = member.tpe
 
   def generate: GeneratorContext = {
@@ -23,7 +23,7 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
     val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ", ")
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
-      GeneratorUtils.mergeGeneratorContexts(Seq(paramsContext, callCtx), givenContent = callCtx.content)
+      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = callCtx.content)
     } else {
       throw new RuntimeException("Blablub")
     }
@@ -34,7 +34,7 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
     val paramsContent: String = paramsContext.content
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
-      GeneratorUtils.mergeGeneratorContexts(Seq(paramsContext, callCtx), givenContent = callCtx.content)
+      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = callCtx.content)
     } else if (isOperator(m)) {
       val prettyOperator = prettifyOperator(m.name)
       paramsContext.enhance(s"$varName $prettyOperator $paramsContent")
@@ -54,7 +54,7 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
   private def hasInvocationHandle: Boolean = {
     val paramTypes = member match {
       case m: Method => m.params.map(_.tpe)
-      case f: Field => Seq()
+      case f: Field => Vector()
     }
     val tpeName = if (prevTpe != null) prevTpe.name else ""
     GlobalConfig.invocationConfig.hasInvocationHandle(scope, tpeName, member.name, paramTypes)
@@ -63,7 +63,7 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
   private def executeInvocationHandle(): GeneratorContext = {
     val paramTypes = member match {
       case m: Method => m.params.map(_.tpe)
-      case f: Field => Seq()
+      case f: Field => Vector()
     }
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
     val paramsAsString = params.map(_.generate.content).toList

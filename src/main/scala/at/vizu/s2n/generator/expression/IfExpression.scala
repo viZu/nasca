@@ -16,7 +16,7 @@ case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart
   override def generateReturn: GeneratorContext = generateAcc(true)
 
   private def generateAcc(withReturn: Boolean) = {
-    val parts = Seq(generateIfPart(withReturn), generateElseIfParts(withReturn), generateElsePart(withReturn))
+    val parts = Vector(generateIfPart(withReturn), generateElseIfParts(withReturn), generateElsePart(withReturn))
     GeneratorUtils.mergeGeneratorContexts(parts, seperator = " ")
   }
 
@@ -44,7 +44,7 @@ case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart
     val cond = ifPart.condition.generate
     val body = generateCtx(ifPart.body, withReturn)
     val content = f(cond.content, body.content)
-    GeneratorUtils.mergeGeneratorContexts(Seq(cond, body), givenContent = content)
+    GeneratorUtils.mergeGeneratorContexts(Vector(cond, body), givenContent = content)
   }
 
   private def generateCtx(expression: Expression, withReturn: Boolean) = {

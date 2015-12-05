@@ -6,7 +6,7 @@ import at.vizu.s2n.types.symbol.{BaseTypes, TType}
 /**
   * Phil on 29.11.15.
   */
-case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expression] = Seq()) extends Expression {
+case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expression] = Vector()) extends Expression {
   def exprTpe = tpe
 
   def generate = {

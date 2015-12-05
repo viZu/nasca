@@ -13,7 +13,7 @@ case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMetho
     val typeName = GeneratorUtils.getCppTypeName(exprTpe.pkg, exprTpe.simpleName)
     val paramsString: String = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
     val initMethodCall = s"this->$initMethodName()"
-    val expressions: Seq[Expression] = Seq(LiteralExpression(baseTypes.unit, initMethodCall))
+    val expressions: Seq[Expression] = Vector(LiteralExpression(baseTypes.unit, initMethodCall))
     val initializers = method.params.map(p => s"${p.name}(${p.name})").mkString(", ")
     val initializer = if (initializers.nonEmpty) s": $initializers " else ""
     val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")

@@ -16,7 +16,7 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
       case _ => rhs.generate
     }
     val generated = s"${lhsCtx.content} = ${rhsCtx.content}"
-    GeneratorUtils.mergeGeneratorContexts(Seq(lhsCtx, rhsCtx), givenContent = generated)
+    GeneratorUtils.mergeGeneratorContexts(Vector(lhsCtx, rhsCtx), givenContent = generated)
   }
 
   override def skipSemiColon: Boolean = false

@@ -65,48 +65,50 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with no package" in {
-    val field = Field(ctx, Seq(), "aField", tpeWithOutPkg)
-    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<Type> aField;")
+    val field = Field(ctx, Vector(), "aField", tpeWithOutPkg)
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"const ${sharedPtr}<Type> aField")
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with package" in {
-    val field = Field(ctx, Seq(), "aField", tpeWithPkg)
-    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<test::Type> aField;")
+    val field = Field(ctx, Vector(), "aField", tpeWithPkg)
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"const ${sharedPtr}<test::Type> aField")
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with nested package" in {
-    val field = Field(ctx, Seq(), "aField", tpeWithNestedPkg)
-    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<test_a_b_c::Type> aField;")
+    val field = Field(ctx, Seq(Mutable), "aField", tpeWithNestedPkg)
+    GeneratorUtils.generateFieldDefinition(baseTypes, field).trim should be(s"${sharedPtr}<test_a_b_c::Type> aField")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with no param" in {
-    val method = Method(ctx, "aMethod", tpeWithOutPkg, Seq(), Seq())
+    val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Vector())
     GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod();")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with one param" in {
-    val method = Method(ctx, "aMethod", tpeWithOutPkg, Seq(), Seq(Param(ctx, tpeWithPkg, "a")))
+    val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Seq(Param(ctx, tpeWithPkg, "a")))
     GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with two param" in {
-    val method = Method(ctx, "aMethod", tpeWithPkg, Seq(), Seq(Param(ctx, tpeWithOutPkg, "a"), Param(ctx, tpeWithNestedPkg, "b")))
+    val method = Method(ctx, "aMethod", tpeWithPkg, Vector(), Seq(Param(ctx, tpeWithOutPkg, "a"), Param(ctx, tpeWithNestedPkg, "b")))
     GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
   }
 
   "GeneratorUtils.generateIncludes" should "return empty C++ Includes for no scala Imports" in {
-    GeneratorUtils.generateIncludes(Seq()) should be("")
+    GeneratorUtils.generateIncludes(Vector()) should be("#include <memory>")
   }
 
   "GeneratorUtils.generateIncludes" should "return correct C++ Include for a single scala Import" in {
     GeneratorUtils.generateIncludes(Seq(ImportStmt("", "Type", ""))) should be(
-      """#include "Type.h"
+      """#include <memory>
+        |#include "Type.h"
         | """.stripMargin)
   }
 
   "GeneratorUtils.generateIncludes" should "return correct C++ Includes for multiple scala Imports" in {
     GeneratorUtils.generateIncludes(Seq(ImportStmt("", "Type", ""), ImportStmt("", "Type2", ""))) should be(
-      """#include "Type.h"
+      """#include <memory>
+        |#include "Type.h"
         |#include "Type2.h"
         | """.stripMargin)
   }

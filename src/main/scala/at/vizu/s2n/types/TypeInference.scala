@@ -14,7 +14,7 @@ object TypeInference {
     trees.map(getType(baseTypes, scope, _))
   }
 
-  def getType(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Seq()): TType = {
+  def getType(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()): TType = {
     tree match {
       case b: Block => getTypeBlock(baseTypes, scope, b)
       case v: ValDef => baseTypes.unit
@@ -35,7 +35,7 @@ object TypeInference {
     getType(baseTypes, scope, block.expr)
   }
 
-  def getTypeSelect(baseTypes: BaseTypes, scope: TScope, select: Select, params: Seq[TType] = Seq()): TType = {
+  def getTypeSelect(baseTypes: BaseTypes, scope: TScope, select: Select, params: Seq[TType] = Vector()): TType = {
     val tpe: TType = getType(baseTypes, scope, select.qualifier)
     val selectName: String = select.name.toString
 
@@ -58,17 +58,17 @@ object TypeInference {
 
   def getTypeIdent(baseTypes: BaseTypes, scope: TScope, ident: Ident): TType = {
     val iName = ident.name.toString
-    scope.findMethod(iName, Seq()) match {
+    scope.findMethod(iName, Vector()) match {
       case Some(m) => m.returnType
       case None =>
         scope.findIdentifier(iName) match {
           case Some(i) => i.tpe
           case None =>
             val thisTpe: TType = scope.findThis()
-            thisTpe.findMethod(iName, Seq()) match {
+            thisTpe.findMethod(scope.findThis(), iName, Vector()) match {
               case Some(tMethod) => tMethod.returnType
               case None =>
-                thisTpe.findField(iName) match {
+                thisTpe.findField(thisTpe, iName) match {
                   case Some(field) => field.tpe
                   case None => throw new RuntimeException("TODO")
                 }

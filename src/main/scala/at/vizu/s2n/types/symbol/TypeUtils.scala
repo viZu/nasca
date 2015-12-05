@@ -146,7 +146,7 @@ object TypeUtils {
 
   def findMethodForIdent(scope: TScope, ident: Ident, onType: TType = null): Method = {
     val defName: String = ident.name.toString
-    findMethod(scope, defName, ident.pos.line, Seq(), onType)
+    findMethod(scope, defName, ident.pos.line, Vector(), onType)
   }
 
   def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null): Method = {
@@ -156,7 +156,7 @@ object TypeUtils {
       throw new TypeException(scope.currentFile, line, msg)
     }
     val tpe: TType = if (onType == null) scope.findThis() else onType
-    tpe.findMethod(name, args) getOrElse throwMethodNotFound(name)
+    tpe.findMethod(scope.findThis(), name, args) getOrElse throwMethodNotFound(name)
   }
 
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
@@ -203,8 +203,9 @@ object TypeUtils {
       val msg = s"value $fieldName is not a member of type ${tpe.name}"
       throw new TypeException(scope.currentFile, line, msg)
     }
-    val tpe: TType = if (onType == null) scope.findThis() else onType
-    tpe.findField(fieldName) getOrElse throwFieldNotFound(fieldName, tpe)
+    val thisTpe: TType = scope.findThis()
+    val tpe: TType = if (onType == null) thisTpe else onType
+    tpe.findField(thisTpe, fieldName) getOrElse throwFieldNotFound(fieldName, tpe)
   }
 
   def isConstructor(methodName: String): Boolean = {
@@ -216,8 +217,9 @@ object TypeUtils {
       val msg = s"No value $selectName found"
       throw new TypeException(scope.currentFile, line, msg)
     }
-    val tpe: TType = if (onType == null) scope.findThis() else onType
-    tpe.findMethod(name, Seq()).map(_.returnType) orElse tpe.findField(name).map(_.tpe) getOrElse throwMethodNotFound(name)
+    val thisTpe: TType = scope.findThis()
+    val tpe: TType = if (onType == null) thisTpe else onType
+    tpe.findMethod(thisTpe, name, Vector()).map(_.returnType) orElse tpe.findField(thisTpe, name).map(_.tpe) getOrElse throwMethodNotFound(name)
   }
 
   /**
@@ -230,7 +232,7 @@ object TypeUtils {
       throw new TypeException(scope.currentFile, i.pos.line, msg)
     }
     val name: String = i.name.toString
-    scope.findIdentifier(name) orElse scope.findThis().findField(name)
+    scope.findIdentifier(name) orElse scope.findThis().findField(scope.findThis(), name)
       .map(_.asIdentifier) getOrElse throwIdentifierNotFound(name)
   }
 
@@ -248,18 +250,19 @@ object TypeUtils {
     * Member
     */
 
-  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Seq()): (Any) = {
+  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): (Any) = {
     scope.findMethod(name, withParams) match {
       case Some(m) => m
       case None =>
         scope.findIdentifier(name) match {
           case Some(ident) => ident
           case None =>
-            val tpe = if (onType != null) onType else scope.findThis()
-            tpe.findMethod(name, withParams) match {
+            val thisTpe: TType = scope.findThis()
+            val tpe = if (onType != null) onType else thisTpe
+            tpe.findMethod(thisTpe, name, withParams) match {
               case Some(tMethod) => tMethod
               case None =>
-                tpe.findField(name) match {
+                tpe.findField(thisTpe, name) match {
                   case Some(tField) => tField
                   case None => throw new RuntimeException("Todo")
                 }
@@ -269,11 +272,12 @@ object TypeUtils {
   }
 
   def findMember(scope: TScope, name: String, onType: TType = null): Member = {
-    val tpe = if (onType == null) scope.findThis() else onType
-    tpe.findMethod(name, Seq()) match {
+    val thisTpe: TType = scope.findThis()
+    val tpe = if (onType == null) thisTpe else onType
+    tpe.findMethod(thisTpe, name, Vector()) match {
       case Some(tMethod) => tMethod
       case None =>
-        tpe.findField(name) match {
+        tpe.findField(thisTpe, name) match {
           case Some(tField) => tField
           case None => throw new RuntimeException("Todo")
         }
