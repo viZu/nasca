@@ -62,18 +62,19 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
       case _ => false
     })
 
-    val initCtx: GeneratorContext = generateContructorInit(scope, constructorContent)
+    val initCtx = generateContructorInit(scope, constructorContent)
 
     val members = (memberTrees.map({
-      case d: DefDef => generateMethod(scope, d)
+      case d: DefDef => generateMethod(scope, d, initCtx)
       case v: ValDef => generateField(scope, v)
     }) :+ initCtx).filter(_.isNonEmpty)
     GeneratorUtils.mergeGeneratorContexts(members, "\n\n") // remove unhandled member and contexts
   }
 
-  private def generateMethod(scope: TScope, d: DefDef): GeneratorContext = {
+  private def generateMethod(scope: TScope, d: DefDef, initCtx: GeneratorContext): GeneratorContext = {
     val method: Method = TypeUtils.findMethodForDef(scope, d)
-    if (method.constructor) generateConstructor(scope, method)
+    if (method.isAbstract || tpe.isTrait && method.constructor) ""
+    else if (method.constructor) generateConstructor(scope, method, initCtx)
     else
       scoped(scope, (s: TScope) => {
         TypeUtils.addParamsToScope(s, method.params)
@@ -81,8 +82,9 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
       })
   }
 
-  private def generateConstructor(scope: TScope, method: Method): GeneratorContext = {
-    ConstructorExpression(_baseTypes, method, classInitMethodName).generate
+  private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext): GeneratorContext = {
+    if (initCtx.isEmpty) ConstructorExpression(_baseTypes, method, "").generate // no in
+    else ConstructorExpression(_baseTypes, method, classInitMethodName).generate
   }
 
   private def generateField(scope: TScope, v: ValDef): GeneratorContext = {
@@ -136,8 +138,9 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   }
 
   private def generateContructorInit(scope: TScope, constructorContent: List[Tree]): GeneratorContext = {
-    constructorContent match {
-      case Nil => generateConstructorInitBlock(scope, Expression.wrapInBlock(EmptyTree))
+    if (tpe.isTrait) GeneratorContext()
+    else constructorContent match {
+      case Nil => GeneratorContext()
       case _ =>
         val block: Block = Expression.wrapInBlock(constructorContent)
         generateConstructorInitBlock(scope, block)

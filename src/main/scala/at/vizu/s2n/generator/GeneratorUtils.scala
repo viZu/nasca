@@ -60,6 +60,11 @@ object GeneratorUtils {
     s"  $tpeName ${m.name}($params);"
   }
 
+  def generateVirtualMethod(baseTypes: BaseTypes, m: Method): String = {
+    val definition: String = generateMethodDefinition(baseTypes, m).trim.dropRight(1) // remove semicolon
+    s"virtual $definition = 0;"
+  }
+
   def generateParamsString(baseTypes: BaseTypes, params: Seq[Param], withVars: Boolean = false) = {
     params.map(p => {
       generateCppTypeName(baseTypes, p.tpe) + (if (withVars) s" ${p.name}" else "")

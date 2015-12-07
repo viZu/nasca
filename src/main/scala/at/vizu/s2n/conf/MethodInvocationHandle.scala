@@ -48,7 +48,7 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
 
   private def buildMap() = classInvocations.map(ci => ci.className -> ci.build()).toMap
 
-  def findInvocationHandle(scope: TScope, className: String, methodName: String, params: Seq[TType]): List[String] => GeneratorContext = {
+  def findInvocationHandle(scope: TScope, className: String, methodName: String, params: Seq[TType]): Seq[String] => GeneratorContext = {
     val cName = if (className.isEmpty) "__root__" else className
     findInvocationHandleOpt(scope, cName, methodName, params).get
   }

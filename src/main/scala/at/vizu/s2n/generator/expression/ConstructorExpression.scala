@@ -12,8 +12,7 @@ case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMetho
   override def generate: GeneratorContext = {
     val typeName = GeneratorUtils.getCppTypeName(exprTpe.pkg, exprTpe.simpleName)
     val paramsString: String = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
-    val initMethodCall = s"this->$initMethodName()"
-    val expressions: Seq[Expression] = Vector(LiteralExpression(baseTypes.unit, initMethodCall))
+    val expressions: Seq[Expression] = generateInitMethodExpr()
     val initializers = method.params.map(p => s"${p.name}(${p.name})").mkString(", ")
     val initializer = if (initializers.nonEmpty) s": $initializers " else ""
     val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")
@@ -22,6 +21,14 @@ case class ConstructorExpression(baseTypes: BaseTypes, method: Method, initMetho
          |  ${ctx.content}
          |}""".stripMargin
     ctx.enhance(content)
+  }
+
+  private def generateInitMethodExpr() = {
+    if (initMethodName.isEmpty) Vector()
+    else {
+      val initMethodCall = s"this->$initMethodName()"
+      Vector(LiteralExpression(baseTypes.unit, initMethodCall))
+    }
   }
 
   override def skipSemiColon: Boolean = true

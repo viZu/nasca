@@ -78,6 +78,7 @@ trait HeaderFileGenerator {
     member match {
       case m: Method =>
         if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
+        else if (m.isAbstract) GeneratorUtils.generateVirtualMethod(baseTypes, m)
         else GeneratorUtils.generateMethodDefinition(baseTypes, m)
       case f: Field => generateFieldDefinition(baseTypes, f)
     }
