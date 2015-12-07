@@ -128,7 +128,6 @@ object TypeUtils {
   }
 
   def addClass(scope: TScope, tpe: TType) = {
-    nullType(scope).addParent(tpe)
     scope.addClass(tpe)
   }
 
@@ -295,7 +294,7 @@ object TypeUtils {
     if (tpe1 == unit || tpe2 == unit) unit
     else {
       var foundType: TType = null
-      tpe1.forEachType(t => {
+      tpe1.foreachType(t => {
         if (foundType == null && tpe2.hasParent(t)) foundType = t
       })
       foundType

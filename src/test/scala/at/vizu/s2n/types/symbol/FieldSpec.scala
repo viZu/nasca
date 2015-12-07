@@ -7,7 +7,7 @@ import org.scalatest._
   */
 class FieldSpec extends FlatSpec with Matchers {
 
-  val tpe = TType(Context("test", 0), "FieldType", "test")
+  val tpe = ConcreteType(Context("test", 0), "FieldType", "test")
   val field = Field(Context("test", 0), Vector(Private, Abstract), "field", tpe)
   val mutableField = Field(Context("test", 0), Vector(Private, Mutable), "field", tpe)
 

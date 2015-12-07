@@ -140,7 +140,7 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   private def generateContructorInit(scope: TScope, constructorContent: List[Tree]): GeneratorContext = {
     if (tpe.isTrait) GeneratorContext()
     else constructorContent match {
-      case Nil => GeneratorContext()
+      case Nil => GeneratorContext() // no intitialization is done
       case _ =>
         val block: Block = Expression.wrapInBlock(constructorContent)
         generateConstructorInitBlock(scope, block)

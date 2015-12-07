@@ -42,12 +42,12 @@ object TypeGatherer {
 
     private def buildEmptyClasses(currentFile: String, pkgName: String, c: ClassDef) = {
       val ctx = Context(currentFile, c.pos.line)
-      TypeUtils.addClass(scope, TType(ctx, c.name.toString, pkgName, TypeUtils.getModifiers(c.mods)))
+      TypeUtils.addClass(scope, ConcreteType(ctx, c.name.toString, pkgName, TypeUtils.getModifiers(c.mods)))
     }
 
     private def buildEmptyObject(currentFile: String, pkgName: String, m: ModuleDef) = {
       val ctx = Context(currentFile, m.pos.line)
-      val tpe: TType = TType(ctx, m.name.toString, pkgName, TypeUtils.getModifiers(m.mods), isObject = true)
+      val tpe: TType = ConcreteType(ctx, m.name.toString, pkgName, TypeUtils.getModifiers(m.mods), _isObject = true)
       scope.addObject(tpe)
       scope.add(Identifier(ctx, tpe.fullClassName, tpe, mutable = false))
     }

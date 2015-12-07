@@ -12,9 +12,9 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   val baseTypes = new ScalaScopeInitializer
   val sharedPtr = "std::shared_ptr"
   val ctx = Context("", 0)
-  val tpeWithOutPkg = TType(Context("test", 0), "Type")
-  val tpeWithPkg = TType(Context("test", 0), "Type", "test")
-  val tpeWithNestedPkg = TType(Context("test", 0), "Type", "test.a.b.c")
+  val tpeWithOutPkg = ConcreteType(Context("test", 0), "Type")
+  val tpeWithPkg = ConcreteType(Context("test", 0), "Type", "test")
+  val tpeWithNestedPkg = ConcreteType(Context("test", 0), "Type", "test.a.b.c")
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with no package" in {
     GeneratorUtils.getCppTypeName("", "Type") should be("Type")

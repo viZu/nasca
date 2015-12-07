@@ -6,23 +6,23 @@ package at.vizu.s2n.types.symbol
 class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   lazy val ctx: Context = Context("", 0)
-  lazy val any = new TType(simpleName = "Any", pkg = "scala")
-  lazy val anyVal = new TType(simpleName = "AnyVal", pkg = "scala")
-  lazy val anyRef = new TType(simpleName = "AnyRef", pkg = "scala")
-  lazy val string = new TType(simpleName = "String", pkg = "scala", mods = Vector(Trait))
-  lazy val numeric = new TType(simpleName = "NumericPrimitive", pkg = "scala", mods = Vector(Trait))
-  lazy val unit = new TType(simpleName = "Unit", pkg = "scala", mods = Vector(Trait))
-  lazy val boolean = new TType(simpleName = "Boolean", pkg = "scala", mods = Vector(Trait))
-  lazy val byte = new TType(simpleName = "Byte", pkg = "scala", mods = Vector(Trait))
-  lazy val short = new TType(simpleName = "Short", pkg = "scala", mods = Vector(Trait))
-  lazy val char = new TType(simpleName = "Char", pkg = "scala", mods = Vector(Trait))
-  lazy val int = new TType(simpleName = "Int", pkg = "scala", mods = Vector(Trait))
-  lazy val long = new TType(simpleName = "Long", pkg = "scala", mods = Vector(Trait))
-  lazy val float = new TType(simpleName = "Float", pkg = "scala", mods = Vector(Trait))
-  lazy val double = new TType(simpleName = "Double", pkg = "scala", mods = Vector(Trait))
-  lazy val nullTpe = new TType(simpleName = "Null", pkg = "scala", mods = Vector(Trait))
+  lazy val any = new ConcreteType(_simpleName = "Any", _pkg = "scala")
+  lazy val anyVal = new ConcreteType(_simpleName = "AnyVal", _pkg = "scala")
+  lazy val anyRef = new ConcreteType(_simpleName = "AnyRef", _pkg = "scala")
+  lazy val string = new ConcreteType(_simpleName = "String", _pkg = "scala", _mods = Vector(Trait))
+  lazy val numeric = new ConcreteType(_simpleName = "NumericPrimitive", _pkg = "scala", _mods = Vector(Trait))
+  lazy val unit = new ConcreteType(_simpleName = "Unit", _pkg = "scala", _mods = Vector(Trait))
+  lazy val boolean = new ConcreteType(_simpleName = "Boolean", _pkg = "scala", _mods = Vector(Trait))
+  lazy val byte = new ConcreteType(_simpleName = "Byte", _pkg = "scala", _mods = Vector(Trait))
+  lazy val short = new ConcreteType(_simpleName = "Short", _pkg = "scala", _mods = Vector(Trait))
+  lazy val char = new ConcreteType(_simpleName = "Char", _pkg = "scala", _mods = Vector(Trait))
+  lazy val int = new ConcreteType(_simpleName = "Int", _pkg = "scala", _mods = Vector(Trait))
+  lazy val long = new ConcreteType(_simpleName = "Long", _pkg = "scala", _mods = Vector(Trait))
+  lazy val float = new ConcreteType(_simpleName = "Float", _pkg = "scala", _mods = Vector(Trait))
+  lazy val double = new ConcreteType(_simpleName = "Double", _pkg = "scala", _mods = Vector(Trait))
+  lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = "scala", _mods = Vector(Trait))
 
-  lazy val primitives = Set(boolean, byte, short, char, int, long, float, double, unit)
+  lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit)
 
   override def initScope: TScope = {
     val scope: TScope = new TScope()
@@ -67,27 +67,27 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initAnyVal() = {
     //TODO Context
-    anyVal.parents = Vector(any)
+    anyVal._parents = Vector(any)
     anyVal
   }
 
   private def initAnyRef() = {
     //TODO Context
-    anyRef.parents = Vector(any)
+    anyRef._parents = Vector(any)
     anyRef.addMethod(Method(ctx, "eq", boolean, Vector(Final), Vector(Param(ctx, anyRef, "arg0"))))
     anyRef.addMethod(Method(ctx, "ne", boolean, Vector(Final), Vector(Param(ctx, anyRef, "arg0"))))
     anyRef
   }
 
   private def initString() = {
-    string.parents = Vector(anyRef)
+    string._parents = Vector(anyRef)
     string.addMethod(Method(ctx, "$times", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "$plus", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string
   }
 
   private def initNumericPrimitive() = {
-    numeric.parents = Vector()
+    numeric._parents = Vector()
     numeric.addMethod(Method(ctx, "$less", boolean, Vector(Abstract), Vector(Param(ctx, numeric, "x")), operator = true))
     numeric.addMethod(Method(ctx, "$less$eq", boolean, Vector(Abstract), Vector(Param(ctx, numeric, "x")), operator = true))
     numeric.addMethod(Method(ctx, "$greater", boolean, Vector(Abstract), Vector(Param(ctx, numeric, "x")), operator = true))
@@ -117,13 +117,13 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initUnit() = {
     //TODO Context
-    unit.parents = Vector(anyVal)
+    unit._parents = Vector(anyVal)
     unit
   }
 
   private def initBoolean() = {
     //TODO Context
-    boolean.parents = Vector(anyVal)
+    boolean._parents = Vector(anyVal)
     boolean.addMethod(Method(ctx, "$less", boolean, Vector(Abstract), Vector(Param(ctx, boolean, "x")), operator = true))
     boolean.addMethod(Method(ctx, "$less$eq", boolean, Vector(Abstract), Vector(Param(ctx, boolean, "x")), operator = true))
     boolean.addMethod(Method(ctx, "$greater", boolean, Vector(Abstract), Vector(Param(ctx, boolean, "x")), operator = true))
@@ -138,7 +138,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initByte() = {
     //TODO Context
-    byte.parents = Vector(short)
+    byte._parents = Vector(short)
     byte.addMethod(Method(ctx, "unary_$minus", int, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(byte, double, double)
     calcMethods(byte, float, float)
@@ -152,7 +152,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initShort() = {
     //TODO Context
-    short.parents = Vector(int)
+    short._parents = Vector(int)
     short.addMethod(Method(ctx, "unary_$minus", int, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(short, double, double)
     calcMethods(short, float, float)
@@ -166,7 +166,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initChar() = {
     //TODO Context
-    char.parents = Vector(int)
+    char._parents = Vector(int)
     char.addMethod(Method(ctx, "unary_$minus", int, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(char, double, double)
     calcMethods(char, float, float)
@@ -180,7 +180,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initInt() = {
     //TODO Context
-    int.parents = Vector(long)
+    int._parents = Vector(long)
     int.addMethod(Method(ctx, "unary_$minus", int, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(int, double, double)
     calcMethods(int, float, float)
@@ -194,7 +194,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initLong() = {
     //TODO Context
-    long.parents = Vector(float)
+    long._parents = Vector(float)
     long.addMethod(Method(ctx, "unary_$minus", long, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(long, double, double)
     calcMethods(long, float, float)
@@ -207,7 +207,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   }
 
   private def initFloat() = {
-    float.parents = Vector(double)
+    float._parents = Vector(double)
     float.addMethod(Method(ctx, "unary_$minus", float, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(float, double, double)
     calcMethods(float, float, float)
@@ -221,7 +221,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   private def initDouble() = {
     //TODO Context
-    double.parents = Vector(anyVal, numeric)
+    double._parents = Vector(anyVal, numeric)
     double.addMethod(Method(ctx, "unary_$minus", double, Vector(Abstract, Override), Vector(), operator = true))
     calcMethods(double, double, double)
     calcMethods(double, float, double)
@@ -233,7 +233,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     double
   }
 
-  private def calcMethods(appendTo: TType, tpe: TType, retTpe: TType) = {
+  private def calcMethods(appendTo: ConcreteType, tpe: TType, retTpe: TType) = {
     appendTo.addMethod(Method(ctx, "$times", retTpe, Vector(Abstract, Override), Vector(Param(ctx, tpe, "x")), operator = true))
     appendTo.addMethod(Method(ctx, "$plus", retTpe, Vector(Abstract, Override), Vector(Param(ctx, tpe, "x")), operator = true))
     appendTo.addMethod(Method(ctx, "$div", retTpe, Vector(Abstract, Override), Vector(Param(ctx, tpe, "x")), operator = true))
@@ -242,7 +242,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   }
 
   private def initNull() = {
-    nullTpe.parents = Vector(string)
+    nullTpe._parents = Vector(string)
     nullTpe
   }
 

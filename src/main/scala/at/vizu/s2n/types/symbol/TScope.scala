@@ -61,6 +61,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   def addClass(tpe: TType) = {
     if (findClassInCurrentScope(tpe.fullClassName).isEmpty) {
+      addNullTypeAsSubType(tpe)
       _types = _types :+ tpe
     } else {
       throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
@@ -250,7 +251,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def addNullTypeAsSubType(tpe: TType): Unit = {
-    findNullType().addParent(tpe)
+    findNullType().asInstanceOf[ConcreteType].addParent(tpe)
   }
 
   /**

@@ -8,10 +8,10 @@ import org.scalatest._
 class MethodSpec extends FlatSpec with Matchers {
 
   val ctx = Context("", 0)
-  val superType = TType(ctx, "SuperType", "test")
-  val param1 = TType(ctx, "Param", "test")
+  val superType = ConcreteType(ctx, "SuperType", "test")
+  val param1 = ConcreteType(ctx, "Param", "test")
   param1.addParent(superType)
-  val param2 = TType(ctx, "AnotherParam", "test")
+  val param2 = ConcreteType(ctx, "AnotherParam", "test")
 
   "Method.checkArgs" should "return true if correct argument types are presented" in {
     val m = createMethod()
@@ -50,7 +50,7 @@ class MethodSpec extends FlatSpec with Matchers {
 
 
   private def createMethod(): Method = {
-    val returnType = TType(ctx, "Return", "test")
+    val returnType = ConcreteType(ctx, "Return", "test")
     val params: Seq[Param] = Seq(superType, param2).map(Param(ctx, _, "a"))
     Method(ctx, "name", returnType, Seq(), params)
   }

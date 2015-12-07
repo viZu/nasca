@@ -9,11 +9,11 @@ class TypeUtilsSpec extends FlatSpec with Matchers {
 
   "TypeUtils.toString" should "return a well formatted comma seperated String for Nameables" in {
     val ctx = Context("", 0)
-    val bType = TType(ctx, "BType")
-    val cType = TType(ctx, "CType", "a")
-    val dType = TType(ctx, "DType", "b")
-    val eType = TType(ctx, "EType", "c")
-    val fType = TType(ctx, "FType", "d")
+    val bType = ConcreteType(ctx, "BType")
+    val cType = ConcreteType(ctx, "CType", "a")
+    val dType = ConcreteType(ctx, "DType", "b")
+    val eType = ConcreteType(ctx, "EType", "c")
+    val fType = ConcreteType(ctx, "FType", "d")
     TypeUtils.toString(Vector(bType, cType, dType, eType, fType)) should be("BType, a.CType, b.DType, c.EType, d.FType")
   }
 

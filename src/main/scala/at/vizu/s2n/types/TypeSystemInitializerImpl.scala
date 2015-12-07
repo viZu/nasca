@@ -117,7 +117,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
   private def enhanceType(pkgName: String, m: ImplDef, typeProvider: String => Option[TType]): TType = {
     val className = if (pkgName.isEmpty) m.name.toString else pkgName + "." + m.name.toString
-    val tpe = typeProvider(className)
+    val tpe = typeProvider(className).collect({ case c: ConcreteType => c })
       .orElse(throw new scala.RuntimeException(s"No type with name $className found")).get
 
     val traverser = new ClassMemberTraverser(m.impl)

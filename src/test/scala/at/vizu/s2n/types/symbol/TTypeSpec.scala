@@ -9,17 +9,17 @@ import org.scalatest._
 class TTypeSpec extends FlatSpec with Matchers {
 
   val ctx = Context("", 0)
-  val int = TType(ctx, "Int", "scala")
-  val string = TType(ctx, "String", "scala")
+  val int = ConcreteType(ctx, "Int", "scala")
+  val string = ConcreteType(ctx, "String", "scala")
 
-  val traitType = TType(ctx, "TraitType", "test")
+  val traitType = ConcreteType(ctx, "TraitType", "test")
   val tparams: Seq[Param] = Seq(int, string).map(Param(ctx, _, "_any"))
   private val tMethod: Method = Method(ctx, "tMethod", int, Seq(), tparams)
   traitType.addMethod(tMethod)
   private val tField: Field = Field(ctx, Seq(), "tField", int)
   traitType.addField(tField)
 
-  val superType = TType(ctx, "SuperType", "test")
+  val superType = ConcreteType(ctx, "SuperType", "test")
   val sparams: Seq[Param] = Seq(string).map(Param(ctx, _, "_any"))
   private val sMethod: Method = Method(ctx, "sMethod", string, Seq(), sparams)
   superType.addMethod(sMethod)
@@ -27,7 +27,7 @@ class TTypeSpec extends FlatSpec with Matchers {
   superType.addField(sField)
   superType.addParent(traitType)
 
-  val aType = TType(ctx, "AType", "test")
+  val aType = ConcreteType(ctx, "AType", "test")
   val aparams: Seq[Param] = Seq(string, string).map(Param(ctx, _, "_any"))
   private val aMethod: Method = Method(ctx, "aMethod", string, Seq(), aparams)
   aType.addMethod(aMethod)
@@ -37,11 +37,11 @@ class TTypeSpec extends FlatSpec with Matchers {
   aType.addField(aField)
   aType.addParent(superType)
 
-  val bType = TType(ctx, "BType")
-  val cType = TType(ctx, "CType", "test")
-  val dType = TType(ctx, "DType", "test")
-  val eType = TType(ctx, "EType", "test")
-  val fType = TType(ctx, "FType", "test")
+  val bType = ConcreteType(ctx, "BType")
+  val cType = ConcreteType(ctx, "CType", "test")
+  val dType = ConcreteType(ctx, "DType", "test")
+  val eType = ConcreteType(ctx, "EType", "test")
+  val fType = ConcreteType(ctx, "FType", "test")
 
   initBType()
   initCType()
@@ -91,19 +91,19 @@ class TTypeSpec extends FlatSpec with Matchers {
 
   "AType foreachType" should "be executed three times (AType, Trait and Supertype)" in {
     var i = 0
-    aType.forEachType(t => i += 1)
+    aType.foreachType(t => i += 1)
     i should be(3)
   }
 
   "Trait foreachType" should "be executed once" in {
     var i = 0
-    traitType.forEachType(t => i += 1)
+    traitType.foreachType(t => i += 1)
     i should be(1)
   }
 
   "DType foreachType" should "be executed seven times" in {
     var i = 0
-    dType.forEachType(t => i += 1)
+    dType.foreachType(t => i += 1)
     i should be(7)
   }
 
@@ -171,14 +171,14 @@ class TTypeSpec extends FlatSpec with Matchers {
   }
 
   private def initDType(): Unit = {
-    val twoType: TType = TType(ctx, "2Trait", "test", Seq(Trait))
+    val twoType: ConcreteType = ConcreteType(ctx, "2Trait", "test", Seq(Trait))
     twoType.addParent(traitType)
     dType.addParent(twoType)
-    val threeType: TType = TType(ctx, "3Trait", "test", Seq(Trait))
-    threeType.addParent(TType(ctx, "4Trait", "test", Seq(Trait)))
+    val threeType: ConcreteType = ConcreteType(ctx, "3Trait", "test", Seq(Trait))
+    threeType.addParent(ConcreteType(ctx, "4Trait", "test", Seq(Trait)))
     dType.addParent(threeType)
-    dType.addParent(TType(ctx, "5Trait", "test", Seq(Trait)))
-    dType.addParent(TType(ctx, "6Trait", "test", Seq(Trait)))
+    dType.addParent(ConcreteType(ctx, "5Trait", "test", Seq(Trait)))
+    dType.addParent(ConcreteType(ctx, "6Trait", "test", Seq(Trait)))
 
   }
 
