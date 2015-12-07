@@ -24,7 +24,7 @@ trait TType extends Modifiable with Nameable {
   lazy val members = methods ++ fields
   lazy val modifiers: Set[Modifier] = Set() ++ mods
 
-  protected def parents: Seq[TType]
+  private[symbol] def parents: Seq[TType]
 
   def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method]
 

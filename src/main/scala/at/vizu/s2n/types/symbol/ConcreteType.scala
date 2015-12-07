@@ -6,16 +6,15 @@ import at.vizu.s2n.exception.TypeException
   * Phil on 07.10.15.
   */
 
-case class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
-                        _pkg: String = "", _mods: Seq[Modifier] = Vector(), private[symbol] val _isObject: Boolean = false) extends TType {
+class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
+                   _pkg: String = "", _mods: Seq[Modifier] = Vector(), private[symbol] val _isObject: Boolean = false) extends TType {
 
   private var _methods: Seq[Method] = Vector()
   private var _fields: Seq[Field] = Vector()
 
-  def parents = _parents
+  private[symbol] def parents = _parents
 
   private[symbol] var _parents: Seq[TType] = Vector()
-  var generics: Seq[GenericModifier] = Vector()
 
   def methods = _methods
 
@@ -138,4 +137,13 @@ case class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   override def mods: Seq[Modifier] = _mods
 
   override def isObject: Boolean = _isObject
+}
+
+object ConcreteType {
+
+  def apply(ctx: Context = Context("", 0), simpleName: String,
+            pkg: String = "", mods: Seq[Modifier] = Vector(), isObject: Boolean = false) = {
+    new ConcreteType(ctx, simpleName, pkg, mods, isObject)
+  }
+
 }

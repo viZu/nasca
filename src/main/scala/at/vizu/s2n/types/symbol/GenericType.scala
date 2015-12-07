@@ -3,28 +3,50 @@ package at.vizu.s2n.types.symbol
 /**
   * Phil on 07.12.15.
   */
-case class GenericType(_ctx: Context, genericName: String) extends TType {
-  override def ctx: Context = _ctx
+class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
+                  _pkg: String = "", _mods: Seq[Modifier] = Vector(), genericModifiers: Seq[GenericModifier]
+                  , override private[symbol] val _isObject: Boolean = false)
+  extends ConcreteType(_ctx, _simpleName, _pkg, _mods, _isObject) {
 
-  override def isObject: Boolean = false
+  def applyTypes(types: Seq[TType]) = {
+    val typeMap: Map[GenericModifier, TType] = genericModifiers.zip(types).toMap
+    val newMethods = mapMethods(typeMap)
+    val newFields = mapFields(typeMap)
+    new AppliedGenericType(types, newMethods, newFields, this)
+  }
 
-  override def methods: Seq[Method] = Seq()
+  private def mapMethods(types: Map[GenericModifier, TType]): Seq[Method] = {
+    methods.map(mapMethod(types, _))
+  }
 
-  override def pkg: String = ""
+  private def mapMethod(types: Map[GenericModifier, TType], method: Method) = {
+    val returnType = getNewTpe(types, method.returnType)
+    val params = method.params.map(mapParam(types, _))
+    Method(method.ctx, method.name, returnType, method.mods, params, method.constructor, method.instanceMethod, method.operator)
+  }
 
-  override def simpleName: String = genericName
+  private def mapParam(types: Map[GenericModifier, TType], oldParam: Param): Param = {
+    oldParam.tpe match {
+      case g: GenericModifier => Param(oldParam.ctx, getNewTpe(types, g), oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
+      case _ => oldParam // Garbage collector?
+    }
+  }
 
-  override def hasParent(tpe: TType): Boolean = ???
+  private def mapFields(types: Map[GenericModifier, TType]): Seq[Field] = {
+    fields.map(mapField(types, _))
+  }
 
-  override def fields: Seq[Field] = Seq()
+  private def mapField(types: Map[GenericModifier, TType], field: Field) = {
+    field.tpe match {
+      case g: GenericModifier => Field(field.ctx, field.mods, field.name, getNewTpe(types, g))
+      case _ => field // Garbage collector?
+    }
+  }
 
-  override def validate(): Unit = ???
-
-  override def findField(execCtx: TType, name: String): Option[Field] = ???
-
-  override def mods: Seq[Modifier] = ???
-
-  override protected def parents: Seq[TType] = ???
-
-  override def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = ???
+  private def getNewTpe(types: Map[GenericModifier, TType], oldType: TType) = {
+    oldType match {
+      case g: GenericModifier => types.get(g).get
+      case _ => oldType
+    }
+  }
 }

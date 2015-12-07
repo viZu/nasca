@@ -47,7 +47,7 @@ object TypeGatherer {
 
     private def buildEmptyObject(currentFile: String, pkgName: String, m: ModuleDef) = {
       val ctx = Context(currentFile, m.pos.line)
-      val tpe: TType = ConcreteType(ctx, m.name.toString, pkgName, TypeUtils.getModifiers(m.mods), _isObject = true)
+      val tpe: TType = ConcreteType(ctx, m.name.toString, pkgName, TypeUtils.getModifiers(m.mods), isObject = true)
       scope.addObject(tpe)
       scope.add(Identifier(ctx, tpe.fullClassName, tpe, mutable = false))
     }
