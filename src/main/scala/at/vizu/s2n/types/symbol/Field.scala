@@ -16,6 +16,7 @@ case class Field(ctx: Context, mods: Seq[Modifier], name: String, var _tpe: TTyp
 
   override def toString: String = {
     val v = if (isMutable) "var" else "val"
-    s"$v $name: ${tpe.fullClassName}"
+    val className = if (tpe == null) "" else s": tpe.fullClassName"
+    s"$v $name$className"
   }
 }

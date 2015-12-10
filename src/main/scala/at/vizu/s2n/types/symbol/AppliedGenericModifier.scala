@@ -3,7 +3,7 @@ package at.vizu.s2n.types.symbol
 /**
   * Phil on 07.12.15.
   */
-class AppliedGenericModifier(appliedType: TType, genericType: GenericModifier)
+class AppliedGenericModifier(val appliedType: TType, val genericType: GenericModifier)
   extends GenericModifier(genericType.ctx, genericType.genericName, genericType.upperBound, genericType.lowerBound,
     genericType.coVariance, genericType.contraVariance) {
 
@@ -17,10 +17,15 @@ class AppliedGenericModifier(appliedType: TType, genericType: GenericModifier)
 
   override def hasParent(tpe: TType): Boolean = appliedType.hasParent(tpe)
 
+  override def isAssignableFrom(other: TType): Boolean = other.hasParent(appliedType)
+
   override def findField(execCtx: TType, name: String) = appliedType.findField(execCtx, name)
 
   override def findMethod(execCtx: TType, name: String, args: Seq[TType]) = appliedType.findMethod(execCtx, name, args)
 
   override private[symbol] def parents: Seq[TType] = appliedType.parents
 
+  override def isAssignableAsParam(other: TType): Boolean = other match {
+    case a: AppliedGenericModifier => a == other
+  }
 }

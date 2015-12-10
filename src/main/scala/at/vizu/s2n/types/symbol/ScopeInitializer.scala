@@ -13,4 +13,8 @@ trait ScopeInitializer {
 
   def nullType: TType
 
+  def nothing: TType
+
+  def any: TType
+
 }

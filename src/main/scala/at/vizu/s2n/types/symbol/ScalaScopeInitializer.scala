@@ -21,6 +21,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   lazy val float = new ConcreteType(_simpleName = "Float", _pkg = "scala", _mods = Vector(Trait))
   lazy val double = new ConcreteType(_simpleName = "Double", _pkg = "scala", _mods = Vector(Trait))
   lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = "scala", _mods = Vector(Trait))
+  lazy val nothing = new ConcreteType(_simpleName = "Nothing", _pkg = "scala", _mods = Vector(Trait))
 
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit)
 
@@ -35,7 +36,8 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     val numericPrimitive = initNumericPrimitive()
     val pris = initPrimitives()
     val nullT = initNull()
-    val allTypes = anys ++ pris :+ numericPrimitive :+ str :+ nullT
+    val nothing = initNothing(pris :+ nullT)
+    val allTypes = anys ++ pris :+ numericPrimitive :+ str :+ nullT :+ nothing
 
     scope.addAllClasses(allTypes)
 
@@ -244,6 +246,11 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   private def initNull() = {
     nullTpe._parents = Vector(string)
     nullTpe
+  }
+
+  private def initNothing(parents: Seq[TType]) = {
+    nothing._parents = parents
+    nothing
   }
 
   override def unitType: TType = unit

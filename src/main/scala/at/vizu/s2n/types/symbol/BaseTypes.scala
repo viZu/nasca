@@ -20,6 +20,7 @@ trait BaseTypes {
   val float: TType
   val double: TType
   val nullTpe: TType
+  val nothing: TType
 
   val primitives: Set[TType]
 

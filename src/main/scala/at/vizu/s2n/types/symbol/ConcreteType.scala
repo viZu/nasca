@@ -2,6 +2,8 @@ package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.exception.TypeException
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * Phil on 07.10.15.
   */
@@ -9,8 +11,9 @@ import at.vizu.s2n.exception.TypeException
 class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
                    _pkg: String = "", _mods: Seq[Modifier] = Vector(), private[symbol] val _isObject: Boolean = false) extends TType {
 
-  private var _methods: Seq[Method] = Vector()
-  private var _fields: Seq[Field] = Vector()
+  protected var _methods: Seq[Method] = Vector()
+  protected var _fields: Seq[Field] = Vector()
+  private[symbol] var memberAddedListener: ArrayBuffer[Member => Unit] = ArrayBuffer()
 
   private[symbol] def parents = _parents
 
@@ -72,7 +75,9 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
     val args: Seq[TType] = method.params.map(_.tpe)
     val methodFound = findMethod(this, method.name, args).isDefined
     if (!methodFound || methodFound && method.isOverride) {
-      _methods = _methods :+ handleConstructor(method)
+      val addedMethod = handleConstructor(method)
+      _methods = _methods :+ addedMethod
+      notifyMemberAddedListener(addedMethod)
     } else {
       throw new TypeException(method.ctx.fileName, method.ctx.line,
         s"Type $fullClassName already has a method ${method.name}(${TypeUtils.toString(args)})")
@@ -80,7 +85,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def handleConstructor(m: Method) = {
-    if (m.constructor) Method(m.ctx, m.name, this, m.mods, m.params, m.constructor)
+    if (m.constructor) Method(m.ctx, m.name, this, m.mods, m.params, m.generics, m.constructor)
     else m
   }
 
@@ -94,6 +99,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   def addField(field: Field) = {
     if (findField(this, field.name).isEmpty) {
       _fields = _fields :+ field
+      notifyMemberAddedListener(field)
     } else {
       throw new TypeException(field.ctx.fileName, field.ctx.line,
         s"Type $fullClassName already has a field with name ${field.name}")
@@ -105,6 +111,10 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
       throw new TypeException(field.ctx.fileName, field.ctx.line,
         s"Type $fullClassName must either be abstract or implement abstract member ${field.name}")
     }
+  }
+
+  private def notifyMemberAddedListener(member: Member) = {
+    memberAddedListener.foreach(_.apply(member))
   }
 
   def addParent(parent: TType) = {
@@ -137,6 +147,12 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   override def mods: Seq[Modifier] = _mods
 
   override def isObject: Boolean = _isObject
+
+  override def isAssignableAsParam(other: TType): Boolean = other match {
+    case c: ConcreteType => this.isAssignableFrom(c)
+    case a: AppliedGenericModifier => this.isAssignableFrom(a.appliedType)
+    case _ => false
+  }
 }
 
 object ConcreteType {

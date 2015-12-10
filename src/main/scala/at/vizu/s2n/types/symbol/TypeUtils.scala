@@ -10,8 +10,12 @@ import scala.runtime.BoxedUnit
  */
 object TypeUtils {
 
+  val ConstructorName = "<init>"
+
   private var unitTpe: TType = null
   private var nullTpe: TType = null
+  private var anyTpe: TType = null
+  private var nothingTpe: TType = null
 
   /**
     * Modifiers
@@ -76,6 +80,7 @@ object TypeUtils {
       throw new TypeException(scope.currentFile, typeTree.pos.line, msg)
     }
     typeTree match {
+      case s: Select => findClass(scope, s.toString, s.pos.line)
       case rt: RefTree => findClass(scope, rt.name.toString, rt.pos.line)
       case id: ImplDef =>
         val tpeName: String = id.name.toString
@@ -83,7 +88,21 @@ object TypeUtils {
       case l: Literal => findTypeForLiteral(scope, l).getOrElse(throwTypeNotFound(l.value.value.getClass.getName))
       case t: This => scope.findThis()
       case n: New => findType(scope, n.tpt)
-      case att: AppliedTypeTree => throw new RuntimeException(s"Generic Types not supported yet: $att")
+      case att: AppliedTypeTree =>
+        val appliedTypes = att.args.map(findType(scope, _))
+        findType(scope, att.tpt) match {
+          case gt: GenericType =>
+            if (gt.genericModifiers.size != appliedTypes.size)
+              throw new TypeException(scope.currentFile, att.pos.line,
+                s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${appliedTypes.size}")
+            if (gt.genericModifiers == appliedTypes) gt
+            else {
+              val appliedMap = gt.genericModifiers.zip(appliedTypes).toMap
+              gt.applyTypes(appliedMap)
+            }
+          case _ => throw new TypeException(scope.currentFile, att.pos.line,
+            s"Wrong number of type arguments. Expected 0, but was ${appliedTypes.size}")
+        }
       case tt: TypeTree => null
       case _@other => throw new RuntimeException(s"Unknown Typetree: ${showRaw(other)}")
     }
@@ -131,6 +150,38 @@ object TypeUtils {
     scope.addClass(tpe)
   }
 
+  def createAndAddGenericModifiers(scope: TScope, generics: Seq[TypeDef]) = {
+    generics.map(createAndAddGenericModifier(scope, _))
+  }
+
+  def createAndAddGenericModifier(scope: TScope, generic: TypeDef) = {
+    val genericModifier: GenericModifier = createGenericModifier(scope, generic)
+    scope.addClass(genericModifier)
+    genericModifier
+  }
+
+  def createGenericModifier(scope: TScope, generic: TypeDef) = {
+    val ctx = Context(scope.currentFile, generic.pos.line)
+    val (lower, upper) = generic.rhs match {
+      case tbt: TypeBoundsTree => {
+        val lo = tbt.lo match {
+          case EmptyTree => nothingType(scope)
+          case _ => TypeUtils.findType(scope, tbt.lo)
+        }
+        val hi = tbt.hi match {
+          case EmptyTree => anyType(scope)
+          case _ => TypeUtils.findType(scope, tbt.hi)
+        }
+        (lo, hi)
+      }
+    }
+
+    //val upperBound = TypeUtils.findClass(currentScope, )
+    val coVariant: Boolean = generic.mods.hasFlag(Flag.COVARIANT)
+    val contraVariant: Boolean = generic.mods.hasFlag(Flag.CONTRAVARIANT)
+    new GenericModifier(ctx, generic.name.toString, upper, lower, coVariant, contraVariant)
+  }
+
   /**
     * Methods
     */
@@ -148,31 +199,75 @@ object TypeUtils {
     findMethod(scope, defName, ident.pos.line, Vector(), onType)
   }
 
-  def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null): Method = {
-    def throwMethodNotFound(methodName: String): Nothing = {
-      val argList = TypeUtils.toString(args)
-      val msg = s"No method $methodName($argList) found"
-      throw new TypeException(scope.currentFile, line, msg)
-    }
+  def findConstructor(scope: TScope, line: Int, args: Seq[TType], onType: TType = null) = {
+    findMethod(scope, ConstructorName, line, args, onType)
+  }
+
+  def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null,
+                 genericModifier: Seq[GenericModifier] = Seq()): Method = {
     val tpe: TType = if (onType == null) scope.findThis() else onType
-    tpe.findMethod(scope.findThis(), name, args) getOrElse throwMethodNotFound(name)
+    tpe.findMethod(scope.findThis(), name, args) getOrElse throwMethodNotFound(scope, name, args, line)
+  }
+
+  def applyConstructor(scope: TScope, args: Seq[TType], n: New): TType = {
+    val onType: TType = findType(scope, n)
+    onType match {
+      case at: AppliedGenericType => at
+      case gt: GenericType =>
+        val method: Method = findConstructor(scope, n.pos.line, args, gt)
+        val appliedTypes: Map[GenericModifier, TType] = method.getAppliedTypes(args)
+        gt.applyTypes(appliedTypes)
+      case _ => onType
+    }
+  }
+
+  def applyTypesOnType(scope: TScope, onType: TType, appliedTypes: Seq[TType], line: Int): TType = {
+    onType match {
+      case gt: GenericType =>
+        if (gt.genericModifiers.size != appliedTypes.size)
+          throw new TypeException(scope.currentFile, line,
+            s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${appliedTypes.size}")
+        else {
+          val map = gt.genericModifiers.zip(appliedTypes).map(pair => {
+            checkTypeToApply(scope, line, pair._1, pair._2)
+            pair
+          }).toMap
+          gt.applyTypes(map)
+        }
+      case _ => onType
+    }
+  }
+
+  def checkTypeToApply(scope: TScope, line: Int, genericModifier: GenericModifier, tpeToApply: TType) = {
+    if (!tpeToApply.hasParent(genericModifier.upperBound) || !tpeToApply.isAssignableFrom(genericModifier.lowerBound)) {
+      throw new TypeException("", 0, s"Type $tpeToApply is not applicatple for generic modifier $genericModifier")
+    }
+  }
+
+  private def throwMethodNotFound(scope: TScope, methodName: String, args: Seq[TType], line: Int): Nothing = {
+    val argList = TypeUtils.toString(args)
+    val msg = s"No method $methodName($argList) found"
+    throw new TypeException(scope.currentFile, line, msg)
   }
 
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
+    val methodName: String = d.name.toString
+
+    val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
     val params: List[Param] = d.vparamss.head.map {
       case v: ValDef =>
         val tpe: TType = TypeUtils.findType(scope, v.tpt)
         Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
     }
 
-    val methodName: String = d.name.toString
-    val retType = TypeUtils.findType(scope, d.tpt)
-    if (retType == null && !isConstructor(methodName)) {
+    val constructor: Boolean = isConstructor(methodName)
+    val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
+    if (retType == null && !constructor) {
       throw new TypeException(ctx.fileName, ctx.line, s"A return type for Method $methodName is required ")
     }
     //TODO check if Method exists in current scope
-    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, isConstructor(methodName), instanceMethod)
+    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, constructor, instanceMethod)
   }
 
   /**
@@ -184,8 +279,11 @@ object TypeUtils {
   }
 
   def areParamsApplicable(definedParams: Seq[TType], actualParams: Seq[TType]): Boolean = {
-    val filtered: Seq[Boolean] = actualParams.zipWithIndex.map(a => a._1.hasParent(definedParams(a._2))).filter(_ == true)
-    filtered.size == definedParams.size
+    actualParams.zip(definedParams).forall(a => isParamApplicable(a._1, a._2))
+  }
+
+  def isParamApplicable(actualParam: TType, definedParam: TType): Boolean = {
+    definedParam.isAssignableAsParam(actualParam)
   }
 
   /**
@@ -284,6 +382,28 @@ object TypeUtils {
   }
 
   /**
+    * Generics
+    */
+
+  def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, applyPartly: Boolean = false) = {
+    oldType match {
+      case g: GenericModifier => types.getOrElse(g, g)
+      case g: GenericType =>
+        val typesToApply = if (applyPartly) findTypesToApply(types, g) else findTypesToApplyPartly(types, g)
+        g.applyTypes(typesToApply) // TODO apply partly
+      case _ => oldType
+    }
+  }
+
+  private def findTypesToApply(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
+    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
+  }
+
+  private def findTypesToApplyPartly(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
+    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
+  }
+
+  /**
    * Utility
    */
 
@@ -321,4 +441,19 @@ object TypeUtils {
     }
     nullTpe
   }
+
+  def anyType(scope: TScope) = {
+    if (anyTpe == null) {
+      anyTpe = scope.findClass("scala.Any").get
+    }
+    anyTpe
+  }
+
+  def nothingType(scope: TScope) = {
+    if (nothingTpe == null) {
+      nothingTpe = scope.findClass("scala.Nothing").get
+    }
+    nothingTpe
+  }
+
 }

@@ -61,6 +61,8 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       tree match {
         case c: ClassDef =>
           handleEnterChildScope()
+          val thisTpe: TType = TypeUtils.findType(currentScope, c)
+          currentScope = currentScope.enterScope(thisTpe)
           tpe = enhanceClass(packageName, c)
         case m: ModuleDef =>
           handleEnterChildScope()
@@ -104,23 +106,39 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    */
 
   private def enhanceClass(pkgName: String, c: ClassDef): TType = {
-    enhanceType(pkgName, c, rootScope.findClass)
+    val tpe: ConcreteType = getType(pkgName, c, rootScope.findClass)
+    addGenericModifiers(c.tparams, tpe)
+    enhanceType(pkgName, c.impl, tpe)
+  }
+
+  private def addGenericModifiers(generics: Seq[TypeDef], tpe: ConcreteType) = {
+    tpe match {
+      case g: GenericType =>
+        generics.map(TypeUtils.createGenericModifier(currentScope, _)).foreach(gm => {
+          currentScope.addClass(gm)
+          g.addGenericModifier(gm)
+        })
+      case _ =>
+    }
   }
 
   /**
-   * Create Module
-   */
+    * Create Module
+    */
 
   private def enhanceObject(pkgName: String, m: ModuleDef): TType = {
-    enhanceType(pkgName, m, rootScope.findObject)
+    val tpe: ConcreteType = getType(pkgName, m, rootScope.findObject)
+    enhanceType(pkgName, m.impl, tpe)
   }
 
-  private def enhanceType(pkgName: String, m: ImplDef, typeProvider: String => Option[TType]): TType = {
-    val className = if (pkgName.isEmpty) m.name.toString else pkgName + "." + m.name.toString
-    val tpe = typeProvider(className).collect({ case c: ConcreteType => c })
+  private def getType(pkgName: String, i: ImplDef, typeProvider: String => Option[TType]) = {
+    val className = if (pkgName.isEmpty) i.name.toString else pkgName + "." + i.name.toString
+    typeProvider(className).collect({ case c: ConcreteType => c })
       .orElse(throw new scala.RuntimeException(s"No type with name $className found")).get
+  }
 
-    val traverser = new ClassMemberTraverser(m.impl)
+  private def enhanceType(pkgName: String, template: Template, tpe: ConcreteType): TType = {
+    val traverser = new ClassMemberTraverser(template)
     traverser.buildMembers()
     traverser.fields.foreach(tpe.addField)
     traverser.methods.foreach(tpe.addMethod)

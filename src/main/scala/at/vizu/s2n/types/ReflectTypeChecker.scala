@@ -85,7 +85,17 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   }
 
   private def checkImplementation(scope: TScope, c: ImplDef) = {
+    checkGenerics(scope)
     checkMembers(scope, c.impl)
+  }
+
+  private def checkGenerics(scope: TScope) = {
+    scope.findThis() match {
+      case gt: GenericType =>
+        // TODO check generic for unique identifier
+        gt.genericModifiers.foreach(scope.addClass)
+      case _ =>
+    }
   }
 
   private def checkMembers(scope: TScope, t: Template) = {
@@ -117,9 +127,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   }
 
   private def checkDefMember(scope: TScope, d: DefDef) = {
+    TypeUtils.createAndAddGenericModifiers(scope, d.tparams)
     val method: Method = TypeUtils.findMethodForDef(scope, d)
     if (!method.constructor && !method.isAbstract) {
-      val expected: TType = TypeUtils.findType(scope, d.tpt)
+      val expected: TType = method.returnType
       scoped(scope, (s: TScope) => {
         TypeUtils.addParamsToScope(s, method.params)
         checkValOrDefBody(s, d.rhs, expected)
@@ -197,12 +208,25 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
   private def checkApply(scope: TScope, apply: Apply): TType = {
     apply.fun match {
-      case s: Select =>
-        val tpe: TType = checkQualifier(scope, s.qualifier)
+      case s@Select(New(a: AppliedTypeTree), name) =>
+        val onType: TType = TypeUtils.findType(scope, a.tpt)
+        val appliedTypes: List[TType] = a.args.map(TypeUtils.findType(scope, _))
+        val line: Int = apply.pos.line
+        val newType = TypeUtils.applyTypesOnType(scope, onType, appliedTypes, line)
+        val args = checkArgs(scope, apply.args)
+        TypeUtils.findConstructor(scope, line, args, newType).returnType
+      case s@Select(n: New, name) =>
+        val args = checkArgs(scope, apply.args)
+        TypeUtils.applyConstructor(scope, args, n)
+      case s@Select(qualifier, name) =>
         val args: Seq[TType] = checkArgs(scope, apply.args)
-        val selectName: String = s.name.toString
-
-        TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe).returnType
+        val tpe: TType = checkQualifier(scope, qualifier)
+        val selectName: String = name.toString
+        val method: Method = TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe)
+        if (method.generics.nonEmpty) {
+          val appliedTypes = method.getAppliedTypes(args)
+          method.applyTypes(appliedTypes).returnType
+        } else method.returnType
       case i: Ident =>
         val args = checkArgs(scope, apply.args)
         checkIdent(scope, i, args)
@@ -218,7 +242,6 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
 
   private def checkQualifier(scope: TScope, qualifier: Tree): TType = qualifier match {
     case l: Literal => TypeUtils.findType(scope, l)
-    case n: New => TypeUtils.findType(scope, n)
     case i: Ident => TypeUtils.findIdentifier(scope, i).tpe
     case a: Apply => checkApply(scope, a)
     case t: This => scope.findThis()
@@ -232,6 +255,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
       case b: Block => checkBlock(scope, b)
       case a: Apply => checkApply(scope, a)
       case s: Select => checkSelect(scope, s)
+      case t: This => scope.findThis()
     })
   }
 

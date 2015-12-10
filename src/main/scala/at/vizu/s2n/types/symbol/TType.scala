@@ -32,7 +32,9 @@ trait TType extends Modifiable with Nameable {
 
   def hasParent(tpe: TType): Boolean
 
-  def isAssignableFrom(other: TType) = other.hasParent(this)
+  def isAssignableFrom(other: TType): Boolean = other.hasParent(this)
+
+  def isAssignableAsParam(other: TType): Boolean
 
   def foreachType(f: TType => Unit): Unit = {
     f(this)

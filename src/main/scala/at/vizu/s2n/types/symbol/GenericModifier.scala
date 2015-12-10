@@ -19,6 +19,8 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
 
   override def hasParent(tpe: TType): Boolean = upperBound.hasParent(tpe)
 
+  override def isAssignableFrom(other: TType): Boolean = other.hasParent(upperBound)
+
   override def fields: Seq[Field] = Seq()
 
   override def validate(): Unit = return
@@ -54,5 +56,17 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
     result = prime * result + coVariance.hashCode()
     result = prime * result + contraVariance.hashCode()
     result
+  }
+
+  override def toString: String = name
+
+  override def isAssignableAsParam(other: TType): Boolean = other match {
+    case a: AppliedGenericModifier =>
+      a.genericType == this &&
+        a.appliedType.isAssignableFrom(lowerBound) && upperBound.isAssignableFrom(a.appliedType)
+    case g: GenericModifier => this == g
+    case g: GenericType => lowerBound.hasParent(g) && upperBound.isAssignableFrom(g)
+    case c: ConcreteType => c.isAssignableFrom(lowerBound) && upperBound.isAssignableFrom(c)
+    case _ => false
   }
 }
