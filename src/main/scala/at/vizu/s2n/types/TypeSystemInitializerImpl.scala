@@ -21,6 +21,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     this.trees = trees
     initScopePhase1()
     initScopePhase2()
+    initScopePhase3()
     validateTypes()
     rootScope
   }
@@ -35,10 +36,59 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   }
 
   /**
-   * Init Scope Phase 2
-   */
+    * Init Scope Phase 2
+    */
 
   private def initScopePhase2() = {
+    println("Applying generic modifiers")
+    trees.foreach(t => {
+      currentScope.currentFile = t.fileName
+      val traverser: Phase2Traverser = new Phase2Traverser
+      traverser.traverse(t.internalTree)
+    })
+  }
+
+  private class Phase2Traverser extends Traverser {
+    val pkgBuilder = new ArrayBuffer[String]
+    var scoped = false
+
+    override def traverse(tree: Tree): Unit = tree match {
+      case c: ClassDef =>
+        val tpe: ConcreteType = getType(packageName, c, rootScope.findClass)
+        addGenericModifiers(c.tparams, tpe)
+      case PackageDef(Ident(name), subtree) =>
+        pkgBuilder.append(name.toString)
+        super.traverse(tree)
+      case _ => super.traverse(tree)
+    }
+
+    private def handleEnterChildScope() = {
+      if (!scoped) {
+        currentScope = currentScope.enterScope()
+        currentScope.currentPackage = packageName
+        scoped = true
+      }
+    }
+
+    private def packageName = pkgBuilder.mkString(".")
+  }
+
+  private def addGenericModifiers(generics: Seq[TypeDef], tpe: ConcreteType) = {
+    tpe match {
+      case g: GenericType =>
+        generics.map(TypeUtils.createGenericModifier(currentScope, _)).foreach(gm => {
+          currentScope.addClass(gm)
+          g.addGenericModifier(gm)
+        })
+      case _ =>
+    }
+  }
+
+  /**
+    * Init Scope Phase 3
+   */
+
+  private def initScopePhase3() = {
     trees.foreach(tree => {
       currentScope.currentFile = tree.fileName
       initTree(tree)
@@ -107,19 +157,8 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
   private def enhanceClass(pkgName: String, c: ClassDef): TType = {
     val tpe: ConcreteType = getType(pkgName, c, rootScope.findClass)
-    addGenericModifiers(c.tparams, tpe)
+    //addGenericModifiers(c.tparams, tpe)
     enhanceType(pkgName, c.impl, tpe)
-  }
-
-  private def addGenericModifiers(generics: Seq[TypeDef], tpe: ConcreteType) = {
-    tpe match {
-      case g: GenericType =>
-        generics.map(TypeUtils.createGenericModifier(currentScope, _)).foreach(gm => {
-          currentScope.addClass(gm)
-          g.addGenericModifier(gm)
-        })
-      case _ =>
-    }
   }
 
   /**
@@ -140,9 +179,9 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   private def enhanceType(pkgName: String, template: Template, tpe: ConcreteType): TType = {
     val traverser = new ClassMemberTraverser(template)
     traverser.buildMembers()
+    traverser.parents.foreach(tpe.addParent)
     traverser.fields.foreach(tpe.addField)
     traverser.methods.foreach(tpe.addMethod)
-    traverser.parents.foreach(tpe.addParent)
     tpe
   }
 
@@ -156,6 +195,9 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       // Todo self type
       parents ++= t.parents.map {
         case s@Select(i, tn) => TypeUtils.findType(currentScope, s)
+        case a: AppliedTypeTree =>
+          val tpe = TypeUtils.findType(currentScope, a)
+          tpe
         case i: Ident => TypeUtils.findType(currentScope, i)
       }
       t.body.foreach {

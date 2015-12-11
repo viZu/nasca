@@ -53,7 +53,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
       classScope.addTypeAlias(i.rename, i.pkg + "." + i.name)
     })
     classScope.addTypeAlias(impl.tpe.simpleName, impl.tpe.name)
-    new SourceFileGeneratorImpl(baseTypes, classScope, impl)
+    new CppSourceFileGenerator(baseTypes, classScope, impl)
   }
 
   def getMainClassGenerator(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]): MainFileGenerator = {

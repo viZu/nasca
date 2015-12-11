@@ -45,6 +45,16 @@ object TypeInference {
 
   def getTypeApply(baseTypes: BaseTypes, scope: TScope, apply: Apply): TType = {
     apply.fun match {
+      case s@Select(New(a: AppliedTypeTree), name) =>
+        val onType: TType = TypeUtils.findType(scope, a.tpt)
+        val appliedTypes: List[TType] = a.args.map(TypeUtils.findType(scope, _))
+        val line: Int = apply.pos.line
+        val newType = TypeUtils.applyTypesOnType(scope, onType, appliedTypes, line)
+        val args = getTypes(baseTypes, scope, apply.args)
+        TypeUtils.findConstructor(scope, line, args, newType).returnType
+      case s@Select(n: New, name) =>
+        val args = getTypes(baseTypes, scope, apply.args)
+        TypeUtils.applyConstructor(scope, args, n)
       case s: Select =>
         val tpe: TType = getType(baseTypes, scope, s.qualifier)
         val args: Seq[TType] = getTypes(baseTypes, scope, apply.args)
@@ -90,4 +100,7 @@ object TypeInference {
     TypeUtils.findCommonBaseClass(scope, thenType, elseType)
   }
 
+  def getTypeNew(baseTypes: BaseTypes, scope: TScope, n: New): TType = {
+    TypeUtils.findType(scope, n)
+  }
 }

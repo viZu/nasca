@@ -127,15 +127,15 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
   }
 
   private def checkDefMember(scope: TScope, d: DefDef) = {
-    TypeUtils.createAndAddGenericModifiers(scope, d.tparams)
-    val method: Method = TypeUtils.findMethodForDef(scope, d)
-    if (!method.constructor && !method.isAbstract) {
-      val expected: TType = method.returnType
-      scoped(scope, (s: TScope) => {
+    scoped(scope, (s: TScope) => {
+      TypeUtils.createAndAddGenericModifiers(s, d.tparams)
+      val method: Method = TypeUtils.findMethodForDef(s, d)
+      if (!method.constructor && !method.isAbstract) {
+        val expected: TType = method.returnType
         TypeUtils.addParamsToScope(s, method.params)
         checkValOrDefBody(s, d.rhs, expected)
-      })
-    }
+      }
+    })
   }
 
   private def checkReturnExpected(returned: Option[TType], expected: TType, line: Int, scope: TScope): Unit = {
@@ -409,7 +409,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
     tpe
   }
 
-  private def scoped(scope: TScope, f: TScope => Unit) = {
+  private def scoped[U](scope: TScope, f: TScope => U) = {
     val childScope: TScope = scope.enterScope()
     f(childScope)
     childScope.exitScope()

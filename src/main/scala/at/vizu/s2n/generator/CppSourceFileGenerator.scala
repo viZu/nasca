@@ -12,7 +12,7 @@ import scala.reflect.runtime.universe._
 /**
   * Phil on 12.11.15.
   */
-class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, implementation: Implementation) extends SourceFileGenerator {
+class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implementation: Implementation) extends SourceFileGenerator {
 
   lazy val classInitMethodName = "__init__class__" + implementation.tpe.simpleName
 
@@ -23,13 +23,20 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   override def generateSourceFile(args: Arguments): Seq[GeneratorHandle] = {
     val name = GeneratorUtils.getSourceFileName(tpe)
     println("Generating source file " + name)
-
+    addGenericsToScope(classScope)
     val context = generateContent(classScope)
 
     println("Writing source file " + name)
     val prettyContent = CodePrettifier.prettify(context.content)
     ScalaFiles.writeToFile(args.out, name, prettyContent)
     context.handles
+  }
+
+  private def addGenericsToScope(scope: TScope) = {
+    implementation.tpe match {
+      case g: GenericType => g.genericModifiers.foreach(scope.addClass)
+      case _ =>
+    }
   }
 
   private def generateContent(scope: TScope): GeneratorContext = {
@@ -72,14 +79,16 @@ class SourceFileGeneratorImpl(_baseTypes: BaseTypes, classScope: TScope, impleme
   }
 
   private def generateMethod(scope: TScope, d: DefDef, initCtx: GeneratorContext): GeneratorContext = {
-    val method: Method = TypeUtils.findMethodForDef(scope, d)
-    if (method.isAbstract || tpe.isTrait && method.constructor) ""
-    else if (method.constructor) generateConstructor(scope, method, initCtx)
-    else
-      scoped(scope, (s: TScope) => {
+    scoped(scope, (s: TScope) => {
+      TypeUtils.createAndAddGenericModifiers(scope, d.tparams)
+      val method: Method = TypeUtils.findMethodForDef(scope, d)
+      if (method.isAbstract || tpe.isTrait && method.constructor) ""
+      else if (method.constructor) generateConstructor(scope, method, initCtx)
+      else {
         TypeUtils.addParamsToScope(s, method.params)
         generateMethod(s, d.rhs, method.returnType, method.name, method.params)
-      })
+      }
+    })
   }
 
   private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext): GeneratorContext = {

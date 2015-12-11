@@ -71,6 +71,10 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   def addAllClasses(tpes: Seq[TType]) = _types = _types ++ tpes
 
+  def findAllClasses(): Seq[TType] = {
+    _types ++ parent.map(_.findAllClasses()).getOrElse(Vector())
+  }
+
   def findClass(name: String): Option[TType] = {
     findClassWithName(name) orElse findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
   }
