@@ -23,7 +23,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = "scala", _mods = Vector(Trait))
   lazy val nothing = new ConcreteType(_simpleName = "Nothing", _pkg = "scala", _mods = Vector(Trait))
 
-  lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit)
+  lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
   override def initScope: TScope = {
     val scope: TScope = new TScope()

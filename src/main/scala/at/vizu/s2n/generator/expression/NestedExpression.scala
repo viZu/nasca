@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol._
 /**
   * Phil on 29.11.15.
   */
-case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
+case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType, varName: String,
                             member: Member, params: Seq[Expression] = Vector()) extends Expression {
   lazy val exprTpe = member.tpe
 
@@ -42,7 +42,8 @@ case class NestedExpression(scope: TScope, prevTpe: TType, varName: String,
       paramsContext.enhance(s"$varName.${m.name}($paramsContent)")
     } else {
       val call = if (tpe.isObject) s"$varName->getInstance()->" else s"$varName->"
-      paramsContext.enhance(s"$call${m.name}($paramsContent)")
+      val typeParams: GeneratorContext = if (m.generics.nonEmpty) GeneratorUtils.generateTypeArgs(baseTypes, m.generics) else ""
+      paramsContext.enhance(s"$call${m.name}$typeParams($paramsContent)", typeParams.handles)
     }
   }
 

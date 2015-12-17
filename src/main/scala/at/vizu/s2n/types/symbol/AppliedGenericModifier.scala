@@ -28,4 +28,11 @@ class AppliedGenericModifier(val appliedType: TType, val genericType: GenericMod
   override def isAssignableAsParam(other: TType): Boolean = other match {
     case a: AppliedGenericModifier => a == other
   }
+
+  override def equals(that: Any): Boolean = that match {
+    case a: AppliedGenericModifier => a.appliedType == appliedType
+    case g: GenericModifier => appliedType == g
+    case c: ConcreteType => appliedType == c
+    case _ => false
+  }
 }

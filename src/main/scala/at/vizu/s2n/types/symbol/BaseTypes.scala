@@ -24,6 +24,10 @@ trait BaseTypes {
 
   val primitives: Set[TType]
 
-  def isPrimitive(tpe: TType) = primitives.contains(tpe)
+  def isPrimitive(tpe: TType) = tpe match {
+    case c: ConcreteType => primitives.contains(c)
+    case a: AppliedGenericModifier => primitives.contains(a.appliedType)
+    case _ => false
+  }
 
 }

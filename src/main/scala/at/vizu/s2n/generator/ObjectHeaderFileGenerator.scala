@@ -30,7 +30,7 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
   }
 
   override protected def generatePublicSection(members: Seq[Member]): String = {
-    val staticPtr = s"static ${GeneratorUtils.generateSmartPtr(selfType)}"
+    val staticPtr = s"static ${GeneratorUtils.generateSmartPtr(baseTypes, selfType)}"
     val getInstance: String =
       s"""
          |

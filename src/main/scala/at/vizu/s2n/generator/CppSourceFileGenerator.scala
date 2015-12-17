@@ -18,17 +18,20 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
 
   def tpe = implementation.tpe
 
+  def pkg = tpe.pkg
+
   def nameSpace = GeneratorUtils.getNameSpace(tpe.pkg)
 
+  private val fileName: String = GeneratorUtils.getSourceFileName(tpe)
+
   override def generateSourceFile(args: Arguments): Seq[GeneratorHandle] = {
-    val name = GeneratorUtils.getSourceFileName(tpe)
-    println("Generating source file " + name)
+    println("Generating source file " + fileName)
     addGenericsToScope(classScope)
     val context = generateContent(classScope)
 
-    println("Writing source file " + name)
+    println("Writing source file " + fileName)
     val prettyContent = CodePrettifier.prettify(context.content)
-    ScalaFiles.writeToFile(args.out, name, prettyContent)
+    ScalaFiles.writeToFile(args.out, fileName, prettyContent)
     context.handles
   }
 
@@ -42,9 +45,12 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   private def generateContent(scope: TScope): GeneratorContext = {
     val context = generateContentAcc(scope)
     context.enhance(
-      s"""${generateIncludes(context.handles)}
+      s"""${GeneratorUtils.generateIncludeGuard(pkg, fileName)}
+         |${generateIncludes(context.handles)}
          |
-         |${context.content}""".stripMargin).removeHandles(classOf[IncludeHandle])
+         |${context.content}
+         |
+         |${GeneratorUtils.generateEndIf(pkg, fileName)}""".stripMargin).removeHandles(classOf[IncludeHandle])
   }
 
   private def generateIncludes(handles: Seq[GeneratorHandle]) = {
@@ -86,7 +92,9 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
       else if (method.constructor) generateConstructor(scope, method, initCtx)
       else {
         TypeUtils.addParamsToScope(s, method.params)
-        generateMethod(s, d.rhs, method.returnType, method.name, method.params)
+        val classString = GeneratorUtils.generateClassTemplate(tpe)
+        val templateString = classString + GeneratorUtils.generateMethodTemplate(method)
+        generateMethod(s, d.rhs, method.returnType, method.name, method.params, templateString)
       }
     })
   }
@@ -118,7 +126,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     val initCall = initMethodName + "()"
     val initializerHandle = FieldInitializerHandle(varName, initCall)
     val privateMethodHandle = generateInitMethodHandle(initMethodName, varTpe)
-    val generatedMethod = generateMethod(scope, b, varTpe, initMethodName)
+    val templateString = GeneratorUtils.generateClassTemplate(tpe)
+    val generatedMethod = generateMethod(scope, b, varTpe, initMethodName, templateString = templateString)
     val methodHandle = MethodHandle(generatedMethod.content)
     generatedMethod.enhance(initMethodName, Vector(initializerHandle, privateMethodHandle, methodHandle))
   }
@@ -128,17 +137,20 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     MethodDefinitionHandle(m)
   }
 
-  private def generateMethod(scope: TScope, rhs: Tree, returnType: TType, methodName: String, params: Seq[Param] = Vector()): GeneratorContext = {
+  private def generateMethod(scope: TScope, rhs: Tree, returnType: TType, methodName: String,
+                             params: Seq[Param] = Vector(), templateString: String = ""): GeneratorContext = {
     val cppMethodName = getMethodName(methodName)
     val rhsBlock: Block = Expression.wrapInBlock(rhs)
     val methodBody: GeneratorContext = Expression.getBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).generate //  generateMethodBody(scope, rhs, _baseTypes.unit != returnType)
     val returnTypeString = GeneratorUtils.generateCppTypeName(_baseTypes, returnType)
     val paramsString = GeneratorUtils.generateParamsString(_baseTypes, params, withVars = true)
-    val methodString: String = s"""$returnTypeString $cppMethodName($paramsString) ${methodBody.content}"""
-    methodBody.enhance(methodString)
+    val methodString: String = s"""$templateString$returnTypeString $cppMethodName($paramsString) ${methodBody.content}"""
+    methodBody.enhance(methodString, paramsString.handles)
   }
 
-  private def getMethodName(methodName: String) = GeneratorUtils.getCppTypeName(_baseTypes, tpe) + "::" + methodName
+  private def getMethodName(methodName: String) = {
+    GeneratorUtils.getCppTypeName(_baseTypes, tpe, withTypeName = false) + "::" + methodName
+  }
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {
     val exprCtx: GeneratorContext = expression.generate
@@ -158,7 +170,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
 
   private def generateConstructorInitBlock(scope: TScope, body: Block) = {
     val mdHandle = generateInitMethodHandle(classInitMethodName, _baseTypes.unit)
-    val methodCtx = generateMethod(scope, body, _baseTypes.unit, classInitMethodName)
+    val templateString = GeneratorUtils.generateClassTemplate(tpe)
+    val methodCtx = generateMethod(scope, body, _baseTypes.unit, classInitMethodName, templateString = templateString)
     val mHandle = MethodHandle(methodCtx.content)
 
     methodCtx.enhance("", Vector(mHandle, mdHandle))

@@ -61,7 +61,11 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   private def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, appliedType: TType, applyPartly: Boolean = false) = {
     oldType match {
-      case g: GenericModifier => types.getOrElse(g, g)
+      case am: AppliedGenericModifier => ???
+      case g: GenericModifier => types.get(g) match {
+        case None => g
+        case Some(t) => g.applyType(t)
+      }
       case g: GenericType if this == g => appliedType
       case g: GenericType =>
         val typesToApply = if (applyPartly) findTypesToApply(types, g) else findTypesToApplyPartly(types, g)

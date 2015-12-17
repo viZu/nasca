@@ -28,7 +28,8 @@ trait HeaderFileGenerator {
 
     val name: String = GeneratorUtils.getHeaderFileName(selfType)
     println("Generating header file " + name)
-    val content: String = GeneratorUtils.generateIncludes(imports) + generateHeaderContent(packageName)
+    val includeGuard = GeneratorUtils.generateIncludeGuard(packageName, GeneratorUtils.getHeaderFileName(selfType))
+    val content: String = includeGuard + GeneratorUtils.generateIncludes(imports) + generateHeaderContent(packageName)
 
     ScalaFiles.createDirectory(args.out)
 
@@ -38,15 +39,29 @@ trait HeaderFileGenerator {
   }
 
   protected def generateHeaderContent(pkg: String): String = {
-    wrapBodyWithNamespace(pkg, generateClassBody())
+    wrapBodyWithNamespace(pkg, generateClassBody()) + generateClassEnding()
   }
 
   protected def generateClassBody(): String = {
-    s"""class ${selfType.simpleName} {
-        |
+    val classTemplate: String = GeneratorUtils.generateClassTemplate(selfType)
+    s"""${classTemplate}class ${selfType.simpleName} {
+       |
         |${generateSections()}
-        |};
-     """.stripMargin
+       |};
+       |""".stripMargin
+  }
+
+  protected def generateClassEnding(): String = {
+    val endif = s"${GeneratorUtils.generateEndIf(packageName, GeneratorUtils.getHeaderFileName(selfType))}"
+    selfType match {
+      case gt: GenericType =>
+        s"""
+           |#include "${GeneratorUtils.getSourceFileName(selfType)}"
+           |$endif"""".stripMargin
+      case _ =>
+        s"""
+           |$endif""".stripMargin
+    }
   }
 
   protected def generateSections(): String = {

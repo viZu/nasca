@@ -21,13 +21,16 @@ case class GeneratorContext(content: String = "", handles: Seq[GeneratorHandle] 
 
   def enhance(content: String, handles: Seq[GeneratorHandle] = Vector()) = GeneratorContext(content, this.handles ++ handles)
 
-  def enhance(handles: Seq[GeneratorHandle]) = GeneratorContext(content, this.handles ++ handles)
+  def ++(handles: Seq[GeneratorHandle]) = GeneratorContext(content, this.handles ++ handles)
 
-  def enhance(handle: GeneratorHandle) = GeneratorContext(content, this.handles :+ handle)
+  def +(handle: GeneratorHandle) = GeneratorContext(content, this.handles :+ handle)
+
+  def +(content: String) = GeneratorContext(this.content + content, handles)
 
   def removeHandles[T <: GeneratorHandle](clazz: Class[T]) = {
     val newHandles = this.handles.filter(_.getClass != clazz)
     GeneratorContext(content, newHandles)
   }
 
+  override def toString: String = content
 }

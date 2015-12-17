@@ -163,7 +163,7 @@ object TypeUtils {
   def createGenericModifier(scope: TScope, generic: TypeDef) = {
     val ctx = Context(scope.currentFile, generic.pos.line)
     val (lower, upper) = generic.rhs match {
-      case tbt: TypeBoundsTree => {
+      case tbt: TypeBoundsTree =>
         val lo = tbt.lo match {
           case EmptyTree => nothingType(scope)
           case _ => TypeUtils.findType(scope, tbt.lo)
@@ -173,7 +173,6 @@ object TypeUtils {
           case _ => TypeUtils.findType(scope, tbt.hi)
         }
         (lo, hi)
-      }
     }
 
     //val upperBound = TypeUtils.findClass(currentScope, )
@@ -387,7 +386,11 @@ object TypeUtils {
 
   def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, applyPartly: Boolean = false) = {
     oldType match {
-      case g: GenericModifier => types.getOrElse(g, g)
+      case g: GenericModifier =>
+        types.get(g) match {
+          case None => g
+          case Some(tpe) => g.applyType(tpe)
+        }
       case g: GenericType =>
         val typesToApply = if (applyPartly) findTypesToApply(types, g) else findTypesToApplyPartly(types, g)
         g.applyTypes(typesToApply) // TODO apply partly

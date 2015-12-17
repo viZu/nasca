@@ -14,7 +14,7 @@ object GlobalConfig {
     val root = new ClassInvocations("__root__") {
       withInvocation(new MethodInvocationHandle("println") {
         withParams("scala.Any") handleAs { (params) =>
-          getPrintCtx( s"""std::cout << "${params.head}" << std::endl""")
+          getPrintCtx( s"""std::cout << ${params.head} << std::endl""")
         }
         withParams() handleAs {
           getPrintCtx("std::cout << std::endl")
@@ -23,7 +23,7 @@ object GlobalConfig {
 
       withInvocation(new MethodInvocationHandle("print") {
         withParams("scala.Any") handleAs { (params) =>
-          getPrintCtx( s"""std::cout << "${params.head}"""")
+          getPrintCtx( s"""std::cout << ${params.head}""")
         }
       })
     }

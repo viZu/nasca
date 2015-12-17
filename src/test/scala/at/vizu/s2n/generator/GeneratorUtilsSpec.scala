@@ -17,15 +17,15 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   val tpeWithNestedPkg = ConcreteType(Context("test", 0), "Type", "test.a.b.c")
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with no package" in {
-    GeneratorUtils.getCppTypeName("", "Type") should be("Type")
+    GeneratorUtils.getCppTypeName("", "Type", "") should be("Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with package" in {
-    GeneratorUtils.getCppTypeName("test", "Type") should be("test::Type")
+    GeneratorUtils.getCppTypeName("test", "Type", "") should be("test::Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with nested package" in {
-    GeneratorUtils.getCppTypeName("test.a.b.c", "Type") should be("test_a_b_c::Type")
+    GeneratorUtils.getCppTypeName("test.a.b.c", "Type", "") should be("test_a_b_c::Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename for type with no package" in {
@@ -41,27 +41,27 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer with no package" in {
-    GeneratorUtils.generateSmartPtr("", "Type") should be(s"${sharedPtr}<Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithOutPkg) should be(s"${sharedPtr}<Type>")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer with package" in {
-    GeneratorUtils.generateSmartPtr("test", "Type") should be(s"${sharedPtr}<test::Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithPkg) should be(s"${sharedPtr}<test::Type>")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer with nested package" in {
-    GeneratorUtils.generateSmartPtr("test.a.b.c", "Type") should be(s"${sharedPtr}<test_a_b_c::Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithNestedPkg) should be(s"${sharedPtr}<test_a_b_c::Type>")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer for type with no package" in {
-    GeneratorUtils.generateSmartPtr(tpeWithOutPkg) should be(s"${sharedPtr}<Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithOutPkg) should be(s"${sharedPtr}<Type>")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer for type with package" in {
-    GeneratorUtils.generateSmartPtr(tpeWithPkg) should be(s"${sharedPtr}<test::Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithPkg) should be(s"${sharedPtr}<test::Type>")
   }
 
   "GeneratorUtils.generateSmartPtr" should "return correct C++ smart pointer for type with nested package" in {
-    GeneratorUtils.generateSmartPtr(tpeWithNestedPkg) should be(s"${sharedPtr}<test_a_b_c::Type>")
+    GeneratorUtils.generateSmartPtr(baseTypes, tpeWithNestedPkg) should be(s"${sharedPtr}<test_a_b_c::Type>")
   }
 
   "GeneratorUtils.generateFieldDefinition" should "return C++ field for scala field with no package" in {
@@ -81,17 +81,17 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with no param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Vector())
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod();")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<Type> aMethod();")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with one param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Seq(Param(ctx, tpeWithPkg, "a")))
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with two param" in {
     val method = Method(ctx, "aMethod", tpeWithPkg, Vector(), Seq(Param(ctx, tpeWithOutPkg, "a"), Param(ctx, tpeWithNestedPkg, "b")))
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).trim should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
   }
 
   "GeneratorUtils.generateIncludes" should "return empty C++ Includes for no scala Imports" in {

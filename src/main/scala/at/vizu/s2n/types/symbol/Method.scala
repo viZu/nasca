@@ -46,7 +46,9 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
   def applyTypes(types: Map[GenericModifier, TType]) = {
     require(types.size == generics.size)
     val retTpe = TypeUtils.getNewTpe(types, returnType, applyPartly = false)
-    Method(ctx, name, retTpe, mods, params, generics, constructor, instanceMethod, operator)
+    val newGenerics = generics.map(TypeUtils.getNewTpe(types, _, applyPartly = false))
+      .collect({ case gt: GenericModifier => gt })
+    Method(ctx, name, retTpe, mods, params, newGenerics, constructor, instanceMethod, operator)
   }
 
   override def toString = {

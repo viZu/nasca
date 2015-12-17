@@ -11,13 +11,14 @@ case class ValDefExpression(baseTypes: BaseTypes, varName: String, rhs: Expressi
 
   override def generate: GeneratorContext = {
     val varTpe = rhs.exprTpe
-    val lhs = s"${GeneratorUtils.generateCppTypeName(baseTypes, varTpe)} $varName"
+    val typeName: GeneratorContext = GeneratorUtils.generateCppTypeName(baseTypes, varTpe)
+    val lhs = s"${typeName.content} $varName"
     val rhsCtx = rhs match {
       case b: BaseBlockExpression => rhs.generateReturn
       case _ => rhs.generate
     }
     val defString = s"$lhs = ${rhsCtx.content}"
-    rhsCtx.enhance(defString)
+    rhsCtx.enhance(defString, typeName.handles)
   }
 
   override def skipSemiColon: Boolean = false

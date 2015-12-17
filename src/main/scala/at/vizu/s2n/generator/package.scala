@@ -19,7 +19,7 @@ package object generator {
   private def generateGeneratorCtx(expr: Expression): GeneratorContext = {
     val ctx = expr.generate
     if (expr.skipSemiColon || ctx.content.endsWith(";")) ctx
-    else ctx.enhance(ctx.content + ";")
+    else ctx + ";"
   }
 
 }
