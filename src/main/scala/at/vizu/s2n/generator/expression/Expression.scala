@@ -120,8 +120,8 @@ object Expression {
 
   def generateAssignExpression(baseTypes: BaseTypes, scope: TScope, a: Assign) = {
     val lhsExpr = Expression(baseTypes, scope, a.lhs)
-    val block: Any = wrapInlineBlockIfBlock(a.rhs)
-    val rhsExpr = getBlockExpression(baseTypes, scope, block, returnable = true)
+    val rhs: Any = wrapInlineBlockIfBlock(a.rhs)
+    val rhsExpr = Expression(baseTypes, scope, rhs)
 
     AssignExpression(lhsExpr, rhsExpr)
   }

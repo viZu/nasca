@@ -66,7 +66,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     }
     tpe match {
       case g: GenericModifier =>
-        addClassInternal(tpe, findClass(_).isEmpty)
+        addClassInternal(tpe, findGeneric(_).isEmpty)
       case _ =>
         addClassInternal(tpe, findClassInCurrentScope(_).isEmpty)
     }
@@ -77,7 +77,6 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
       throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
         s"Class with qualifier ${tpe.fullClassName} already exists")
     }
-
     if (checkType(tpe.fullClassName)) {
       addNullTypeAsSubType(tpe)
       _types = _types :+ tpe
@@ -92,26 +91,31 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     _types ++ parent.map(_.findAllClasses()).getOrElse(Vector())
   }
 
+  def findGeneric(name: String): Option[TType] = {
+    _types.find(_.fullClassName == name) orElse parent.flatMap(_.findGeneric(name))
+  }
+
   def findClass(name: String): Option[TType] = {
-    findClassWithName(name) orElse findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
+    findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
   }
 
   def findClassInCurrentScope(name: String) = _types.find(_.fullClassName == name)
 
   private def findClassWithName(name: String): Option[TType] = {
-    _types.find(_.fullClassName == name) orElse findClassInParent(name)
+    _types.find(_.fullClassName == name) orElse parent.flatMap(_.findClassWithName(name)) //findClassInParent(name)
   }
 
   private def findClassWithAlias(name: String): Option[TType] = {
     val alias: String = getTypeAlias(name)
-    _types.find(_.fullClassName == alias) orElse findClassInParent(alias)
+    _types.find(_.fullClassName == alias) orElse parent.flatMap(_.findClassWithAlias(alias))
   }
 
   private def findClassWithCurrentPackage(name: String): Option[TType] = {
     findCurrentPackage match {
       case Some(pkg) =>
         val withPackage = pkg + "." + name
-        _types.find(_.fullClassName == withPackage) orElse findClassInParent(withPackage)
+        findClassWithName(withPackage)
+      //_types.find(_.fullClassName == withPackage) orElse parent.flatMap(_.findClassWithCurrentPackage())findClassInParent(withPackage)
       case None => None
     }
   }

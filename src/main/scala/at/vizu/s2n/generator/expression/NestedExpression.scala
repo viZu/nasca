@@ -49,7 +49,16 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
 
   private def generateFieldCallOnType(tpe: TType, varName: String, f: Field): GeneratorContext = {
     val call = if (isNonPointerCall) "." else "->"
-    s"$varName$call${f.name}"
+    val methodName = generateFieldCall(f)
+    s"$varName$call$methodName"
+  }
+
+  private def generateFieldCall(field: Field): String = {
+    if (field.isPublicField) {
+      GeneratorUtils.generateGetter(field)
+    } else {
+      field.name
+    }
   }
 
   private def hasInvocationHandle: Boolean = {

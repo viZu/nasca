@@ -11,6 +11,8 @@ object PackagePrivate extends Modifier
 
 object Protected extends Modifier
 
+object ParamAccessor extends Modifier
+
 object Trait extends Modifier
 
 object Abstract extends Modifier
@@ -49,6 +51,8 @@ trait Modifiable {
   def isCase = modifiers.contains(Case)
 
   def isMutable = modifiers.contains(Mutable)
+
+  def isParamAccessor = modifiers.contains(ParamAccessor)
 
   def visibility = if (isPrivate) "private" else if (isProtected) "protected" else "public"
 }

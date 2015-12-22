@@ -42,7 +42,8 @@ trait HeaderFileGenerator {
 
   protected def generateClassBody(): String = {
     val classTemplate: String = GeneratorUtils.generateClassTemplate(selfType)
-    s"""${classTemplate}class ${selfType.simpleName} {
+    val extendCtx = GeneratorUtils.generateExtends(baseTypes, selfType)
+    s"""${classTemplate}class ${selfType.simpleName}$extendCtx {
        |
         |${generateSections()}
        |};
@@ -99,8 +100,10 @@ trait HeaderFileGenerator {
 
   protected def generateFieldDefinition(baseTypes: BaseTypes, field: Field) = {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
-    getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
+    val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
+    val accesors: String = GeneratorUtils.generateParamAccessor(baseTypes, field)
+    d + (if (accesors.nonEmpty) "\n" + accesors + "\n" else "")
   }
 
   protected def wrapBodyWithNamespace(pkg: String, body: String): String = {

@@ -22,6 +22,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     initScopePhase1()
     initScopePhase2()
     initScopePhase3()
+    initScopePhase4()
     validateTypes()
     rootScope
   }
@@ -87,9 +88,59 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
   /**
     * Init Scope Phase 3
-   */
+    */
 
   private def initScopePhase3() = {
+    println("Gathering constructors")
+    trees.foreach(t => {
+      val traverser = new Phase3Traverser
+      traverser.traverse(t.internalTree)
+    })
+  }
+
+  private class Phase3Traverser extends Traverser {
+    val pkgBuilder = new ArrayBuffer[String]
+    var scoped = false
+
+    override def traverse(tree: Tree): Unit = tree match {
+      case c: ClassDef =>
+        val tpe: ConcreteType = getType(packageName, c, rootScope.findClass)
+        handleEnterChildScope()
+        addConstructorToTpe(currentScope, c.impl.body, tpe)
+      case m: ModuleDef =>
+        val tpe: ConcreteType = getType(packageName, m, rootScope.findObject)
+        handleEnterChildScope()
+        addConstructorToTpe(currentScope, m.impl.body, tpe)
+      case PackageDef(Ident(name), subtree) =>
+        pkgBuilder.append(name.toString)
+        super.traverse(tree)
+      case _ => super.traverse(tree)
+    }
+
+    private def handleEnterChildScope() = {
+      if (!scoped) {
+        currentScope = currentScope.enterScope()
+        currentScope.currentPackage = packageName
+        scoped = true
+      }
+    }
+
+    private def packageName = pkgBuilder.mkString(".")
+  }
+
+  private def addConstructorToTpe(scope: TScope, member: List[Tree], tpe: ConcreteType) = {
+    member.collect({ case d: DefDef => d }).filter(d => TypeUtils.isConstructor(d.name.toString)).foreach(d => {
+      val constructor = TypeUtils.createMethod(scope, d)
+      tpe.addMethod(constructor)
+    })
+  }
+
+  /**
+    * Init Scope Phase 4
+   */
+
+  private def initScopePhase4() = {
+    println("Filling Types")
     trees.foreach(tree => {
       currentScope.currentFile = tree.fileName
       initTree(tree)
@@ -157,8 +208,8 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    */
 
   private def enhanceClass(pkgName: String, c: ClassDef): TType = {
+    println("Enhance Class " + c.name)
     val tpe: ConcreteType = getType(pkgName, c, rootScope.findClass)
-    //addGenericModifiers(c.tparams, tpe)
     enhanceType(pkgName, c.impl, tpe)
   }
 
@@ -193,7 +244,14 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     val parents = new ArrayBuffer[TType]
 
     def buildMembers() = {
+      println("Build Member: " + concreteType)
+      t.body.foreach {
+        case d: DefDef => if (!TypeUtils.isConstructor(d.name.toString)) methods += createMethod(d)
+        case v: ValDef => fields += createField(v)
+        case _@rest => println("TemplateTraverser: " + rest.getClass.getName)
+      }
       // Todo self type
+      println("Build Parents: " + concreteType)
       parents ++= t.parents.map {
         case s@Select(i, tn) => TypeUtils.findType(currentScope, s)
         case a: AppliedTypeTree =>
@@ -202,25 +260,28 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
         case i: Ident => TypeUtils.findType(currentScope, i)
         case Apply(t: Tree, p: List[Tree]) =>
           val tpe: TType = TypeUtils.findType(currentScope, t)
-          val args = p.map(TypeUtils.findType(currentScope, _))
-          TypeUtils.findConstructor(currentScope, t.pos.line, args, concreteType)
+          val args = p.map({ case i: Ident => TypeUtils.findIdentifier(currentScope, i).tpe })
+          TypeUtils.findConstructor(currentScope, t.pos.line, args, tpe)
           tpe
-      }
-      t.body.foreach {
-        case d: DefDef => methods += createMethod(d)
-        case v: ValDef => fields += createField(v)
-        case _@rest => println("TemplateTraverser: " + rest.getClass.getName)
       }
     }
   }
 
   private def createMethod(d: DefDef): Method = {
+    println("Create Method: " + d.name)
     TypeUtils.createMethod(currentScope, d)
   }
 
   private def createField(v: ValDef): Field = {
+    println("Create Field: " + v.name)
     val ctx = Context(currentScope.currentFile, v.pos.line)
-    Field(ctx, TypeUtils.getModifiers(v.mods), v.name.toString, TypeUtils.findType(currentScope, v.tpt))
+    val f: Field = Field(ctx, TypeUtils.getModifiers(v.mods), v.name.toString, TypeUtils.findType(currentScope, v.tpt))
+    if (v.mods.hasFlag(Flag.PARAMACCESSOR)) {
+      // we need to add the paramaccessors
+      // we need to know the information when applying the super constructor
+      currentScope.add(f.asIdentifier)
+    }
+    f
   }
 
   /**

@@ -67,6 +67,7 @@ object GeneratorUtils {
   def generateCppTypeName(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else tpe match {
+      case a: AppliedGenericModifier if a.isGenericModifier => a.name
       case a: AppliedGenericModifier => generateSmartPtr(baseTypes, tpe)
       case g: GenericModifier => g.name
       case _ => generateSmartPtr(baseTypes, tpe)
@@ -108,6 +109,18 @@ object GeneratorUtils {
            |""".stripMargin
       case _ => ""
     }
+  }
+
+  def generateExtends(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
+    tpe.parents match {
+      case Seq() => ""
+      case parents => mergeGeneratorContexts(parents.map(generateSingleExtend(baseTypes, _)), ", ", startsWith = " : ")
+    }
+  }
+
+  def generateSingleExtend(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
+    val extend: GeneratorContext = getCppTypeName(baseTypes, tpe)
+    extend.enhance(s"public $extend")
   }
 
   def generateConstructorDefinition(baseTypes: BaseTypes, m: Method, typeName: String): GeneratorContext = {
@@ -183,6 +196,40 @@ object GeneratorUtils {
     s" = ${handle.content};"
   }
 
+  def generateParamAccessor(baseTypes: BaseTypes, field: Field): String = {
+    if (field.isPublicField) {
+      Vector(generateGetterDefinition(baseTypes, field), generateSetterDefinition(baseTypes, field))
+        .filter(_.nonEmpty)
+        .mkString("\n")
+    } else {
+      ""
+    }
+  }
+
+  def generateGetterDefinition(baseTypes: BaseTypes, field: Field): String = {
+    val retVal = GeneratorUtils.generateCppTypeName(baseTypes, field.tpe)
+    s"$retVal ${GeneratorUtils.generateGetter(field)} { return ${field.name}; }"
+  }
+
+  def generateSetterDefinition(baseTypes: BaseTypes, field: Field): String = {
+    if (field.isMutable) {
+      val nameUpper = field.name.toUpperCase
+      val setTpe = GeneratorUtils.generateCppTypeName(baseTypes, field.tpe)
+      s"void set$nameUpper($setTpe newVal) { ${field.name} = newVal; }"
+    } else {
+      ""
+    }
+  }
+
+  def generateGetter(field: Field): String = {
+    generateGetter(field.name)
+  }
+
+  def generateGetter(fieldName: String): String = {
+    val nameUpper = fieldName.toUpperCase
+    s"get$nameUpper()"
+  }
+
   def generateIncludes(usedTypes: Iterable[TType]): String = {
     (Vector("#include <memory>") ++ usedTypes.map(t => {
       val headerFile = getHeaderFileName(t)
@@ -203,9 +250,12 @@ object GeneratorUtils {
   }
 
   def mergeGeneratorContexts(seq: Seq[GeneratorContext], seperator: String = "\n",
-                             endsWith: String = "", givenContent: String = null): GeneratorContext = {
-    val content: String = if (givenContent != null) givenContent
-    else seq.filter(_.definedContent).map(expr => expr.content).mkString(seperator) + endsWith // remove empty contents
+                             endsWith: String = "", startsWith: String = "", givenContent: String = null): GeneratorContext = {
+    val content: String = if (givenContent != null) {
+      givenContent
+    } else {
+      startsWith + seq.filter(_.definedContent).map(expr => expr.content).mkString(seperator) + endsWith // remove empty contents
+    }
     val handles: Set[GeneratorHandle] = seq.flatMap(_.handles).toSet
     GeneratorContext(content, handles)
   }

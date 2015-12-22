@@ -20,9 +20,9 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
     val tpeName = selfType.simpleName
     val protectedMember =
       s"""
-         |  $tpeName();                           // Don't implement
-         |  $tpeName($tpeName const &);              // Don't implement
-         |  void operator=($tpeName const &);        // Don't implement
+         |$tpeName();                           // Don't implement
+         |$tpeName($tpeName const &);              // Don't implement
+         |void operator=($tpeName const &);        // Don't implement
      """.stripMargin
     super.generateProtectedSection(members) + protectedMember
   }
@@ -32,10 +32,10 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
     val getInstance: String =
       s"""
          |
-         |  $staticPtr getInstance() {
-         |    $staticPtr instance = std::make_shared<${GeneratorUtils.getCppTypeName(baseTypes, selfType)}>();
-         |    return instance;
-         |  }""".stripMargin
+         |$staticPtr getInstance() {
+         |  $staticPtr instance = std::make_shared<${GeneratorUtils.getCppTypeName(baseTypes, selfType)}>();
+         |  return instance;
+         |}""".stripMargin
     super.generatePublicSection(members) + getInstance
   }
 

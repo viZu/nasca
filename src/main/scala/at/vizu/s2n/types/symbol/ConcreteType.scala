@@ -122,7 +122,8 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   def addField(field: Field) = {
-    if (findField(this, field.name).isEmpty) {
+    val fieldFound = findField(this, field.name).isDefined
+    if (!fieldFound || fieldFound && field.isOverride) {
       _fields = _fields :+ field
       notifyMemberAddedListener(field)
     } else {

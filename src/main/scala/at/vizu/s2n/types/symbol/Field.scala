@@ -14,9 +14,11 @@ case class Field(ctx: Context, mods: Seq[Modifier], name: String, var _tpe: TTyp
 
   def asIdentifier: Identifier = Identifier(ctx, name, tpe, isMutable, fromField = true)
 
+  def isPublicField = isPublic && isParamAccessor // needed for creating getter/setter
+
   override def toString: String = {
     val v = if (isMutable) "var" else "val"
-    val className = if (tpe == null) "" else s": tpe.fullClassName"
+    val className = if (tpe == null) "" else s": ${tpe.fullClassName}"
     s"$v $name$className"
   }
 }

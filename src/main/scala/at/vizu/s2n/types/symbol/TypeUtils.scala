@@ -23,45 +23,48 @@ object TypeUtils {
     */
 
   def getModifiers(mods: Modifiers): Seq[Modifier] = {
-    var modifiers: List[Modifier] = List[Modifier]()
+    var modifiers: Seq[Modifier] = Vector[Modifier]()
 
     if (isZero(mods.flags)) {
       modifiers
     } else {
       if (mods.privateWithin.toString != "") {
         //TODO which package?
-        modifiers = PackagePrivate :: modifiers
+        modifiers = PackagePrivate +: modifiers
       }
-      if (mods.hasFlag(Flag.PRIVATE) && !mods.hasFlag(Flag.PARAMACCESSOR)) {
+      if (mods.hasFlag(Flag.PRIVATE)) {
         // TODO PARAMACCESSOR -> generate Getter/Setter?
-        modifiers = Private :: modifiers
+        modifiers = Private +: modifiers
+      }
+      if (mods.hasFlag(Flag.PARAMACCESSOR)) {
+        modifiers = ParamAccessor +: modifiers
       }
       if (mods.hasFlag(Flag.PROTECTED)) {
-        modifiers = Protected :: modifiers
+        modifiers = Protected +: modifiers
       }
       if (mods.hasFlag(Flag.ABSTRACT)) {
-        modifiers = Abstract :: modifiers
+        modifiers = Abstract +: modifiers
       }
       if (mods.hasFlag(Flag.DEFERRED)) {
-        modifiers = Abstract :: modifiers
+        modifiers = Abstract +: modifiers
       }
       if (mods.hasFlag(Flag.SEALED)) {
-        modifiers = Sealed :: modifiers
+        modifiers = Sealed +: modifiers
       }
       if (mods.hasFlag(Flag.FINAL)) {
-        modifiers = Final :: modifiers
+        modifiers = Final +: modifiers
       }
       if (mods.hasFlag(Flag.CASE)) {
-        modifiers = Case :: modifiers
+        modifiers = Case +: modifiers
       }
       if (mods.hasFlag(Flag.OVERRIDE)) {
-        modifiers = Override :: modifiers
+        modifiers = Override +: modifiers
       }
       if (mods.hasFlag(Flag.TRAIT)) {
-        modifiers = Trait :: modifiers
+        modifiers = Trait +: modifiers
       }
       if (mods.hasFlag(Flag.MUTABLE)) {
-        modifiers = Mutable :: modifiers
+        modifiers = Mutable +: modifiers
       }
       modifiers
     }
@@ -156,8 +159,11 @@ object TypeUtils {
   }
 
   def createAndAddGenericModifier(scope: TScope, generic: TypeDef) = {
+    println("generics - generate")
     val genericModifier: GenericModifier = createGenericModifier(scope, generic)
+    val millis: Long = System.currentTimeMillis()
     scope.addClass(genericModifier)
+    println("Add time: " + (System.currentTimeMillis() - millis))
     genericModifier
   }
 
@@ -253,14 +259,15 @@ object TypeUtils {
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
-
+    println("Generics")
     val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
+    println("Before Params")
     val params: List[Param] = d.vparamss.head.map {
       case v: ValDef =>
         val tpe: TType = TypeUtils.findType(scope, v.tpt)
         Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
     }
-
+    println("After Params")
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
     if (retType == null && !constructor) {
