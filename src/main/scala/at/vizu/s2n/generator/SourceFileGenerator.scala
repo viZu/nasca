@@ -8,6 +8,6 @@ import at.vizu.s2n.generator.handles.GeneratorHandle
   */
 trait SourceFileGenerator {
 
-  def generateSourceFile(args: Arguments): Seq[GeneratorHandle]
+  def generateSourceFile(args: Arguments): Set[GeneratorHandle]
 
 }

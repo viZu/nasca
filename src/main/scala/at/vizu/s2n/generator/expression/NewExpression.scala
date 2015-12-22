@@ -16,5 +16,5 @@ case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expressio
     paramsContext.enhance(s"$sharedPtrName(new $typeName(${paramsContext.content}))", typeName.handles)
   }
 
-  override def skipSemiColon: Boolean = false
+  override def skipSemiColon: Boolean = true
 }

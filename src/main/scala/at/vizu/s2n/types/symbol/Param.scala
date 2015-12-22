@@ -7,7 +7,7 @@ case class Param(ctx: Context, tpe: TType, name: String, hasDefaultVal: Boolean 
 
   override def toString: String = {
     val v = if (mutable) "var" else "val"
-    s"$v name: ${tpe.fullClassName}"
+    s"$v name: ${tpe.toString}"
   }
 
 }

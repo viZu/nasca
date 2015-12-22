@@ -32,7 +32,8 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
 
   private def extractAppliedType(paramToArg: (TType, TType)): Seq[(GenericModifier, TType)] = {
     paramToArg match {
-      case (agm: AppliedGenericModifier, _) => Vector()
+      //TODO: check if arg == generic modifier && != generic modifier
+      //case (agm: AppliedGenericModifier, _) => Vector()
       case (gmParam: GenericModifier, atArg: AppliedGenericModifier) => Vector(gmParam -> atArg)
       case (gmParam: GenericModifier, ctArg: ConcreteType) => Vector(gmParam -> ctArg)
       case (atParam: AppliedGenericType, atArg: AppliedGenericType) =>
@@ -62,7 +63,7 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
   }
 
   private def methodString(params: Seq[TType], genericString: String) = {
-    s"$name$genericString(${TypeUtils.toString(params)}): $returnType"
+    s"$name$genericString(${TypeUtils.toString(params)}): ${returnType.name}"
   }
 
   override def tpe: TType = returnType

@@ -1,7 +1,6 @@
 package at.vizu.s2n.generator
 
-import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, IncludeHandle}
-import at.vizu.s2n.types.result.ImportStmt
+import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.symbol._
 
 /**
@@ -31,6 +30,20 @@ object GeneratorUtils {
 
   def getSourceFileName(simpleTypeName: String): String = {
     getFileName(simpleTypeName, ".cpp")
+  }
+
+  def generateIncludeHandles(tpe: TType): Option[GeneratorHandle] = {
+    def generateIncludeHandle() = {
+      IncludeHandle(getHeaderFileName(tpe), QuotationWrapper)
+    }
+    tpe match {
+      case a: AppliedGenericModifier => a.getConcreteType match {
+        case g: GenericModifier => None
+        case _@t => Some(generateIncludeHandle())
+      }
+      case g: GenericModifier => None
+      case _@t => Some(generateIncludeHandle())
+    }
   }
 
   def generateIncludeGuard(pkg: String, fileName: String): String = {
@@ -64,13 +77,13 @@ object GeneratorUtils {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else {
       val typeString = generateTypeArgsFromType(baseTypes, tpe, withTypeName)
-      getCppTypeName(tpe.pkg, tpe.simpleName, typeString)
+      getCppTypeName(tpe.pkg, tpe.simpleName, typeString) + generateIncludeHandles(tpe)
     }
   }
 
   def getObjectTypeName(baseTypes: BaseTypes, tpe: TType, withTypeDef: Boolean = false, withTypeName: Boolean = false) = {
     val typeString = generateTypeArgsFromType(baseTypes, tpe, withTypeName)
-    getCppTypeName(tpe.pkg, tpe.simpleName, typeString)
+    getCppTypeName(tpe.pkg, tpe.simpleName, typeString) + generateIncludeHandles(tpe)
   }
 
   def generateSmartPtr(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
@@ -143,14 +156,15 @@ object GeneratorUtils {
 
   def generateTypeArgsFromType(baseTypes: BaseTypes, tpe: TType, withTypeName: Boolean = false): GeneratorContext = {
     tpe match {
-      case agt: AppliedGenericType => generateTypeArgs(baseTypes, agt.appliedTypes)
-      case gt: GenericType => generateTypeArgs(gt.genericModifiers, withTypeName)
-      case _ => ""
+      case agt: AppliedGenericType => generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
+      case gt: GenericType =>
+        GeneratorContext(generateTypeArgs(gt.genericModifiers, withTypeName)) + generateIncludeHandles(gt)
+      case _ => generateIncludeHandles(tpe)
     }
   }
 
   def generateTypeArgs(baseTypes: BaseTypes, typeArgs: Seq[TType]): GeneratorContext = {
-    val ctxs = typeArgs.map(getCppTypeName(baseTypes, _))
+    val ctxs = typeArgs.map(generateCppTypeName(baseTypes, _))
     val context = mergeGeneratorContexts(ctxs, ", ")
     context.enhance(s"<$context>")
   }
@@ -169,15 +183,11 @@ object GeneratorUtils {
     s" = ${handle.content};"
   }
 
-  def generateIncludes(imports: Seq[ImportStmt]): String = {
-    val includes = if (imports.isEmpty) ""
-    else {
-      imports.map(i => {
-        val headerFile = getHeaderFileName(i.name)
-        s"""#include "$headerFile"""" + "\n"
-      }).mkString
-    }
-    Vector( """#include <memory>""", includes).filter(!_.isEmpty).mkString("\n")
+  def generateIncludes(usedTypes: Iterable[TType]): String = {
+    (Vector("#include <memory>") ++ usedTypes.map(t => {
+      val headerFile = getHeaderFileName(t)
+      s"""#include "$headerFile""""
+    })).mkString("\n")
   }
 
   def generateScopeMethod(methodName: String): String = {
@@ -187,8 +197,8 @@ object GeneratorUtils {
   val primitiveNames = Map("scala.String" -> "std::string", "scala.Boolean" -> "bool", "scala.Unit" -> "void")
 
   def getPrimitiveName(primitive: TType): GeneratorContext = {
+    val handles: Set[GeneratorHandle] = if (primitive.name == "scala.String") Set(IncludeHandle("string", AngleWrapper)) else Set()
     val primitiveName: String = primitiveNames.getOrElse(primitive.name, primitive.simpleName.toLowerCase)
-    val handles = if (primitive.name == "scala.String") Vector(IncludeHandle("<string>")) else Vector()
     GeneratorContext(primitiveName, handles)
   }
 
@@ -196,7 +206,7 @@ object GeneratorUtils {
                              endsWith: String = "", givenContent: String = null): GeneratorContext = {
     val content: String = if (givenContent != null) givenContent
     else seq.filter(_.definedContent).map(expr => expr.content).mkString(seperator) + endsWith // remove empty contents
-    val handles: Seq[GeneratorHandle] = seq.flatMap(_.handles)
+    val handles: Set[GeneratorHandle] = seq.flatMap(_.handles).toSet
     GeneratorContext(content, handles)
   }
 }

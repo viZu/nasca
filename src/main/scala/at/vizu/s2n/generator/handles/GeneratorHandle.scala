@@ -26,8 +26,20 @@ case class MethodHandle(content: String) extends GeneratorHandle {
   def key = ""
 }
 
-case class IncludeHandle(cppInclude: String) extends GeneratorHandle {
+trait IncludeWrapperStrategy {
+  def wrapInclude(include: String): String
+}
+
+object AngleWrapper extends IncludeWrapperStrategy {
+  override def wrapInclude(include: String): String = s"<$include>"
+}
+
+object QuotationWrapper extends IncludeWrapperStrategy {
+  override def wrapInclude(include: String): String = s""""$include""""
+}
+
+case class IncludeHandle(cppInclude: String, wrapIn: IncludeWrapperStrategy) extends GeneratorHandle {
   def key = cppInclude
 
-  def content = s"#import $cppInclude"
+  def content = s"#include ${wrapIn.wrapInclude(cppInclude)}"
 }

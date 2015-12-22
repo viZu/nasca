@@ -55,6 +55,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     override def traverse(tree: Tree): Unit = tree match {
       case c: ClassDef =>
         val tpe: ConcreteType = getType(packageName, c, rootScope.findClass)
+        handleEnterChildScope()
         addGenericModifiers(c.tparams, tpe)
       case PackageDef(Ident(name), subtree) =>
         pkgBuilder.append(name.toString)
@@ -177,7 +178,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   }
 
   private def enhanceType(pkgName: String, template: Template, tpe: ConcreteType): TType = {
-    val traverser = new ClassMemberTraverser(template)
+    val traverser = new ClassMemberTraverser(template, tpe)
     traverser.buildMembers()
     traverser.parents.foreach(tpe.addParent)
     traverser.fields.foreach(tpe.addField)
@@ -185,7 +186,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     tpe
   }
 
-  private class ClassMemberTraverser(t: Template) {
+  private class ClassMemberTraverser(t: Template, concreteType: ConcreteType) {
 
     val methods = new ArrayBuffer[Method]
     val fields = new ArrayBuffer[Field]
@@ -199,6 +200,11 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
           val tpe = TypeUtils.findType(currentScope, a)
           tpe
         case i: Ident => TypeUtils.findType(currentScope, i)
+        case Apply(t: Tree, p: List[Tree]) =>
+          val tpe: TType = TypeUtils.findType(currentScope, t)
+          val args = p.map(TypeUtils.findType(currentScope, _))
+          TypeUtils.findConstructor(currentScope, t.pos.line, args, concreteType)
+          tpe
       }
       t.body.foreach {
         case d: DefDef => methods += createMethod(d)

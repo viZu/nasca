@@ -1,7 +1,7 @@
 package at.vizu.s2n.conf
 
 import at.vizu.s2n.generator.GeneratorContext
-import at.vizu.s2n.generator.handles.IncludeHandle
+import at.vizu.s2n.generator.handles.{AngleWrapper, IncludeHandle}
 
 /**
   * Phil on 03.12.15.
@@ -31,6 +31,6 @@ object GlobalConfig {
   }
 
   private def getPrintCtx(content: String): GeneratorContext = {
-    GeneratorContext(content, Vector(IncludeHandle("<iostream>")))
+    GeneratorContext(content, Set(IncludeHandle("iostream", AngleWrapper)))
   }
 }

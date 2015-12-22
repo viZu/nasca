@@ -18,9 +18,18 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
     val newMethods = mapMethods(typeMap, appliedType)
     val newFields = mapFields(typeMap, appliedType)
+    val newParents = mapParents(typeMap)
     newMethods.foreach(appliedType.addMethod)
     newFields.foreach(appliedType.addField)
+    newParents.foreach(appliedType.addParent)
     appliedType
+  }
+
+  protected def mapParents(types: Map[GenericModifier, TType]): Seq[TType] = {
+    parents.map {
+      case g: GenericType => g.applyTypes(types)
+      case _@p => p
+    }
   }
 
   protected def mapMethods(types: Map[GenericModifier, TType], appliedType: TType): Seq[Method] = {
@@ -55,13 +64,17 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     }
   }
 
-  private def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]) = {
-    _genericModifiers.map(gm => if (appliedTypes.get(gm).get == null) gm else appliedTypes.get(gm).get)
+  private def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
+    _genericModifiers.map(gm => {
+      if (appliedTypes.get(gm).get == null) gm
+      else gm.applyType(appliedTypes.get(gm).get)
+    })
   }
 
   private def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, appliedType: TType, applyPartly: Boolean = false) = {
     oldType match {
-      case am: AppliedGenericModifier => ???
+      case am: AppliedGenericModifier =>
+        ???
       case g: GenericModifier => types.get(g) match {
         case None => g
         case Some(t) => g.applyType(t)
@@ -91,11 +104,26 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     case _ => false
   }
 
+  def baseTypeEquals(obj: GenericType): Boolean = {
+    obj match {
+      case a: AppliedGenericType => this == a.genericType
+      case b: GenericType => this == b
+    }
+  }
+
+  override def hasParent(tpe: TType): Boolean = super.hasParent(tpe)
+
   override def isAssignableAsParam(other: TType): Boolean = other match {
     case a: AppliedGenericType =>
-      a.genericType == this &&
-        genericModifiers.zip(a.appliedTypes).forall({ case (gm, tpe) => gm.isAssignableFrom(tpe) })
+      //      a.genericType == this &&
+      //        genericModifiers.zip(a.appliedTypes).forall({ case (gm, tpe) => gm.isAssignableFrom(tpe) })
+      false // is not possible
     case g: GenericType => this == g
     case _ => false
+  }
+
+  def checkTypeArguments(other: GenericType) = other match {
+    case a: AppliedGenericType =>
+    case b: GenericType =>
   }
 }

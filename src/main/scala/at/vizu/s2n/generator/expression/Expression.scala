@@ -199,7 +199,8 @@ object Expression {
     if (hasInvocationHandle(scope, method)) executeInvocationHandle(scope, method, params)
     else {
       val paramsAsString = params.map(_.generate.content).mkString
-      s"${method.name}($paramsAsString)"
+      val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
+      paramsAsContext.enhance(s"${method.name}($paramsAsString)")
     }
   }
 
@@ -243,10 +244,11 @@ object Expression {
         val newLast: NestedExpression = last.copy(params = params)
         prevPath.dropRight(1) :+ newLast
       case Apply(i: Ident, pList) =>
-        val expr = TypeUtils.findIdent(scope, i.name.toString) match {
+        val paramTypes = TypeInference.getTypes(baseTypes, scope, apply.args)
+        val expr = TypeUtils.findIdent(scope, i.name.toString, withParams = paramTypes) match {
           //          case m: Method if !m.instanceMethod =>
           //            val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
-          //            NestedExpression(null, "", m, params)
+          //            NestedExpression(baseTypes, null, "", m, params)
           case _ => generateIdentExpression(baseTypes, scope, i, apply.args)
         }
         Vector(expr)

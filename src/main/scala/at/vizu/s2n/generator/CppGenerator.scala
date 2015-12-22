@@ -53,6 +53,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator {
       classScope.addTypeAlias(i.rename, i.pkg + "." + i.name)
     })
     classScope.addTypeAlias(impl.tpe.simpleName, impl.tpe.name)
+    classScope.currentPackage = pkg
     new CppSourceFileGenerator(baseTypes, classScope, impl)
   }
 

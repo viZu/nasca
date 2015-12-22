@@ -3,7 +3,7 @@ package at.vizu.s2n.types.symbol
 /**
   * Phil on 07.12.15.
   */
-class AppliedGenericType(val appliedTypes: Seq[TType],
+class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
                          val genericType: GenericType) extends GenericType(
   genericType.ctx, genericType.simpleName, genericType.pkg, genericType.mods, genericType.isObject) {
 
@@ -19,8 +19,6 @@ class AppliedGenericType(val appliedTypes: Seq[TType],
   }
 
   override def genericModifiers: Seq[GenericModifier] = genericType.genericModifiers
-
-  override private[symbol] def parents: Seq[TType] = genericType.parents
 
   override def toString: String = {
     val typeString = appliedTypes.map(_.toString).mkString(", ")
@@ -40,7 +38,37 @@ class AppliedGenericType(val appliedTypes: Seq[TType],
   override def isAssignableAsParam(other: TType): Boolean = other match {
     case a: AppliedGenericType =>
       a.genericType == this.genericType &&
-        genericModifiers.zip(a.appliedTypes).forall({ case (gm, tpe) => gm.isAssignableFrom(tpe) })
+        appliedTypes.zip(a.appliedTypes).forall({ case (tat, at) => tat.isAssignableAsParam(at) })
+    case g: GenericType =>
+      this.genericType == g &&
+        appliedTypes.zip(g.genericModifiers).forall({ case (tpe, gm) => tpe.isAssignableAsParam(gm) })
     case _ => false
+  }
+
+  override def baseTypeEquals(obj: GenericType): Boolean = obj match {
+    case a: AppliedGenericType => a.genericType == genericType
+    case b: GenericType => genericType == b
+  }
+
+  override def hasParent(tpe: TType): Boolean = {
+    if (super.hasParent(tpe)) true
+    else {
+      tpe match {
+        case a: AppliedGenericType =>
+          if (baseTypeEquals(a)) {
+            appliedTypes.zip(a.appliedTypes).forall {
+              case (param, arg) =>
+                if (!param.isGenericModifier && !arg.isGenericModifier) {
+                  param.checkVariances(arg)
+                } else {
+                  arg.isAssignableFrom(param)
+                }
+            }
+          } else {
+            false
+          }
+        case _ => false
+      }
+    }
   }
 }

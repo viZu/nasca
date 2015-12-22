@@ -18,7 +18,7 @@ object Main {
       environment.compile(arguments)
     } catch {
       case ae: ArgumentException => Console.err.println(ae.getMessage)
-      case iae: IllegalArgumentException => System.exit(0)
+      case iae: IllegalArgumentException => iae.printStackTrace()
       case te: TypeException =>
         Console.err.println(te.formattedMessage)
         te.printStackTrace()

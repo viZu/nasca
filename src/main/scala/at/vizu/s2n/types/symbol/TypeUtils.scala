@@ -2,6 +2,7 @@ package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.exception.TypeException
 
+import scala.collection.mutable
 import scala.reflect.runtime.universe._
 import scala.runtime.BoxedUnit
 
@@ -282,7 +283,7 @@ object TypeUtils {
   }
 
   def isParamApplicable(actualParam: TType, definedParam: TType): Boolean = {
-    definedParam.isAssignableAsParam(actualParam)
+    definedParam.isAssignableFrom(actualParam)
   }
 
   /**
@@ -406,6 +407,43 @@ object TypeUtils {
     g.genericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
   }
 
+  def findGenericModifiers(tpe: TType): Seq[GenericModifier] = tpe match {
+    case a: AppliedGenericModifier => Vector(a)
+    case g: GenericModifier => Vector(g)
+    case a: AppliedGenericType => a.appliedTypes.flatMap(findGenericModifiers)
+    case g: GenericType => g.genericModifiers
+    case c: ConcreteType => Vector()
+    case _ => Vector()
+  }
+
+  def checkGenericTypes(param: GenericType, arg: GenericType): Boolean = {
+    if (param.baseTypeEquals(arg)) {
+
+    }
+    if (param.isAssignableFrom(arg)) {
+      param match {
+        case a: AppliedGenericType => checkGenericTypes2(a, arg)
+        case b: GenericType => checkGenericTypes2(b, arg)
+      }
+    } else {
+      false
+    }
+  }
+
+  def checkGenericTypes2(param: GenericType, arg: GenericType): Boolean = {
+    arg match {
+      case a: AppliedGenericType => param == a
+      case b: GenericType => true
+    }
+  }
+
+  def checkGenericTypes2(param: AppliedGenericType, arg: GenericType): Boolean = {
+    arg match {
+      case a: AppliedGenericType => true
+      case b: GenericType => true
+    }
+  }
+
   /**
    * Utility
    */
@@ -459,4 +497,29 @@ object TypeUtils {
     nothingTpe
   }
 
+  def getUsedTypes(baseTypes: BaseTypes, tpe: TType): Set[TType] = {
+    val set = new mutable.HashSet[TType]()
+    tpe match {
+      case agt: AppliedGenericType =>
+        agt.appliedTypes.foreach(addTpe(baseTypes, _, set))
+      case _ =>
+    }
+    tpe.fields.foreach(f => addTpe(baseTypes, f.tpe, set))
+    tpe.methods.flatMap(_.params.map(_.tpe)).foreach(addTpe(baseTypes, _, set))
+    set.toSet
+  }
+
+  private def addTpe(baseTypes: BaseTypes, tpe: TType, buffer: mutable.HashSet[TType]): Unit = tpe match {
+    case a: AppliedGenericModifier => a.getConcreteType match {
+      case g: GenericModifier =>
+      case _@t if !baseTypes.isPrimitive(t) => buffer.add(t)
+      case _ =>
+    }
+    case gm: GenericModifier =>
+    case at: AppliedGenericType if !baseTypes.isPrimitive(at) =>
+      buffer.add(at)
+      at.appliedTypes.foreach(addTpe(baseTypes, _, buffer))
+    case c: ConcreteType if !baseTypes.isPrimitive(c) => buffer.add(c)
+    case _ =>
+  }
 }

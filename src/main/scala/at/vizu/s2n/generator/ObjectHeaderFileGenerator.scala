@@ -16,8 +16,6 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
 
   override protected def packageName: String = _packageName
 
-  override protected def imports: Seq[ImportStmt] = _imports
-
   override protected def generateProtectedSection(members: Seq[Member]): String = {
     val tpeName = selfType.simpleName
     val protectedMember =

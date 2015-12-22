@@ -74,7 +74,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   def addMethod(method: Method) = {
     val args: Seq[TType] = method.params.map(_.tpe)
     val methodFound = findMethod(this, method.name, args).isDefined
-    if (!methodFound || methodFound && method.isOverride) {
+    if (!methodFound || methodFound && method.isOverride || methodFound && method.constructor) {
       val addedMethod = handleConstructor(method)
       _methods = _methods :+ addedMethod
       notifyMemberAddedListener(addedMethod)
@@ -94,6 +94,31 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
       throw new TypeException(method.ctx.fileName, method.ctx.line,
         s"Type $fullClassName must either be abstract or implement abstract member ${method.name}")
     }
+    if (!method.constructor) {
+      // check only if not constructor
+      method.params.foreach(validateParam(method.ctx, _))
+      validateReturnType(method)
+    }
+  }
+
+  private def validateParam(ctx: Context, p: Param) = {
+    TypeUtils.findGenericModifiers(p.tpe).foreach(gm => {
+      if (gm.covariance) {
+        throw new TypeException(ctx.fileName, ctx.line, s"Covariant type ${gm.name} occurs in contravariant position" +
+          s" in type ${p.tpe.name} of value ${p.name}")
+      }
+    })
+  }
+
+  private def validateReturnType(m: Method) = {
+    val tpe = m.tpe
+    val ctx = m.ctx
+    TypeUtils.findGenericModifiers(tpe).foreach(gm => {
+      if (gm.contravariance) {
+        throw new TypeException(ctx.fileName, ctx.line, s"Contravariant type ${gm.name} occurs in covariant position" +
+          s" in type ${tpe.name} of method $m")
+      }
+    })
   }
 
   def addField(field: Field) = {
@@ -111,6 +136,13 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
       throw new TypeException(field.ctx.fileName, field.ctx.line,
         s"Type $fullClassName must either be abstract or implement abstract member ${field.name}")
     }
+    val tpe: TType = field.tpe
+    TypeUtils.findGenericModifiers(tpe).foreach(gm => {
+      if (gm.contravariance) {
+        throw new TypeException(ctx.fileName, ctx.line, s"Contravariant type ${gm.name} occurs in covariant position" +
+          s" in type ${tpe.name} of value ${field.name}")
+      }
+    })
   }
 
   private def notifyMemberAddedListener(member: Member) = {

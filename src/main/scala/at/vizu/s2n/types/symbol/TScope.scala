@@ -60,12 +60,29 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    */
 
   def addClass(tpe: TType) = {
-    if (findClassInCurrentScope(tpe.fullClassName).isEmpty) {
+    def throwExists() = {
+      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
+        s"Class with qualifier ${tpe.fullClassName} already exists")
+    }
+    tpe match {
+      case g: GenericModifier =>
+        addClassInternal(tpe, findClass(_).isEmpty)
+      case _ =>
+        addClassInternal(tpe, findClassInCurrentScope(_).isEmpty)
+    }
+  }
+
+  private def addClassInternal(tpe: TType, checkType: String => Boolean) = {
+    def throwExists() = {
+      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
+        s"Class with qualifier ${tpe.fullClassName} already exists")
+    }
+
+    if (checkType(tpe.fullClassName)) {
       addNullTypeAsSubType(tpe)
       _types = _types :+ tpe
     } else {
-      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
-        s"Class with qualifier ${tpe.fullClassName} already exists")
+      throwExists()
     }
   }
 

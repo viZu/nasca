@@ -38,7 +38,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
     } else if (isOperator(m)) {
       val prettyOperator = prettifyOperator(m.name)
       paramsContext.enhance(s"$varName $prettyOperator $paramsContent")
-    } else if (isNonPointerCall()) {
+    } else if (isNonPointerCall) {
       paramsContext.enhance(s"$varName.${m.name}($paramsContent)")
     } else {
       val call = if (tpe.isObject) s"$varName->getInstance()->" else s"$varName->"
@@ -48,7 +48,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
   }
 
   private def generateFieldCallOnType(tpe: TType, varName: String, f: Field): GeneratorContext = {
-    val call = if (isNonPointerCall()) "." else "->"
+    val call = if (isNonPointerCall) "." else "->"
     s"$varName$call${f.name}"
   }
 
@@ -73,7 +73,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
 
   private def isOperator(m: Method): Boolean = m.operator
 
-  private def isNonPointerCall(): Boolean = false
+  private def isNonPointerCall: Boolean = false
 
   override def skipSemiColon: Boolean = true
 }

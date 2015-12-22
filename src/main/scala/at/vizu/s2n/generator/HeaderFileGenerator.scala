@@ -3,7 +3,6 @@ package at.vizu.s2n.generator
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, MethodDefinitionHandle}
-import at.vizu.s2n.types.result.ImportStmt
 import at.vizu.s2n.types.symbol._
 
 /**
@@ -17,19 +16,18 @@ trait HeaderFileGenerator {
 
   protected def baseTypes: BaseTypes
 
-  protected def imports: Seq[ImportStmt]
-
   protected def packageName: String
 
   private var handlesMap: HandlesMap = Map()
 
-  def generateHeaderFile(args: Arguments, handles: Seq[GeneratorHandle]): Unit = {
+  def generateHeaderFile(args: Arguments, handles: Set[GeneratorHandle]): Unit = {
     this.handlesMap = handles.map(a => a.key -> a).toMap.groupBy(t => t._2.getClass)
 
     val name: String = GeneratorUtils.getHeaderFileName(selfType)
     println("Generating header file " + name)
     val includeGuard = GeneratorUtils.generateIncludeGuard(packageName, GeneratorUtils.getHeaderFileName(selfType))
-    val content: String = includeGuard + GeneratorUtils.generateIncludes(imports) + generateHeaderContent(packageName)
+    val usedTypes = TypeUtils.getUsedTypes(baseTypes, selfType)
+    val content: String = includeGuard + GeneratorUtils.generateIncludes(usedTypes) + generateHeaderContent(packageName)
 
     ScalaFiles.createDirectory(args.out)
 

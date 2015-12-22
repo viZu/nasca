@@ -28,6 +28,8 @@ trait TType extends Modifiable with Nameable {
 
   def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method]
 
+  def findConstructor(execCtx: TType, args: Seq[TType]) = findMethod(execCtx, TypeUtils.ConstructorName, args)
+
   def findField(execCtx: TType, name: String): Option[Field]
 
   def hasParent(tpe: TType): Boolean
@@ -43,4 +45,5 @@ trait TType extends Modifiable with Nameable {
   def fullClassName = if (pkg.isEmpty) simpleName else pkg + "." + simpleName
 
   def validate(): Unit
+
 }

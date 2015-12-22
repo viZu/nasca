@@ -13,7 +13,5 @@ class ClassHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
 
   override protected def baseTypes: BaseTypes = _baseTypes
 
-  override protected def imports: Seq[ImportStmt] = _imports
-
   override protected def packageName: String = _packageName
 }

@@ -9,7 +9,7 @@ import at.vizu.s2n.types.symbol.TType
 case class ChainedExpression(path: Path) extends Expression {
   override def exprTpe: TType = path.last.exprTpe
 
-  override def generate: GeneratorContext = generateExpressionChain(path)
+  override def generate: GeneratorContext = generateExpressionChain(path, skipSemiColon = true)
 
   override def skipSemiColon: Boolean = false
 }
