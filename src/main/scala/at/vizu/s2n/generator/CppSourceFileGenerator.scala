@@ -68,7 +68,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     } else {
       ""
     }
-    memberContext.enhance(preContent + memberContext.content)
+    val templateCopyConstructors = GeneratorUtils.generateCopyConstructorsSource(_baseTypes, tpe)
+    memberContext.enhance(preContent + memberContext.content + templateCopyConstructors)
   }
 
   private def generateMember(scope: TScope): GeneratorContext = {
@@ -102,8 +103,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   }
 
   private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext): GeneratorContext = {
-    if (initCtx.isEmpty) ConstructorExpression(_baseTypes, method, "").generate // no in
-    else ConstructorExpression(_baseTypes, method, classInitMethodName).generate
+    if (initCtx.isEmpty) ConstructorExpression(scope, method, "").generate // no in
+    else ConstructorExpression(scope, method, classInitMethodName).generate
   }
 
   private def generateField(scope: TScope, v: ValDef): GeneratorContext = {
@@ -150,8 +151,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     methodBody.enhance(methodString, paramsString.handles)
   }
 
-  private def getMethodName(methodName: String) = {
-    GeneratorUtils.getCppTypeName(_baseTypes, tpe, withTypeName = false) + "::" + methodName
+  private def getMethodName(mName: String) = {
+    GeneratorUtils.getCppTypeName(_baseTypes, tpe, withTypeName = false) + "::" + GeneratorUtils.prettifyMethod(mName)
   }
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {

@@ -6,7 +6,8 @@ import at.vizu.s2n.exception.TypeException
  * Phil on 07.10.15.
  */
 class TScope(private var parent: Option[TScope] = None, private val _this: Option[TType] = None,
-             private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None) {
+             private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None,
+             private val _baseTypes: Option[BaseTypes] = None) {
 
   private var _types: Seq[TType] = Vector()
   private var _objects: Seq[TType] = Vector()
@@ -276,21 +277,27 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def addNullTypeAsSubType(tpe: TType): Unit = {
-    findNullType().asInstanceOf[ConcreteType].addParent(tpe)
+    findNullType().asInstanceOf[ConcreteType].addParent(Parent(tpe))
   }
 
   /**
    * Check scope
    */
 
-  //def checkScope(identifier: Identifier) = findIdentifier(identifier.name).isEmpty
-
-  //def checkScope(tpe: Type) = findClass(tpe.fullClassName).isEmpty
+  def baseTypes: BaseTypes = {
+    _baseTypes match {
+      case Some(b) => b
+      case None if parent.isDefined => parent.get.baseTypes
+      case _ => throw new RuntimeException("No basetypes found")
+    }
+  }
 
 }
 
 object TScope {
-  def apply(parent: TScope) = new TScope(Some(parent))
+  def apply(baseTypes: BaseTypes) = new TScope(_baseTypes = Option(baseTypes))
 
-  def apply(parent: TScope, _this: TType) = new TScope(Some(parent), Some(_this))
+  def apply(parent: TScope) = new TScope(Option(parent))
+
+  def apply(parent: TScope, _this: TType) = new TScope(Option(parent), Option(_this))
 }

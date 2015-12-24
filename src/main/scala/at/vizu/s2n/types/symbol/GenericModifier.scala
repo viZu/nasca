@@ -31,7 +31,7 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
 
   override def mods: Seq[Modifier] = Seq()
 
-  override private[symbol] def parents: Seq[TType] = Seq(upperBound)
+  override def parents: Seq[Parent] = Seq(Parent(upperBound))
 
   def gmCovariance = covariance
 

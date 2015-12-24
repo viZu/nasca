@@ -39,11 +39,13 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
       val prettyOperator = prettifyOperator(m.name)
       paramsContext.enhance(s"$varName $prettyOperator $paramsContent")
     } else if (isNonPointerCall) {
-      paramsContext.enhance(s"$varName.${m.name}($paramsContent)")
+      val mName = GeneratorUtils.prettifyMethod(m.name)
+      paramsContext.enhance(s"$varName.$mName($paramsContent)")
     } else {
       val call = if (tpe.isObject) s"$varName->getInstance()->" else s"$varName->"
       val typeParams: GeneratorContext = if (m.generics.nonEmpty) GeneratorUtils.generateTypeArgs(baseTypes, m.generics) else ""
-      paramsContext.enhance(s"$call${m.name}$typeParams($paramsContent)", typeParams.handles)
+      val mName = GeneratorUtils.prettifyMethod(m.name)
+      paramsContext.enhance(s"$call$mName$typeParams($paramsContent)", typeParams.handles)
     }
   }
 

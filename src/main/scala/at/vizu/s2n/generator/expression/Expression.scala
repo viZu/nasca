@@ -28,7 +28,7 @@ trait Expression {
 
 object Expression {
 
-  def apply(baseTypes: BaseTypes, scope: TScope, t: Any): Expression = t match {
+  def apply(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = t match {
     case l: Literal =>
       val tpe = TypeUtils.findType(scope, l)
       val literalStr = l.value.value match {
@@ -37,13 +37,13 @@ object Expression {
       }
       LiteralExpression(tpe, literalStr)
     case a: Apply =>
-      val path: Path = generateApplyExpression(baseTypes, scope, a)
+      val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
       ChainedExpression(path)
     case s: Select =>
-      val path: Path = generateSelectExpression(baseTypes, scope, s)
+      val path: Path = generateSelectExpression(baseTypes, scope, s, opts = opts)
       ChainedExpression(path)
     case i: Ident =>
-      generateIdentExpression(baseTypes, scope, i)
+      generateIdentExpression(baseTypes, scope, i, opts = opts)
     case InlineBlock(_) | Block(_, _) =>
       getBlockExpression(baseTypes, scope, t)
     case d: DefDef =>
@@ -178,14 +178,15 @@ object Expression {
     (stats, expr)
   }
 
-  private def generateIdentExpression(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: List[Tree] = List()): Expression = {
+  private def generateIdentExpression(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: List[Tree] = List(),
+                                      opts: ExpressionOptions = ExpressionOptions()): Expression = {
     val iName: String = ident.name.toString
     val argTypes = TypeInference.getTypes(baseTypes, scope, args)
     TypeUtils.findIdent(scope, iName.toString, withParams = argTypes) match {
       case m: Method =>
         val argExpr: Seq[Expression] = args.map(arg => Expression(baseTypes, scope, arg))
         val methodInvocation = generateMethodInvocation(scope, m, argExpr)
-        if (m.instanceMethod) {
+        if (m.instanceMethod && !opts.ignoreThis) {
           val tmp = methodInvocation.enhance(s"this->${methodInvocation.content}")
           IdentExpression(m.returnType, tmp)
         } else IdentExpression(m.returnType, methodInvocation)
@@ -216,7 +217,8 @@ object Expression {
     handle(paramsAsString)
   }
 
-  private def generateApplyExpression(baseTypes: BaseTypes, scope: TScope, apply: Apply): Path = {
+  private def generateApplyExpression(baseTypes: BaseTypes, scope: TScope, apply: Apply,
+                                      opts: ExpressionOptions): Path = {
     apply match {
       case a@Apply(Select(ne: New, n), pList) =>
         val paramTypes: List[TType] = TypeInference.getTypes(baseTypes, scope, pList)
@@ -255,7 +257,8 @@ object Expression {
     }
   }
 
-  private def generateSelectExpression(baseTypes: BaseTypes, scope: TScope, select: Select, method: Method = null): Path = {
+  private def generateSelectExpression(baseTypes: BaseTypes, scope: TScope, select: Select, method: Method = null,
+                                       opts: ExpressionOptions = ExpressionOptions()): Path = {
     select match {
       case Select(s: Select, n) =>
         val prevPath: Path = generateSelectExpression(baseTypes, scope, s)
@@ -264,7 +267,7 @@ object Expression {
         val elem = NestedExpression(baseTypes, scope, prevTpe, "", member)
         prevPath :+ elem
       case Select(a: Apply, n) =>
-        val prevPath = generateApplyExpression(baseTypes, scope, a)
+        val prevPath = generateApplyExpression(baseTypes, scope, a, opts)
         val prevTpe = prevPath.last.exprTpe
         val member = if (method != null) method else TypeUtils.findMember(scope, n.toString, prevTpe)
         val elem = NestedExpression(baseTypes, scope, prevTpe, "", member)

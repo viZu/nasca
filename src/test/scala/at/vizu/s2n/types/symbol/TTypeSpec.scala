@@ -25,7 +25,7 @@ class TTypeSpec extends FlatSpec with Matchers {
   superType.addMethod(sMethod)
   private val sField: Field = Field(ctx, Seq(), "sField", int)
   superType.addField(sField)
-  superType.addParent(traitType)
+  superType.addParent(Parent(traitType))
 
   val aType = ConcreteType(ctx, "AType", "test")
   val aparams: Seq[Param] = Seq(string, string).map(Param(ctx, _, "_any"))
@@ -35,7 +35,7 @@ class TTypeSpec extends FlatSpec with Matchers {
   aType.addMethod(aaMethod)
   private val aField: Field = Field(ctx, Seq(), "aField", int)
   aType.addField(aField)
-  aType.addParent(superType)
+  aType.addParent(Parent(superType))
 
   val bType = ConcreteType(ctx, "BType")
   val cType = ConcreteType(ctx, "CType", "test")
@@ -162,23 +162,23 @@ class TTypeSpec extends FlatSpec with Matchers {
     bType.addMethod(Method(ctx, "bMethod", string, Seq(), params))
     bType.addMethod(Method(ctx, "bbMethod", int, Seq(), params))
     bType.addField(Field(ctx, Seq(), "bField", int))
-    bType.addParent(superType)
+    bType.addParent(Parent(superType))
   }
 
   private def initCType(): Unit = {
-    cType.addParent(aType)
-    cType.addParent(bType)
+    cType.addParent(Parent(aType))
+    cType.addParent(Parent(bType))
   }
 
   private def initDType(): Unit = {
     val twoType: ConcreteType = ConcreteType(ctx, "2Trait", "test", Seq(Trait))
-    twoType.addParent(traitType)
-    dType.addParent(twoType)
+    twoType.addParent(Parent(traitType))
+    dType.addParent(Parent(twoType))
     val threeType: ConcreteType = ConcreteType(ctx, "3Trait", "test", Seq(Trait))
-    threeType.addParent(ConcreteType(ctx, "4Trait", "test", Seq(Trait)))
-    dType.addParent(threeType)
-    dType.addParent(ConcreteType(ctx, "5Trait", "test", Seq(Trait)))
-    dType.addParent(ConcreteType(ctx, "6Trait", "test", Seq(Trait)))
+    threeType.addParent(Parent(ConcreteType(ctx, "4Trait", "test", Seq(Trait))))
+    dType.addParent(Parent(threeType))
+    dType.addParent(Parent(ConcreteType(ctx, "5Trait", "test", Seq(Trait))))
+    dType.addParent(Parent(ConcreteType(ctx, "6Trait", "test", Seq(Trait))))
 
   }
 

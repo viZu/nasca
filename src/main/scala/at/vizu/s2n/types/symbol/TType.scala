@@ -24,7 +24,9 @@ trait TType extends Modifiable with Nameable {
   lazy val members = methods ++ fields
   lazy val modifiers: Set[Modifier] = Set() ++ mods
 
-  def parents: Seq[TType]
+  def parents: Seq[Parent]
+
+  def parentTypes: Seq[TType] = parents.map(_.tpe)
 
   def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method]
 
@@ -40,7 +42,7 @@ trait TType extends Modifiable with Nameable {
 
   def foreachType(f: TType => Unit): Unit = {
     f(this)
-    parents.foreach(_.foreachType(f))
+    parents.map(_.tpe).foreach(_.foreachType(f))
   }
   def fullClassName = if (pkg.isEmpty) simpleName else pkg + "." + simpleName
 

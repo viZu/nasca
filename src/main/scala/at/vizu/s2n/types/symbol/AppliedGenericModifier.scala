@@ -27,7 +27,7 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
 
   override def findMethod(execCtx: TType, name: String, args: Seq[TType]) = appliedType.findMethod(execCtx, name, args)
 
-  override private[symbol] def parents: Seq[TType] = appliedType.parents
+  override def parents = appliedType.parents
 
   override def applyType(appliedType: TType): AppliedGenericModifier = {
     throw new RuntimeException("AHHH")

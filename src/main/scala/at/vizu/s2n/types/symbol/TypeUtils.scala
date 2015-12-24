@@ -513,7 +513,12 @@ object TypeUtils {
     }
     tpe.fields.foreach(f => addTpe(baseTypes, f.tpe, set))
     tpe.methods.flatMap(_.params.map(_.tpe)).foreach(addTpe(baseTypes, _, set))
-    set.toSet
+    tpe.parentTypes.foreach(addTpe(baseTypes, _, set))
+    tpe match {
+      case a: AppliedGenericType => set.toSet
+      case g: GenericType => set.filter(t => !g.baseTypeEquals(t)).toSet
+      case _ => set.toSet
+    }
   }
 
   private def addTpe(baseTypes: BaseTypes, tpe: TType, buffer: mutable.HashSet[TType]): Unit = tpe match {

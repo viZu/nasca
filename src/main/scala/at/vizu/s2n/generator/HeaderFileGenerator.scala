@@ -67,7 +67,7 @@ trait HeaderFileGenerator {
     groupMember().map(p => generateSection(p._1, p._2)).mkString("\n\n")
   }
 
-  protected def generateSection(visibility: String, members: Seq[Member]): String = {
+  protected def generateSection(visibility: String, members: Seq[String]): String = {
     visibility match {
       case "public" => generatePublicSection(members)
       case "protected" => generateProtectedSection(members)
@@ -75,30 +75,33 @@ trait HeaderFileGenerator {
     }
   }
 
-  protected def generateVisibilitySection(visibility: String, members: Seq[Member]): String = {
-    val memberStr = if (members.isEmpty) "" else "\n" + members.map(generateMember).mkString("\n")
+  protected def generateVisibilitySection(visibility: String, members: Seq[String]): String = {
+    val memberStr = if (members.isEmpty) "" else "\n" + members.mkString("\n")
     s"""$visibility:$memberStr""".stripMargin
   }
 
-  protected def generatePublicSection(members: Seq[Member]): String = {
-    generateVisibilitySection("public", members)
+  protected def generatePublicSection(members: Seq[String]): String = {
+    generateVisibilitySection("public", members) + GeneratorUtils.generateCopyConstructorsHeader(selfType)
   }
 
-  protected def generateProtectedSection(members: Seq[Member]): String = {
+  protected def generateProtectedSection(members: Seq[String]): String = {
     generateVisibilitySection("protected", members)
   }
 
   protected def generateMember(member: Member) = {
     member match {
-      case m: Method =>
-        if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
-        else if (m.isAbstract) GeneratorUtils.generateVirtualMethod(baseTypes, m)
-        else GeneratorUtils.generateMethodDefinition(baseTypes, m)
+      case m: Method => generateMethodDefinition(m).content
       case f: Field => generateFieldDefinition(baseTypes, f)
     }
   }
 
-  protected def generateFieldDefinition(baseTypes: BaseTypes, field: Field) = {
+  protected def generateMethodDefinition(m: Method): GeneratorContext = {
+    if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
+    else if (m.isAbstract) GeneratorUtils.generateVirtualMethod(baseTypes, m)
+    else GeneratorUtils.generateMethodDefinition(baseTypes, m)
+  }
+
+  protected def generateFieldDefinition(baseTypes: BaseTypes, field: Field): String = {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
@@ -118,8 +121,30 @@ trait HeaderFileGenerator {
 
   protected def groupMember() = {
     val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
-    val member: Seq[Member] = selfType.methods ++ selfType.fields ++ methodDefinitions
-    member.groupBy(_.visibility)
+    val methods = selfType.methods ++ methodDefinitions
+    val tuples = generateMethods(methods) ++ generateFields(selfType.fields)
+    tuples.groupBy(_._1).mapValues(sq => sq.map(_._2))
+
+    //val member: Seq[Member] = selfType.methods ++ selfType.fields ++ methodDefinitions
+
+    //member.groupBy(_.visibility)
+  }
+
+  protected def generateMethods(methods: Seq[Method]): Seq[(String, String)] = {
+    methods.map(m => (m.visibility, generateMember(m)))
+  }
+
+  protected def generateFields(fields: Seq[Field]): Seq[(String, String)] = {
+    fields.flatMap(generateField)
+  }
+
+  private def generateField(field: Field): Seq[(String, String)] = {
+    val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
+    val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
+      .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
+    val accesors = ("public", GeneratorUtils.generateParamAccessor(baseTypes, field))
+    //d + (if (accesors.nonEmpty) "\n" + accesors + "\n" else "")
+    Seq(accesors, (field.visibility, d))
   }
 
   protected def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {

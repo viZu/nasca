@@ -10,7 +10,7 @@ class MethodSpec extends FlatSpec with Matchers {
   val ctx = Context("", 0)
   val superType = ConcreteType(ctx, "SuperType", "test")
   val param1 = ConcreteType(ctx, "Param", "test")
-  param1.addParent(superType)
+  param1.addParent(Parent(superType))
   val param2 = ConcreteType(ctx, "AnotherParam", "test")
 
   "Method.checkArgs" should "return true if correct argument types are presented" in {

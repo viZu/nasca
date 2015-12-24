@@ -3,6 +3,8 @@ package at.vizu.s2n.generator
 import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.symbol._
 
+import scala.collection.immutable.IndexedSeq
+
 /**
   * Phil on 11.11.15.
   */
@@ -112,7 +114,7 @@ object GeneratorUtils {
   }
 
   def generateExtends(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
-    tpe.parents match {
+    tpe.parentTypes match {
       case Seq() => ""
       case parents => mergeGeneratorContexts(parents.map(generateSingleExtend(baseTypes, _)), ", ", startsWith = " : ")
     }
@@ -131,7 +133,8 @@ object GeneratorUtils {
   def generateMethodDefinition(baseTypes: BaseTypes, m: Method): GeneratorContext = {
     val tpeName = generateCppTypeName(baseTypes, m.returnType)
     val params = generateParamsString(baseTypes, m.params)
-    tpeName.enhance(s"${generateMethodTemplate(m)}$tpeName ${m.name}($params);", params.handles)
+    val mName = prettifyMethod(m.name)
+    tpeName.enhance(s"${generateMethodTemplate(m)}$tpeName $mName($params);", params.handles)
   }
 
   def generateVirtualMethod(baseTypes: BaseTypes, m: Method): GeneratorContext = {
@@ -167,6 +170,11 @@ object GeneratorUtils {
     s"template$typeArgs"
   }
 
+  def generateTemplatesStringFromString(generics: Seq[String], withTypeName: Boolean = false): String = {
+    val typeArgs = generateTypeArgsString(generics, withTypeName)
+    s"template$typeArgs"
+  }
+
   def generateTypeArgsFromType(baseTypes: BaseTypes, tpe: TType, withTypeName: Boolean = false): GeneratorContext = {
     tpe match {
       case agt: AppliedGenericType => generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
@@ -187,6 +195,11 @@ object GeneratorUtils {
     s"<$templateTypes>"
   }
 
+  def generateTypeArgsString(generics: Seq[String], withTypeName: Boolean = false): String = {
+    val templateTypes = generics.map(s => if (withTypeName) "typename " + s else s).mkString(", ")
+    s"<$templateTypes>"
+  }
+
   def generateFieldDefinition(baseTypes: BaseTypes, f: Field): String = {
     val const = if (f.isMutable) "" else "const "
     s"  $const${generateCppTypeName(baseTypes, f.tpe)} ${f.name}"
@@ -202,7 +215,7 @@ object GeneratorUtils {
         .filter(_.nonEmpty)
         .mkString("\n")
     } else {
-      ""
+      generateGetterDefinition(baseTypes, field)
     }
   }
 
@@ -227,7 +240,7 @@ object GeneratorUtils {
 
   def generateGetter(fieldName: String): String = {
     val nameUpper = fieldName.toUpperCase
-    s"get$nameUpper()"
+    s"get__$nameUpper()"
   }
 
   def generateIncludes(usedTypes: Iterable[TType]): String = {
@@ -237,8 +250,96 @@ object GeneratorUtils {
     })).mkString("\n")
   }
 
-  def generateScopeMethod(methodName: String): String = {
-    s"$methodName()"
+  def generateCopyConstructorsHeader(tpe: TType): String = {
+    tpe match {
+      case a: AppliedGenericType => ""
+      case g: GenericType =>
+        val typeName: String = tpe.simpleName
+        val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
+        val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
+        s"""
+           |
+           |$typeName(const $typeName& t);
+           |$typeName& operator=(const $typeName& t);
+           |
+           |$tmpTemplateArgs
+           |$typeName(const $typeName$tmpTypeArgs& t);
+           |
+           |$tmpTemplateArgs
+           |$typeName<T>& operator=(const $typeName$tmpTypeArgs& t);
+           |""".stripMargin
+      case _ => ""
+    }
+  }
+
+  def generateCopyConstructorsSource(baseTypes: BaseTypes, tpe: TType): String = {
+    tpe match {
+      case a: AppliedGenericType => ""
+      case g: GenericType =>
+        val typeName: String = tpe.simpleName
+        val typeArgs = generateTemplatesString(g.genericModifiers, withTypeName = true)
+        val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
+        val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
+        val cppTypename = getCppTypeName(baseTypes, tpe, withTypeName = false).content
+        val fieldAssignments = generateFieldAssignments(tpe)
+        val fieldInitializers = generateFieldInitializers(tpe)
+        s"""
+           |
+           |$typeArgs
+           |$cppTypename::$typeName(const $typeName& t)$fieldInitializers {}
+           |
+           |$typeArgs
+           |$cppTypename &$cppTypename::operator=(const $typeName& t) {
+           |$fieldAssignments
+           |}
+           |
+           |$typeArgs
+           |$tmpTemplateArgs
+           |$cppTypename::$typeName(const $typeName$tmpTypeArgs& t)$fieldInitializers {}
+           |
+           |$typeArgs
+           |$tmpTemplateArgs
+           |$cppTypename &$cppTypename::operator=(const $typeName$tmpTypeArgs& t) {
+           |$fieldAssignments
+           |}
+           |""".stripMargin
+      case _ => ""
+    }
+  }
+
+  private def generateTempTemplateArgs(genericModifierSize: Int) = {
+    val temp = "TEMP_TYPE"
+    val genStrings = (0 until genericModifierSize).map(n => temp + n)
+    generateTemplatesStringFromString(genStrings, withTypeName = true)
+  }
+
+  private def generateTempTypeArgs(genericModifierSize: Int) = {
+    val temp = "TEMP_TYPE"
+    val genStrings = (0 until genericModifierSize).map(n => temp + n)
+    generateTypeArgsString(genStrings, withTypeName = false)
+  }
+
+  private def generateFieldAssignments(tpe: TType) = {
+    tpe.fields.map(generateFieldAssignment).mkString("\n")
+  }
+
+  private def generateFieldAssignment(f: Field) = {
+    val fieldName = f.name
+    val getter = generateGetter(fieldName)
+    s"this->$fieldName = t.$getter;"
+  }
+
+  private def generateFieldInitializers(tpe: TType) = {
+    tpe.fields.map(generateFieldInitializer).mkString(",") match {
+      case "" => ""
+      case s => " : " + s
+    }
+  }
+
+  private def generateFieldInitializer(f: Field) = {
+    val fieldName = f.name
+    val getter = generateGetter(fieldName)
+    s"$fieldName(t.$getter)"
   }
 
   val primitiveNames = Map("scala.String" -> "std::string", "scala.Boolean" -> "bool", "scala.Unit" -> "void")
@@ -247,6 +348,10 @@ object GeneratorUtils {
     val handles: Set[GeneratorHandle] = if (primitive.name == "scala.String") Set(IncludeHandle("string", AngleWrapper)) else Set()
     val primitiveName: String = primitiveNames.getOrElse(primitive.name, primitive.simpleName.toLowerCase)
     GeneratorContext(primitiveName, handles)
+  }
+
+  def prettifyMethod(m: String) = {
+    m.replaceAll("\\$", "__")
   }
 
   def mergeGeneratorContexts(seq: Seq[GeneratorContext], seperator: String = "\n",

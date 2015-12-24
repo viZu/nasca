@@ -16,7 +16,7 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
 
   override protected def packageName: String = _packageName
 
-  override protected def generateProtectedSection(members: Seq[Member]): String = {
+  override protected def generateProtectedSection(members: Seq[String]): String = {
     val tpeName = selfType.simpleName
     val protectedMember =
       s"""
@@ -27,7 +27,7 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
     super.generateProtectedSection(members) + protectedMember
   }
 
-  override protected def generatePublicSection(members: Seq[Member]): String = {
+  override protected def generatePublicSection(members: Seq[String]): String = {
     val staticPtr = s"static ${GeneratorUtils.generateSmartPtr(baseTypes, selfType)}"
     val getInstance: String =
       s"""
@@ -39,9 +39,14 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
     super.generatePublicSection(members) + getInstance
   }
 
-  override protected def groupMember(): Map[String, Seq[Member]] = {
+  override protected def groupMember(): Map[String, Seq[String]] = {
     val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
-    val member: Seq[Member] = selfType.methods.filter(!_.constructor) ++ selfType.fields ++ methodDefinitions
-    member.groupBy(_.visibility) + ("protected" -> Vector())
+    val methods = selfType.methods.filter(!_.constructor) ++ methodDefinitions
+    val tuples = generateMethods(methods) ++ generateFields(selfType.fields)
+    tuples.groupBy(_._1).mapValues(sq => sq.map(_._2)) + ("protected" -> Vector())
+
+    //val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
+    //val member: Seq[Member] = selfType.methods.filter(!_.constructor) ++ selfType.fields ++ methodDefinitions
+    //member.groupBy(_.visibility) + ("protected" -> Vector())
   }
 }

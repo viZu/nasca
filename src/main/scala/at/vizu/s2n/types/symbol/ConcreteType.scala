@@ -1,6 +1,7 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.generator.expression.Expression
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -15,9 +16,9 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   protected var _fields: Seq[Field] = Vector()
   private[symbol] var memberAddedListener: ArrayBuffer[Member => Unit] = ArrayBuffer()
 
-  private[symbol] def parents = _parents
+  def parents = _parents
 
-  private[symbol] var _parents: Seq[TType] = Vector()
+  private[symbol] var _parents: Seq[Parent] = Vector()
 
   def methods = _methods
 
@@ -42,7 +43,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def findMethodInParents(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = {
-    val optMethods: Seq[Option[Method]] = parents.map(_.findMethod(execCtx, name, args)).filter(_.isDefined)
+    val optMethods: Seq[Option[Method]] = parentTypes.map(_.findMethod(execCtx, name, args)).filter(_.isDefined)
     if (optMethods.nonEmpty) optMethods.head else None
   }
 
@@ -51,7 +52,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def findFieldInParents(execCtx: TType, name: String): Option[Field] = {
-    val optFields: Seq[Option[Field]] = parents.map(_.findField(execCtx, name)).filter(_.isDefined)
+    val optFields: Seq[Option[Field]] = parentTypes.map(_.findField(execCtx, name)).filter(_.isDefined)
     if (optFields.nonEmpty) optFields.head else None
   }
 
@@ -68,7 +69,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
 
   def hasParent(tpe: TType): Boolean = {
     if (tpe == this) true
-    else parents.exists(_.hasParent(tpe))
+    else parentTypes.exists(_.hasParent(tpe))
   }
 
   def addMethod(method: Method) = {
@@ -150,7 +151,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
     memberAddedListener.foreach(_.apply(member))
   }
 
-  def addParent(parent: TType) = {
+  def addParent(parent: Parent) = {
     _parents = _parents :+ parent
   }
 
@@ -164,7 +165,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   def validate() = {
     _methods.foreach(validateMethod)
     _fields.foreach(validateField)
-    parents.zipWithIndex.foreach(validateParent)
+    parentTypes.zipWithIndex.foreach(validateParent)
   }
 
   private def isNullType = "scala.Null" == fullClassName

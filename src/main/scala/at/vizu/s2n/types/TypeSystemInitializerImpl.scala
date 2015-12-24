@@ -1,6 +1,7 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.generator.expression.{ExpressionOptions, Expression}
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.symbol._
 
@@ -241,7 +242,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
 
     val methods = new ArrayBuffer[Method]
     val fields = new ArrayBuffer[Field]
-    val parents = new ArrayBuffer[TType]
+    val parents = new ArrayBuffer[Parent]
 
     def buildMembers() = {
       println("Build Member: " + concreteType)
@@ -253,16 +254,18 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
       // Todo self type
       println("Build Parents: " + concreteType)
       parents ++= t.parents.map {
-        case s@Select(i, tn) => TypeUtils.findType(currentScope, s)
+        case s@Select(i, tn) => Parent(TypeUtils.findType(currentScope, s))
         case a: AppliedTypeTree =>
           val tpe = TypeUtils.findType(currentScope, a)
-          tpe
-        case i: Ident => TypeUtils.findType(currentScope, i)
+          Parent(tpe)
+        case i: Ident => Parent(TypeUtils.findType(currentScope, i))
         case Apply(t: Tree, p: List[Tree]) =>
           val tpe: TType = TypeUtils.findType(currentScope, t)
-          val args = p.map({ case i: Ident => TypeUtils.findIdentifier(currentScope, i).tpe })
+          val bt: BaseTypes = currentScope.baseTypes
+          val args = TypeInference.getTypes(bt, currentScope, p)
           TypeUtils.findConstructor(currentScope, t.pos.line, args, tpe)
-          tpe
+          val expressions = p.map(Expression(bt, currentScope, _, ExpressionOptions(true)))
+          Parent(tpe, expressions)
       }
     }
   }

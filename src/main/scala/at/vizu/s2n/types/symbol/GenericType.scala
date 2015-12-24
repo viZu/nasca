@@ -25,10 +25,10 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     appliedType
   }
 
-  protected def mapParents(types: Map[GenericModifier, TType]): Seq[TType] = {
-    parents.map {
-      case g: GenericType => g.applyTypes(types)
-      case _@p => p
+  protected def mapParents(types: Map[GenericModifier, TType]): Seq[Parent] = {
+    parentTypes.map {
+      case g: GenericType => Parent(g.applyTypes(types))
+      case _@p => Parent(p)
     }
   }
 
@@ -104,10 +104,11 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     case _ => false
   }
 
-  def baseTypeEquals(obj: GenericType): Boolean = {
+  def baseTypeEquals(obj: TType): Boolean = {
     obj match {
       case a: AppliedGenericType => this == a.genericType
       case b: GenericType => this == b
+      case _ => false
     }
   }
 
