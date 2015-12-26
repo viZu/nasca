@@ -1,9 +1,12 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.log.Debug
+import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.result._
 import at.vizu.s2n.types.symbol._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
@@ -12,14 +15,15 @@ import scala.runtime.BoxedUnit
 /**
  * Phil on 23.10.15.
  */
-class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker {
+class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogging {
 
   def checkTypes(rootScope: TScope, tree: AST): ScalaFileWrapper = {
     require(tree != null)
-    println(s"Checking types for file ${tree.fileName}")
-    val traverser: ClassTraverser = new ClassTraverser(rootScope, tree)
-    traverser.traverse(tree.internalTree)
-    traverser.createFileWrapper()
+    profileFunc(logger, s"Type checker ${tree.fileName}", () => {
+      val traverser: ClassTraverser = new ClassTraverser(rootScope, tree)
+      traverser.traverse(tree.internalTree)
+      traverser.createFileWrapper()
+    }, Debug)
   }
 
   private class ClassTraverser(var currentScope: TScope, ast: AST) extends Traverser {

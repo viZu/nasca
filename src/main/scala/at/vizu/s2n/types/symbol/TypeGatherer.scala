@@ -23,7 +23,6 @@ object TypeGatherer {
     val pkgBuilder = new ArrayBuffer[String]
 
     override def traverse(tree: Tree): Unit = {
-      //println(tree.toString())
       tree match {
         case c: ClassDef =>
           buildEmptyClasses(ast.fileName, packageName, c)

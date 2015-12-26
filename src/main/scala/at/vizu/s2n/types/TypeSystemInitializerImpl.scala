@@ -1,9 +1,12 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
-import at.vizu.s2n.generator.expression.{ExpressionOptions, Expression}
+import at.vizu.s2n.generator.expression.{Expression, ExpressionOptions}
+import at.vizu.s2n.log.Profiler._
+import at.vizu.s2n.log.{Debug, Trace}
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.symbol._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
@@ -11,14 +14,13 @@ import scala.reflect.runtime.universe._
 /**
  * Phil on 06.11.15.
  */
-class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends TypeSystemInitializer {
+class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends TypeSystemInitializer with LazyLogging {
 
   private val rootScope: TScope = scopeInitializer.initScope
   private var currentScope = rootScope
   private var trees: Seq[AST] = Vector()
 
   override def initTypeSystem(trees: Seq[AST]): TScope = {
-    println("Initializing type system")
     this.trees = trees
     initScopePhase1()
     initScopePhase2()
@@ -33,8 +35,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    */
 
   private def initScopePhase1() = {
-    println("Gathering types")
-    TypeGatherer.gatherTypes(trees, currentScope)
+    profile(logger, "Gather types", TypeGatherer.gatherTypes(trees, currentScope), Debug)
   }
 
   /**
@@ -42,12 +43,13 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     */
 
   private def initScopePhase2() = {
-    println("Applying generic modifiers")
-    trees.foreach(t => {
-      currentScope.currentFile = t.fileName
-      val traverser: Phase2Traverser = new Phase2Traverser
-      traverser.traverse(t.internalTree)
-    })
+    profileFunc(logger, "Applying generic modifiers", () => {
+      trees.foreach(t => {
+        currentScope.currentFile = t.fileName
+        val traverser: Phase2Traverser = new Phase2Traverser
+        traverser.traverse(t.internalTree)
+      })
+    }, Debug)
   }
 
   private class Phase2Traverser extends Traverser {
@@ -92,11 +94,12 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     */
 
   private def initScopePhase3() = {
-    println("Gathering constructors")
-    trees.foreach(t => {
-      val traverser = new Phase3Traverser
-      traverser.traverse(t.internalTree)
-    })
+    profileFunc(logger, "Gather constructors", () => {
+      trees.foreach(t => {
+        val traverser = new Phase3Traverser
+        traverser.traverse(t.internalTree)
+      })
+    }, Debug)
   }
 
   private class Phase3Traverser extends Traverser {
@@ -141,11 +144,13 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    */
 
   private def initScopePhase4() = {
-    println("Filling Types")
-    trees.foreach(tree => {
-      currentScope.currentFile = tree.fileName
-      initTree(tree)
-    })
+    logger.trace("Filling Types")
+    profileFunc(logger, "Fill types", () => {
+      trees.foreach(tree => {
+        currentScope.currentFile = tree.fileName
+        initTree(tree)
+      })
+    }, Debug)
   }
 
   private def initTree(tree: AST) = {
@@ -209,9 +214,10 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    */
 
   private def enhanceClass(pkgName: String, c: ClassDef): TType = {
-    println("Enhance Class " + c.name)
-    val tpe: ConcreteType = getType(pkgName, c, rootScope.findClass)
-    enhanceType(pkgName, c.impl, tpe)
+    profileFunc(logger, "Enhance class " + c.name, () => {
+      val tpe: ConcreteType = getType(pkgName, c, rootScope.findClass)
+      enhanceType(pkgName, c.impl, tpe)
+    }, Debug)
   }
 
   /**
@@ -219,8 +225,10 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     */
 
   private def enhanceObject(pkgName: String, m: ModuleDef): TType = {
-    val tpe: ConcreteType = getType(pkgName, m, rootScope.findObject)
-    enhanceType(pkgName, m.impl, tpe)
+    profileFunc(logger, "Enhance object " + m.name, () => {
+      val tpe: ConcreteType = getType(pkgName, m, rootScope.findObject)
+      enhanceType(pkgName, m.impl, tpe)
+    }, Debug)
   }
 
   private def getType(pkgName: String, i: ImplDef, typeProvider: String => Option[TType]) = {
@@ -245,38 +253,38 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
     val parents = new ArrayBuffer[Parent]
 
     def buildMembers() = {
-      println("Build Member: " + concreteType)
       t.body.foreach {
         case d: DefDef => if (!TypeUtils.isConstructor(d.name.toString)) methods += createMethod(d)
         case v: ValDef => fields += createField(v)
-        case _@rest => println("TemplateTraverser: " + rest.getClass.getName)
+        case _@rest => logger.trace("TemplateTraverser: " + rest.getClass.getName)
       }
       // Todo self type
-      println("Build Parents: " + concreteType)
-      parents ++= t.parents.map {
-        case s@Select(i, tn) => Parent(TypeUtils.findType(currentScope, s))
-        case a: AppliedTypeTree =>
-          val tpe = TypeUtils.findType(currentScope, a)
-          Parent(tpe)
-        case i: Ident => Parent(TypeUtils.findType(currentScope, i))
-        case Apply(t: Tree, p: List[Tree]) =>
-          val tpe: TType = TypeUtils.findType(currentScope, t)
-          val bt: BaseTypes = currentScope.baseTypes
-          val args = TypeInference.getTypes(bt, currentScope, p)
-          TypeUtils.findConstructor(currentScope, t.pos.line, args, tpe)
-          val expressions = p.map(Expression(bt, currentScope, _, ExpressionOptions(true)))
-          Parent(tpe, expressions)
-      }
+      profileFunc(logger, "Build Parents: " + concreteType, () => {
+        parents ++= t.parents.map {
+          case s@Select(i, tn) => Parent(TypeUtils.findType(currentScope, s))
+          case a: AppliedTypeTree =>
+            val tpe = TypeUtils.findType(currentScope, a)
+            Parent(tpe)
+          case i: Ident => Parent(TypeUtils.findType(currentScope, i))
+          case Apply(subTree: Tree, p: List[Tree]) =>
+            val tpe: TType = TypeUtils.findType(currentScope, subTree)
+            val bt: BaseTypes = currentScope.baseTypes
+            val args = TypeInference.getTypes(bt, currentScope, p)
+            TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
+            val expressions = profile(logger, "Expression", p.map(Expression(bt, currentScope, _, ExpressionOptions(true))))
+            Parent(tpe, expressions)
+        }
+      }, Trace)
     }
   }
 
   private def createMethod(d: DefDef): Method = {
-    println("Create Method: " + d.name)
-    TypeUtils.createMethod(currentScope, d)
+    logger.trace("Create Method: " + d.name)
+    profile(logger, "Create Method: " + d.name, TypeUtils.createMethod(currentScope, d), Trace)
   }
 
   private def createField(v: ValDef): Field = {
-    println("Create Field: " + v.name)
+    logger.trace("Create Field: " + v.name)
     val ctx = Context(currentScope.currentFile, v.pos.line)
     val f: Field = Field(ctx, TypeUtils.getModifiers(v.mods), v.name.toString, TypeUtils.findType(currentScope, v.tpt))
     if (v.mods.hasFlag(Flag.PARAMACCESSOR)) {
@@ -291,7 +299,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
    * Validate Types
    */
   private def validateTypes() = {
-    println("Validating gathered types")
+    logger.debug("Validating gathered types")
     rootScope.types.foreach(_.validate())
     rootScope.objects.foreach(_.validate())
   }

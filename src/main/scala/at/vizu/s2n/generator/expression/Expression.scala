@@ -4,6 +4,7 @@ package expression
 import at.vizu.s2n.conf.GlobalConfig
 import at.vizu.s2n.types.TypeInference
 import at.vizu.s2n.types.symbol._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.api.InlineBlock
 import scala.reflect.runtime.universe._
@@ -26,39 +27,45 @@ trait Expression {
   def skipSemiColon: Boolean
 }
 
-object Expression {
+object Expression extends LazyLogging {
 
-  def apply(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = t match {
-    case l: Literal =>
-      val tpe = TypeUtils.findType(scope, l)
-      val literalStr = l.value.value match {
-        case s: java.lang.String => s""""$s""""
-        case _@v => v.toString
-      }
-      LiteralExpression(tpe, literalStr)
-    case a: Apply =>
-      val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
-      ChainedExpression(path)
-    case s: Select =>
-      val path: Path = generateSelectExpression(baseTypes, scope, s, opts = opts)
-      ChainedExpression(path)
-    case i: Ident =>
-      generateIdentExpression(baseTypes, scope, i, opts = opts)
-    case InlineBlock(_) | Block(_, _) =>
-      getBlockExpression(baseTypes, scope, t)
-    case d: DefDef =>
-      generateInlineDefExpression(baseTypes, scope, d)
-    case v: ValDef =>
-      generateValDefExpression(baseTypes, scope, v)
-    case a: Assign =>
-      generateAssignExpression(baseTypes, scope, a)
-    case l: LabelDef =>
-      generateLabelDefExpression(baseTypes, scope, l)
-    case i: If =>
-      generateIfExpression(baseTypes, scope, i)
-    case EmptyTree =>
-      println("Empty Tree!")
-      EmptyExpression(baseTypes.unit)
+  def apply(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
+    applyInternal(baseTypes, scope, t, opts)
+  }
+
+  private def applyInternal(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
+    t match {
+      case l: Literal =>
+        val tpe = TypeUtils.findType(scope, l)
+        val literalStr = l.value.value match {
+          case s: java.lang.String => s""""$s""""
+          case _@v => v.toString
+        }
+        LiteralExpression(tpe, literalStr)
+      case a: Apply =>
+        val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
+        ChainedExpression(path)
+      case s: Select =>
+        val path: Path = generateSelectExpression(baseTypes, scope, s, opts = opts)
+        ChainedExpression(path)
+      case i: Ident =>
+        generateIdentExpression(baseTypes, scope, i, opts = opts)
+      case InlineBlock(_) | Block(_, _) =>
+        getBlockExpression(baseTypes, scope, t)
+      case d: DefDef =>
+        generateInlineDefExpression(baseTypes, scope, d)
+      case v: ValDef =>
+        generateValDefExpression(baseTypes, scope, v)
+      case a: Assign =>
+        generateAssignExpression(baseTypes, scope, a)
+      case l: LabelDef =>
+        generateLabelDefExpression(baseTypes, scope, l)
+      case i: If =>
+        generateIfExpression(baseTypes, scope, i)
+      case EmptyTree =>
+        logger.warn("Empty Tree!")
+        EmptyExpression(baseTypes.unit)
+    }
   }
 
   def wrapInBlock(t: Tree): Block = {
@@ -99,13 +106,13 @@ object Expression {
 
   def generateWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
     val blockExpr = getBlockExpression(baseTypes, scope, block) // we are only taking stats since the expr is the recursive while method call
-    val condExpr = Expression(baseTypes, scope, cond)
+    val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     WhileExpression(baseTypes, condExpr, blockExpr)
   }
 
   def generateDoWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
     val blockExpr = getBlockExpression(baseTypes, scope, block)
-    val condExpr = Expression(baseTypes, scope, cond)
+    val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     DoWhileExpression(baseTypes, condExpr, blockExpr)
   }
 
@@ -114,14 +121,14 @@ object Expression {
     val varName = v.name.toString
     TypeUtils.createIdentifier(scope, v, varTpe)
     val rhs = wrapInlineBlockIfBlock(v.rhs)
-    val rhsExpr = Expression(baseTypes, scope, rhs)
+    val rhsExpr = Expression.applyInternal(baseTypes, scope, rhs)
     ValDefExpression(baseTypes, varName, rhsExpr)
   }
 
   def generateAssignExpression(baseTypes: BaseTypes, scope: TScope, a: Assign) = {
-    val lhsExpr = Expression(baseTypes, scope, a.lhs)
+    val lhsExpr = Expression.applyInternal(baseTypes, scope, a.lhs)
     val rhs: Any = wrapInlineBlockIfBlock(a.rhs)
-    val rhsExpr = Expression(baseTypes, scope, rhs)
+    val rhsExpr = Expression.applyInternal(baseTypes, scope, rhs)
 
     AssignExpression(lhsExpr, rhsExpr)
   }
@@ -148,16 +155,16 @@ object Expression {
   }
 
   def generateIfParts(baseTypes: BaseTypes, scope: TScope, i: If, parts: Vector[IfPart]): (Vector[IfPart], Expression) = {
-    val condExp = Expression(baseTypes, scope, i.cond)
+    val condExp = Expression.applyInternal(baseTypes, scope, i.cond)
     val thenBlock = wrapInBlock(i.thenp)
-    val thenExp = Expression(baseTypes, scope, thenBlock)
+    val thenExp = Expression.applyInternal(baseTypes, scope, thenBlock)
     val ifPart = IfPart(condExp, thenExp)
     i.elsep match {
       case ei: If => generateIfParts(baseTypes, scope, ei, parts :+ ifPart)
       case Literal(Constant(b: BoxedUnit)) => (parts, EmptyExpression(baseTypes.unit))
       case _ =>
         val elseBlock = wrapInBlock(i.elsep)
-        (parts :+ ifPart, Expression(baseTypes, scope, elseBlock))
+        (parts :+ ifPart, Expression.applyInternal(baseTypes, scope, elseBlock))
     }
   }
 
@@ -173,8 +180,8 @@ object Expression {
   }
 
   def getBlockContent(baseTypes: BaseTypes, scope: TScope, statsT: List[Tree], exprT: Tree): (List[Expression], Expression) = {
-    val stats: List[Expression] = statsT.map(Expression(baseTypes, scope, _))
-    val expr = Expression(baseTypes, scope, exprT)
+    val stats: List[Expression] = statsT.map(Expression.applyInternal(baseTypes, scope, _))
+    val expr = Expression.applyInternal(baseTypes, scope, exprT)
     (stats, expr)
   }
 
@@ -184,7 +191,7 @@ object Expression {
     val argTypes = TypeInference.getTypes(baseTypes, scope, args)
     TypeUtils.findIdent(scope, iName.toString, withParams = argTypes) match {
       case m: Method =>
-        val argExpr: Seq[Expression] = args.map(arg => Expression(baseTypes, scope, arg))
+        val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         val methodInvocation = generateMethodInvocation(scope, m, argExpr)
         if (m.instanceMethod && !opts.ignoreThis) {
           val tmp = methodInvocation.enhance(s"this->${methodInvocation.content}")
@@ -225,10 +232,10 @@ object Expression {
         val tpe = TypeInference.getType(baseTypes, scope, a)
         //val tpe: TType = TypeUtils.applyConstructor(scope, paramTypes, ne)
         //val tpe: TType = TypeUtils.findType(scope, ne)
-        val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
+        val params: Seq[Expression] = apply.args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         Vector(NewExpression(baseTypes, tpe, params))
       case Apply(s: Select, pList) =>
-        val params: Seq[Expression] = apply.args.map(arg => Expression(baseTypes, scope, arg))
+        val params: Seq[Expression] = apply.args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         val prevPath: Path = if (params.nonEmpty) {
           val argTypes: List[TType] = TypeInference.getTypes(baseTypes, scope, apply.args)
           val tpe = TypeInference.getType(baseTypes, scope, s.qualifier, argTypes)

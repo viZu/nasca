@@ -1,20 +1,31 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.log.Profiler.profile
+import at.vizu.s2n.log.Trace
 import at.vizu.s2n.types.symbol.{BaseTypes, TScope, TType, TypeUtils}
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
 
 /**
   * Phil on 20.11.15.
   */
-object TypeInference {
+object TypeInference extends LazyLogging {
 
   def getTypes(baseTypes: BaseTypes, scope: TScope, trees: List[Tree]) = {
-    trees.map(getType(baseTypes, scope, _))
+    profile(logger, "TypeInference.getTypes", getTypesInternal(baseTypes, scope, trees), Trace)
   }
 
-  def getType(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()): TType = {
+  private def getTypesInternal(baseTypes: BaseTypes, scope: TScope, trees: List[Tree]) = {
+    trees.map(getTypeInternal(baseTypes, scope, _))
+  }
+
+  def getType(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()) = {
+    profile(logger, "TypeInference.getType", getTypeInternal(baseTypes, scope, tree, params), Trace)
+  }
+
+  def getTypeInternal(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()): TType = {
     tree match {
       case b: Block => getTypeBlock(baseTypes, scope, b)
       case v: ValDef => baseTypes.unit
@@ -32,11 +43,11 @@ object TypeInference {
   }
 
   def getTypeBlock(baseTypes: BaseTypes, scope: TScope, block: Block): TType = {
-    getType(baseTypes, scope, block.expr)
+    getTypeInternal(baseTypes, scope, block.expr)
   }
 
   def getTypeSelect(baseTypes: BaseTypes, scope: TScope, select: Select, params: Seq[TType] = Vector()): TType = {
-    val tpe: TType = getType(baseTypes, scope, select.qualifier)
+    val tpe: TType = getTypeInternal(baseTypes, scope, select.qualifier)
     val selectName: String = select.name.toString
 
     if (params.isEmpty) TypeUtils.findMethodOrFieldType(scope, selectName, select.pos.line, tpe)
@@ -50,14 +61,14 @@ object TypeInference {
         val appliedTypes: List[TType] = a.args.map(TypeUtils.findType(scope, _))
         val line: Int = apply.pos.line
         val newType = TypeUtils.applyTypesOnType(scope, onType, appliedTypes, line)
-        val args = getTypes(baseTypes, scope, apply.args)
+        val args = getTypesInternal(baseTypes, scope, apply.args)
         TypeUtils.findConstructor(scope, line, args, newType).returnType
       case s@Select(n: New, name) =>
-        val args = getTypes(baseTypes, scope, apply.args)
+        val args = getTypesInternal(baseTypes, scope, apply.args)
         TypeUtils.applyConstructor(scope, args, n)
       case s: Select =>
-        val tpe: TType = getType(baseTypes, scope, s.qualifier)
-        val args: Seq[TType] = getTypes(baseTypes, scope, apply.args)
+        val tpe: TType = getTypeInternal(baseTypes, scope, s.qualifier)
+        val args: Seq[TType] = getTypesInternal(baseTypes, scope, apply.args)
         val selectName: String = s.name.toString
 
         TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe).returnType
@@ -68,11 +79,11 @@ object TypeInference {
 
   def getTypeIdent(baseTypes: BaseTypes, scope: TScope, ident: Ident): TType = {
     val iName = ident.name.toString
-    scope.findMethod(iName, Vector()) match {
-      case Some(m) => m.returnType
+    scope.findIdentifier(iName) match {
+      case Some(i) => i.tpe
       case None =>
-        scope.findIdentifier(iName) match {
-          case Some(i) => i.tpe
+        scope.findMethod(iName, Vector()) match {
+          case Some(m) => m.returnType
           case None =>
             val thisTpe: TType = scope.findThis()
             thisTpe.findMethod(scope.findThis(), iName, Vector()) match {
@@ -94,9 +105,9 @@ object TypeInference {
   def getTypeIf(baseTypes: BaseTypes, scope: TScope, i: If): TType = {
     val elseType = i.elsep match {
       case l: Literal => getTypeLiteral(baseTypes, scope, l)
-      case _ => getType(baseTypes, scope, i.elsep)
+      case _ => getTypeInternal(baseTypes, scope, i.elsep)
     }
-    val thenType = getType(baseTypes, scope, i.thenp)
+    val thenType = getTypeInternal(baseTypes, scope, i.thenp)
     TypeUtils.findCommonBaseClass(scope, thenType, elseType)
   }
 

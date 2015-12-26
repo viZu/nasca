@@ -2,21 +2,24 @@ package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
+import at.vizu.s2n.log.Debug
+import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.types.result.{Implementation, ObjectImplementation}
 import at.vizu.s2n.types.symbol.TScope
+import com.typesafe.scalalogging.LazyLogging
 
 /**
   * Phil on 02.12.15.
   */
-class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFileGenerator {
+class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFileGenerator with LazyLogging {
 
   private val tpe = impl.tpe
 
   override def generateMainFile(args: Arguments): Unit = {
-    println("Generating main file...")
-    checkMainClass()
-
-    generateInternal(args)
+    profileFunc(logger, "Generate main file", () => {
+      checkMainClass()
+      generateInternal(args)
+    }, Debug)
   }
 
   private def generateInternal(args: Arguments) = {

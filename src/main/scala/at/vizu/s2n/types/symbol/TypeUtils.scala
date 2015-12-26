@@ -1,6 +1,7 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.exception.TypeException
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 import scala.reflect.runtime.universe._
@@ -9,7 +10,7 @@ import scala.runtime.BoxedUnit
 /**
  * Phil on 21.10.15.
  */
-object TypeUtils {
+object TypeUtils extends LazyLogging {
 
   val ConstructorName = "<init>"
 
@@ -159,11 +160,11 @@ object TypeUtils {
   }
 
   def createAndAddGenericModifier(scope: TScope, generic: TypeDef) = {
-    println("generics - generate")
+    logger.trace("generics - generate")
     val genericModifier: GenericModifier = createGenericModifier(scope, generic)
     val millis: Long = System.currentTimeMillis()
     scope.addClass(genericModifier)
-    println("Add time: " + (System.currentTimeMillis() - millis))
+    logger.trace("Add time: " + (System.currentTimeMillis() - millis))
     genericModifier
   }
 
@@ -259,15 +260,15 @@ object TypeUtils {
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
-    println("Generics")
+    logger.trace("Generics")
     val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
-    println("Before Params")
+    logger.trace("Before Params")
     val params: List[Param] = d.vparamss.head.map {
       case v: ValDef =>
         val tpe: TType = TypeUtils.findType(scope, v.tpt)
         Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
     }
-    println("After Params")
+    logger.trace("After Params")
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
     if (retType == null && !constructor) {
@@ -355,11 +356,11 @@ object TypeUtils {
     */
 
   def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): (Any) = {
-    scope.findMethod(name, withParams) match {
-      case Some(m) => m
+    scope.findIdentifier(name) match {
+      case Some(ident) => ident
       case None =>
-        scope.findIdentifier(name) match {
-          case Some(ident) => ident
+        scope.findMethod(name, withParams) match {
+          case Some(m) => m
           case None =>
             val thisTpe: TType = scope.findThis()
             val tpe = if (onType != null) onType else thisTpe

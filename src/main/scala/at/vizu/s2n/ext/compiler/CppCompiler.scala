@@ -4,18 +4,22 @@ import java.nio.file.Path
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
+import at.vizu.s2n.log.Profiler._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.io.Source
+import scala.sys.process.ProcessLogger
 
 /**
   * Phil on 03.12.15.
   */
-class CppCompiler extends ExtCompiler {
+class CppCompiler extends ExtCompiler with LazyLogging {
   override def compile(args: Arguments): Unit = {
-    println("Compiling C++ sources")
-    copyAnyFiles(args)
-    copyMakeFile(args)
-    executeMakeFile(args)
+    profileFunc(logger, "Compiling C++ sources", () => {
+      copyAnyFiles(args)
+      copyMakeFile(args)
+      executeMakeFile(args)
+    })
     ???
   }
 
@@ -49,6 +53,17 @@ class CppCompiler extends ExtCompiler {
   private def executeMakeFile(args: Arguments) = {
     import scala.sys.process._
     val outDir = args.out.toString
-    s"make -C $outDir".!
+    val result = s"make -C $outDir".!(new CompilerProcessLogger)
+    if (result < 0) {
+      logger.error(s"C++ compiler exited with status code $result")
+    }
+  }
+
+  private class CompilerProcessLogger extends ProcessLogger with LazyLogging {
+    override def out(s: => String): Unit = logger.debug(s)
+
+    override def err(s: => String): Unit = logger.warn(s)
+
+    override def buffer[T](f: => T): T = f
   }
 }

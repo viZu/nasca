@@ -44,9 +44,5 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
     val methods = selfType.methods.filter(!_.constructor) ++ methodDefinitions
     val tuples = generateMethods(methods) ++ generateFields(selfType.fields)
     tuples.groupBy(_._1).mapValues(sq => sq.map(_._2)) + ("protected" -> Vector())
-
-    //val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
-    //val member: Seq[Member] = selfType.methods.filter(!_.constructor) ++ selfType.fields ++ methodDefinitions
-    //member.groupBy(_.visibility) + ("protected" -> Vector())
   }
 }

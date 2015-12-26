@@ -1,30 +1,31 @@
 package at.vizu.s2n
 
-import at.vizu.s2n.args.ArgumentsParser
+import at.vizu.s2n.args.{Arguments, ArgumentsParser}
 import at.vizu.s2n.environment.Environments
 import at.vizu.s2n.exception.{ArgumentException, TypeException}
+import at.vizu.s2n.log.{Log, LogOptions}
+import com.typesafe.scalalogging.LazyLogging
 
 import _root_.scala.tools.reflect.ToolBoxError
 
 /**
 *  Phil on 21.09.15.
 */
-object Main {
+object Main extends LazyLogging {
+
 
   def main(args: Array[String]) {
     try {
       val arguments = ArgumentsParser.parseArguments(args)
+      initLogger(arguments)
       val environment = Environments(arguments)
       environment.compile(arguments)
     } catch {
-      case ae: ArgumentException => Console.err.println(ae.getMessage)
-      case iae: IllegalArgumentException => iae.printStackTrace()
-      case te: TypeException =>
-        Console.err.println(te.formattedMessage)
-        te.printStackTrace()
-      case tb: ToolBoxError =>
-        Console.err.println(tb.message)
-
+      case ae: ArgumentException => logger.error("Wrong arguments", ae)
+      case iae: IllegalArgumentException => logger.error("Illegal arguments", iae)
+      case te: TypeException => logger.error(te.formattedMessage, te)
+      case e: Exception => logger.error("An error occurred")
+      case tb: ToolBoxError => logger.error("Error initializing scala toolbox", tb)
     }
   }
 
@@ -32,5 +33,9 @@ object Main {
     assert(args.length > 0)
   }
 
+  private def initLogger(args: Arguments) = {
+    val options: LogOptions = LogOptions(args)
+    Log.init(options)
+  }
 
 }

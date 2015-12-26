@@ -1,40 +1,56 @@
 package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
+import at.vizu.s2n.log.Debug
+import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.types.result._
 import at.vizu.s2n.types.symbol.{BaseTypes, TScope}
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * Phil on 06.11.15.
  */
-class CppGenerator(baseTypes: BaseTypes) extends Generator {
+class CppGenerator(baseTypes: BaseTypes) extends Generator with LazyLogging {
 
-  type GeneratorPair = (SourceFileGenerator, HeaderFileGenerator)
+  type GeneratorTuple = (SourceFileGenerator, HeaderFileGenerator, Implementation)
 
   override def generateCode(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]): Unit = {
-    println("Generating C++ files...")
-    val generatorPairs = getGeneratorPairs(scope, fileContents)
-    generatorPairs.foreach(tuple => invokeGenerators(args, tuple._1, tuple._2))
+    profileFunc(logger, "Generate C++ sources", () => {
+      invokeGeneratorTuples(args, scope, fileContents)
+      invokeMain(args, scope, fileContents)
+    })
+  }
 
+  def invokeMain(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
     if (args.main.isNonEmpty) {
       val mainGenerator = getMainClassGenerator(args, scope, fileContents)
       mainGenerator.generateMainFile(args)
     }
   }
 
+  def invokeGeneratorTuples(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
+    val tuples = getGeneratorPairs(scope, fileContents)
+    tuples.foreach(invoke(args, _))
+  }
 
-  def invokeGenerators(args: Arguments, sourceGenerator: SourceFileGenerator, headerGenerator: HeaderFileGenerator) = {
+  def invoke(args: Arguments, tuple: GeneratorTuple) = {
+    profileFunc(logger, s"Generate class ${tuple._3.tpe}", () => {
+      invokeGeneratorTuple(args, tuple._1, tuple._2)
+    }, Debug)
+  }
+
+  def invokeGeneratorTuple(args: Arguments, sourceGenerator: SourceFileGenerator, headerGenerator: HeaderFileGenerator) = {
     val handles = sourceGenerator.generateSourceFile(args)
     headerGenerator.generateHeaderFile(args, handles)
   }
 
-  def getGeneratorPairs(scope: TScope, fileContents: Seq[ScalaFileWrapper]): Seq[GeneratorPair] = {
+  def getGeneratorPairs(scope: TScope, fileContents: Seq[ScalaFileWrapper]): Seq[GeneratorTuple] = {
     fileContents.flatMap(c => {
       c.impls.map({
         case oi: ObjectImplementation =>
-          (getSourceGenerator(scope, c.pkg, c.imports, oi), getObjectHeaderGenerator(c.pkg, c.imports, oi))
+          (getSourceGenerator(scope, c.pkg, c.imports, oi), getObjectHeaderGenerator(c.pkg, c.imports, oi), oi)
         case ci: ClassImplementation =>
-          (getSourceGenerator(scope, c.pkg, c.imports, ci), getClassHeaderGenerator(c.pkg, c.imports, ci))
+          (getSourceGenerator(scope, c.pkg, c.imports, ci), getClassHeaderGenerator(c.pkg, c.imports, ci), ci)
       })
     })
   }

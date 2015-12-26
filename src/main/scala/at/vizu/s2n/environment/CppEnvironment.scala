@@ -8,11 +8,13 @@ import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.Generator
 import at.vizu.s2n.parser.{AST, Parser}
 import at.vizu.s2n.types.TypeSystem
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * Phil on 06.11.15.
  */
-class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generator, extCompiler: ExtCompiler) extends Environment {
+class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generator, extCompiler: ExtCompiler)
+  extends Environment with LazyLogging {
 
   override def compile(args: Arguments): Unit = {
     val contents: Seq[(String, String)] = readFileContents(args.files)
@@ -24,7 +26,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
 
   private def readFileContents(files: Seq[Path]) = {
     val pathStrings: Seq[String] = files.map(_.toString)
-    println( s"""Reading file contents: ${pathStrings.mkString(",")}""")
+    logger.debug(s"Reading file contents: ${pathStrings.mkString(",")}")
     pathStrings.zip(ScalaFiles.readFiles(files))
   }
 

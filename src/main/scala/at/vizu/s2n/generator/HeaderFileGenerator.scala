@@ -4,11 +4,12 @@ import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.handles.{FieldInitializerHandle, GeneratorHandle, MethodDefinitionHandle}
 import at.vizu.s2n.types.symbol._
+import com.typesafe.scalalogging.LazyLogging
 
 /**
   * Phil on 12.11.15.
   */
-trait HeaderFileGenerator {
+trait HeaderFileGenerator extends LazyLogging {
 
   type HandlesMap = Map[Class[_ <: GeneratorHandle], Map[String, GeneratorHandle]]
 
@@ -24,14 +25,14 @@ trait HeaderFileGenerator {
     this.handlesMap = handles.map(a => a.key -> a).toMap.groupBy(t => t._2.getClass)
 
     val name: String = GeneratorUtils.getHeaderFileName(selfType)
-    println("Generating header file " + name)
+    logger.debug("Generating header file " + name)
     val includeGuard = GeneratorUtils.generateIncludeGuard(packageName, GeneratorUtils.getHeaderFileName(selfType))
     val usedTypes = TypeUtils.getUsedTypes(baseTypes, selfType)
     val content: String = includeGuard + GeneratorUtils.generateIncludes(usedTypes) + generateHeaderContent(packageName)
 
     ScalaFiles.createDirectory(args.out)
 
-    println("Writing header file " + name)
+    logger.debug("Writing header file " + name)
     val prettyContent = CodePrettifier.prettify(content)
     ScalaFiles.writeToFile(args.out, name, prettyContent)
   }

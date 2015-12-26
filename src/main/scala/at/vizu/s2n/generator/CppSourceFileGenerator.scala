@@ -6,13 +6,15 @@ import at.vizu.s2n.generator.expression.{ConstructorExpression, Expression}
 import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.result.Implementation
 import at.vizu.s2n.types.symbol._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
 
 /**
   * Phil on 12.11.15.
   */
-class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implementation: Implementation) extends SourceFileGenerator {
+class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implementation: Implementation)
+  extends SourceFileGenerator with LazyLogging {
 
   lazy val classInitMethodName = "__init__class__" + implementation.tpe.simpleName
 
@@ -25,11 +27,11 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   private val fileName: String = GeneratorUtils.getSourceFileName(tpe)
 
   override def generateSourceFile(args: Arguments): Set[GeneratorHandle] = {
-    println("Generating source file " + fileName)
+    logger.debug("Generating source file " + fileName)
     addGenericsToScope(classScope)
     val context = generateContent(classScope)
 
-    println("Writing source file " + fileName)
+    logger.debug("Writing source file " + fileName)
     val prettyContent = CodePrettifier.prettify(context.content)
     ScalaFiles.writeToFile(args.out, fileName, prettyContent)
     context.handles
