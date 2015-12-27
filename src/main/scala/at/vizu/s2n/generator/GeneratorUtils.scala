@@ -3,8 +3,6 @@ package at.vizu.s2n.generator
 import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.symbol._
 
-import scala.collection.immutable.IndexedSeq
-
 /**
   * Phil on 11.11.15.
   */
@@ -251,58 +249,60 @@ object GeneratorUtils {
   }
 
   def generateCopyConstructorsHeader(tpe: TType): String = {
-    tpe match {
-      case a: AppliedGenericType => ""
-      case g: GenericType =>
-        val typeName: String = tpe.simpleName
-        val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
-        val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
-        s"""
-           |
+    generateCopyConstructors(tpe, g => {
+      val typeName: String = tpe.simpleName
+      val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
+      val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
+      s"""
+         |
            |$typeName(const $typeName& t);
-           |$typeName& operator=(const $typeName& t);
-           |
+         |$typeName& operator=(const $typeName& t);
+         |
            |$tmpTemplateArgs
-           |$typeName(const $typeName$tmpTypeArgs& t);
-           |
+         |$typeName(const $typeName$tmpTypeArgs& t);
+         |
            |$tmpTemplateArgs
-           |$typeName<T>& operator=(const $typeName$tmpTypeArgs& t);
-           |""".stripMargin
-      case _ => ""
-    }
+         |$typeName<T>& operator=(const $typeName$tmpTypeArgs& t);
+         |""".stripMargin
+    })
   }
 
   def generateCopyConstructorsSource(baseTypes: BaseTypes, tpe: TType): String = {
+    generateCopyConstructors(tpe, g => {
+      val typeName: String = tpe.simpleName
+      val typeArgs = generateTemplatesString(g.genericModifiers, withTypeName = true)
+      val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
+      val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
+      val cppTypename = getCppTypeName(baseTypes, tpe, withTypeName = false).content
+      val fieldAssignments = generateFieldAssignments(tpe)
+      val fieldInitializers = generateFieldInitializers(tpe)
+      s"""
+         |
+           |$typeArgs
+         |$cppTypename::$typeName(const $typeName& t)$fieldInitializers {}
+         |
+           |$typeArgs
+         |$cppTypename &$cppTypename::operator=(const $typeName& t) {
+         |$fieldAssignments
+         |}
+         |
+           |$typeArgs
+         |$tmpTemplateArgs
+         |$cppTypename::$typeName(const $typeName$tmpTypeArgs& t)$fieldInitializers {}
+         |
+           |$typeArgs
+         |$tmpTemplateArgs
+         |$cppTypename &$cppTypename::operator=(const $typeName$tmpTypeArgs& t) {
+         |$fieldAssignments
+         |}
+         |""".stripMargin
+    })
+  }
+
+  private def generateCopyConstructors(tpe: TType, f: GenericType => String): String = {
     tpe match {
       case a: AppliedGenericType => ""
-      case g: GenericType =>
-        val typeName: String = tpe.simpleName
-        val typeArgs = generateTemplatesString(g.genericModifiers, withTypeName = true)
-        val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
-        val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
-        val cppTypename = getCppTypeName(baseTypes, tpe, withTypeName = false).content
-        val fieldAssignments = generateFieldAssignments(tpe)
-        val fieldInitializers = generateFieldInitializers(tpe)
-        s"""
-           |
-           |$typeArgs
-           |$cppTypename::$typeName(const $typeName& t)$fieldInitializers {}
-           |
-           |$typeArgs
-           |$cppTypename &$cppTypename::operator=(const $typeName& t) {
-           |$fieldAssignments
-           |}
-           |
-           |$typeArgs
-           |$tmpTemplateArgs
-           |$cppTypename::$typeName(const $typeName$tmpTypeArgs& t)$fieldInitializers {}
-           |
-           |$typeArgs
-           |$tmpTemplateArgs
-           |$cppTypename &$cppTypename::operator=(const $typeName$tmpTypeArgs& t) {
-           |$fieldAssignments
-           |}
-           |""".stripMargin
+      case g: GenericType => f(g)
       case _ => ""
     }
   }
@@ -327,6 +327,11 @@ object GeneratorUtils {
     val fieldName = f.name
     val getter = generateGetter(fieldName)
     s"this->$fieldName = t.$getter;"
+  }
+
+  def generateFieldAccessor(f: Field) = {
+    if (f.isPublicField) generateGetter(f)
+    else f.name
   }
 
   private def generateFieldInitializers(tpe: TType) = {

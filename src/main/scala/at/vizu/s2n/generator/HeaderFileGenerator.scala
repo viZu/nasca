@@ -125,10 +125,6 @@ trait HeaderFileGenerator extends LazyLogging {
     val methods = selfType.methods ++ methodDefinitions
     val tuples = generateMethods(methods) ++ generateFields(selfType.fields)
     tuples.groupBy(_._1).mapValues(sq => sq.map(_._2))
-
-    //val member: Seq[Member] = selfType.methods ++ selfType.fields ++ methodDefinitions
-
-    //member.groupBy(_.visibility)
   }
 
   protected def generateMethods(methods: Seq[Method]): Seq[(String, String)] = {
@@ -145,7 +141,7 @@ trait HeaderFileGenerator extends LazyLogging {
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
     val accesors = ("public", GeneratorUtils.generateParamAccessor(baseTypes, field))
     //d + (if (accesors.nonEmpty) "\n" + accesors + "\n" else "")
-    Seq(accesors, (field.visibility, d))
+    Seq(accesors, ("private", d))
   }
 
   protected def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {

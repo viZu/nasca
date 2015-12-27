@@ -20,7 +20,6 @@ class CppCompiler extends ExtCompiler with LazyLogging {
       copyMakeFile(args)
       executeMakeFile(args)
     })
-    ???
   }
 
   private def copyMakeFile(args: Arguments) = {
