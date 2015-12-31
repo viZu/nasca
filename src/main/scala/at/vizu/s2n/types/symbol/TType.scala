@@ -49,3 +49,31 @@ trait TType extends Modifiable with Nameable {
   def validate(): Unit
 
 }
+
+object NoType extends TType {
+  override def ctx: Context = Context("", 0)
+
+  override def isObject: Boolean = false
+
+  override def methods: Seq[Method] = Seq()
+
+  override def pkg: String = ""
+
+  override def simpleName: String = "notype"
+
+  override def hasParent(tpe: TType): Boolean = false
+
+  override def fields: Seq[Field] = Seq()
+
+  override def validate(): Unit = return
+
+  override def findField(execCtx: TType, name: String): Option[Field] = None
+
+  override def mods: Seq[Modifier] = Seq()
+
+  override def isAssignableAsParam(other: TType): Boolean = false
+
+  override def parents: Seq[Parent] = Seq()
+
+  override def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = None
+}

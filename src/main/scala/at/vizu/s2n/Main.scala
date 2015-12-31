@@ -2,7 +2,7 @@ package at.vizu.s2n
 
 import at.vizu.s2n.args.{Arguments, ArgumentsParser}
 import at.vizu.s2n.environment.Environments
-import at.vizu.s2n.exception.{ArgumentException, TypeException}
+import at.vizu.s2n.exception.{ArgumentException, CompilerException, TypeException}
 import at.vizu.s2n.log.{Log, LogOptions}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -24,7 +24,8 @@ object Main extends LazyLogging {
       case ae: ArgumentException => logger.error("Wrong arguments", ae)
       case iae: IllegalArgumentException => logger.error("Illegal arguments", iae)
       case te: TypeException => logger.error(te.formattedMessage, te)
-      case e: Exception => logger.error("An error occurred")
+      case ce: CompilerException => ce.logErrors(logger)
+      case e: Exception => logger.error("An error occurred", e)
       case tb: ToolBoxError => logger.error("Error initializing scala toolbox", tb)
     }
   }

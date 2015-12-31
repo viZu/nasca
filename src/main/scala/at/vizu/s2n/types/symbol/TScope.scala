@@ -1,6 +1,6 @@
 package at.vizu.s2n.types.symbol
 
-import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.error.TypeErrors
 
 /**
  * Phil on 07.10.15.
@@ -36,7 +36,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   // TODO: Optimize?
-  def isEmptyScope(): Boolean = (_types ++ _objects ++ _identifiers ++ _methods).isEmpty
+  def isEmptyScope: Boolean = (_types ++ _objects ++ _identifiers ++ _methods).isEmpty
 
   def enterScope(): TScope = TScope(this)
 
@@ -62,8 +62,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   def addClass(tpe: TType) = {
     def throwExists() = {
-      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
-        s"Class with qualifier ${tpe.fullClassName} already exists")
+      TypeErrors.addError(tpe.ctx, s"Class with qualifier ${tpe.fullClassName} already exists")
     }
     tpe match {
       case g: GenericModifier =>
@@ -75,8 +74,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def addClassInternal(tpe: TType, checkType: String => Boolean) = {
     def throwExists() = {
-      throw new TypeException(tpe.ctx.fileName, tpe.ctx.line,
-        s"Class with qualifier ${tpe.fullClassName} already exists")
+      TypeErrors.addError(tpe.ctx, s"Class with qualifier ${tpe.fullClassName} already exists")
     }
     if (checkType(tpe.fullClassName)) {
       addNullTypeAsSubType(tpe)
@@ -133,8 +131,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     if (findObjectInCurrentScope(obj.fullClassName).isEmpty) {
       _objects = _objects :+ obj
     } else {
-      throw new TypeException(obj.ctx.fileName, obj.ctx.line,
-        s"Object with qualifier ${obj.fullClassName} already exists")
+      TypeErrors.addError(obj.ctx, s"Object with qualifier ${obj.fullClassName} already exists")
     }
   }
 
@@ -177,7 +174,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     if (findIdentifierInCurrentScope(identifier.name).isEmpty) {
       _identifiers = _identifiers :+ identifier
     } else {
-      throw new TypeException(identifier.ctx.fileName, identifier.ctx.line,
+      TypeErrors.addError(identifier.ctx,
         s"Identifier with qualifier ${identifier.name} already exists in current scope")
     }
   }
@@ -238,7 +235,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     if (findMethodInScopeMethods(method.name, args).isEmpty) {
       _methods = _methods :+ method
     } else {
-      throw new TypeException(method.ctx,
+      TypeErrors.addError(method.ctx,
         s"Method ${method.name}(${TypeUtils.toString(args)}) already exists in current scope")
     }
   }

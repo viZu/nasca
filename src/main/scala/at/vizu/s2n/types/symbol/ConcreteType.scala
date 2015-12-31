@@ -1,7 +1,6 @@
 package at.vizu.s2n.types.symbol
 
-import at.vizu.s2n.exception.TypeException
-import at.vizu.s2n.generator.expression.Expression
+import at.vizu.s2n.error.TypeErrors
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -43,8 +42,8 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def findMethodInParents(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = {
-    val optMethods: Seq[Option[Method]] = parentTypes.map(_.findMethod(execCtx, name, args)).filter(_.isDefined)
-    if (optMethods.nonEmpty) optMethods.head else None
+    val optMethods: Seq[Method] = parentTypes.flatMap(_.findMethod(execCtx, name, args))
+    optMethods.headOption
   }
 
   def findField(execCtx: TType, name: String): Option[Field] = {
@@ -52,8 +51,8 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def findFieldInParents(execCtx: TType, name: String): Option[Field] = {
-    val optFields: Seq[Option[Field]] = parentTypes.map(_.findField(execCtx, name)).filter(_.isDefined)
-    if (optFields.nonEmpty) optFields.head else None
+    val optFields: Seq[Field] = parentTypes.flatMap(_.findField(execCtx, name))
+    optFields.headOption
   }
 
   private def checkField(execCtx: TType, name: String, field: Field) = {
@@ -80,7 +79,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
       _methods = _methods :+ addedMethod
       notifyMemberAddedListener(addedMethod)
     } else {
-      throw new TypeException(method.ctx.fileName, method.ctx.line,
+      TypeErrors.addError(method.ctx,
         s"Type $fullClassName already has a method ${method.name}(${TypeUtils.toString(args)})")
     }
   }
@@ -92,7 +91,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
 
   private def validateMethod(method: Method) = {
     if (method.isAbstract && !isAbstract && !isTrait) {
-      throw new TypeException(method.ctx.fileName, method.ctx.line,
+      TypeErrors.addError(method.ctx,
         s"Type $fullClassName must either be abstract or implement abstract member ${method.name}")
     }
     if (!method.constructor) {
@@ -105,7 +104,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   private def validateParam(ctx: Context, p: Param) = {
     TypeUtils.findGenericModifiers(p.tpe).foreach(gm => {
       if (gm.covariance) {
-        throw new TypeException(ctx.fileName, ctx.line, s"Covariant type ${gm.name} occurs in contravariant position" +
+        TypeErrors.addError(ctx, s"Covariant type ${gm.name} occurs in contravariant position" +
           s" in type ${p.tpe.name} of value ${p.name}")
       }
     })
@@ -116,7 +115,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
     val ctx = m.ctx
     TypeUtils.findGenericModifiers(tpe).foreach(gm => {
       if (gm.contravariance) {
-        throw new TypeException(ctx.fileName, ctx.line, s"Contravariant type ${gm.name} occurs in covariant position" +
+        TypeErrors.addError(ctx, s"Contravariant type ${gm.name} occurs in covariant position" +
           s" in type ${tpe.name} of method $m")
       }
     })
@@ -128,20 +127,19 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
       _fields = _fields :+ field
       notifyMemberAddedListener(field)
     } else {
-      throw new TypeException(field.ctx.fileName, field.ctx.line,
-        s"Type $fullClassName already has a field with name ${field.name}")
+      TypeErrors.addError(ctx, s"Type $fullClassName already has a field with name ${field.name}")
     }
   }
 
   private def validateField(field: Field) = {
     if (field.isAbstract && !isAbstract && !isTrait) {
-      throw new TypeException(field.ctx.fileName, field.ctx.line,
+      TypeErrors.addError(field.ctx,
         s"Type $fullClassName must either be abstract or implement abstract member ${field.name}")
     }
     val tpe: TType = field.tpe
     TypeUtils.findGenericModifiers(tpe).foreach(gm => {
       if (gm.contravariance) {
-        throw new TypeException(ctx.fileName, ctx.line, s"Contravariant type ${gm.name} occurs in covariant position" +
+        TypeErrors.addError(field.ctx, s"Contravariant type ${gm.name} occurs in covariant position" +
           s" in type ${tpe.name} of value ${field.name}")
       }
     })
@@ -158,7 +156,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   private def validateParent(p: (TType, Int)) = {
     val (parent, index) = p
     if (index > 0 && !parent.isTrait && !isNullType) {
-      throw new TypeException(ctx.fileName, ctx.line, s"Type ${parent.name} needs to be a trait to be mixed in")
+      TypeErrors.addError(ctx, s"Type ${parent.name} needs to be a trait to be mixed in")
     }
   }
 

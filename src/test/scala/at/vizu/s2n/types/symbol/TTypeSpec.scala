@@ -1,6 +1,6 @@
 package at.vizu.s2n.types.symbol
 
-import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.error.Errors
 import org.scalatest._
 
 /**
@@ -121,7 +121,8 @@ class TTypeSpec extends FlatSpec with Matchers {
   }
 
   "EType addMethod tMethod a second time" should "throw a TypeException" in {
-    an[TypeException] should be thrownBy eType.addMethod(tMethod)
+    eType.addMethod(tMethod)
+    Errors.errors.size should be(1)
   }
 
   "EType addField tField" should "add the field to the type" in {
@@ -130,7 +131,8 @@ class TTypeSpec extends FlatSpec with Matchers {
   }
 
   "EType addField tField a second time" should "throw a TypeException" in {
-    an[TypeException] should be thrownBy eType.addField(tField)
+    eType.addField(tField)
+    Errors.errors.size should be(1)
   }
 
   "AType validate" should "run without exception" in {
@@ -138,23 +140,20 @@ class TTypeSpec extends FlatSpec with Matchers {
   }
 
   "CType validate" should "throw a TypeException because of parents" in {
-    the[TypeException] thrownBy {
-      cType.validate()
-    } should have message s"Type ${bType.name} needs to be a trait to be mixed in"
+    cType.validate()
+    Errors.errors.size should be(1)
   }
 
   "EType validate" should "throw a TypeException because of abstract method" in {
     eType.addMethod(Method(ctx, "aName", int, Seq(Abstract), Seq()))
-    the[TypeException] thrownBy {
-      eType.validate()
-    } should have message s"Type ${eType.name} must either be abstract or implement abstract member aName"
+    eType.validate()
+    Errors.errors.size should be(1)
   }
 
   "FType validate" should "throw a TypeException because of abstract field" in {
     fType.addField(Field(ctx, Seq(Abstract), "aField", int))
-    the[TypeException] thrownBy {
-      fType.validate()
-    } should have message s"Type ${fType.name} must either be abstract or implement abstract member aField"
+    fType.validate()
+    Errors.errors.size should be(1)
   }
 
   private def initBType(): Unit = {

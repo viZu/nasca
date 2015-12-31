@@ -1,6 +1,19 @@
 <configuration>
     <conversionRule conversionWord="highlight" converterClass="at.vizu.s2n.log.HighlightingCompositeConverter"/>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <filter class="at.vizu.s2n.log.MaxLevelFilter">
+            <maxLevel>WARN</maxLevel>
+        </filter>
+        <encoder>
+            <pattern>[%highlight(%level)] %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
         <encoder>
             <pattern>[%highlight(%level)] %msg%n</pattern>
         </encoder>
@@ -8,5 +21,6 @@
 
     <root level="debug">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="STDERR"/>
     </root>
 </configuration>

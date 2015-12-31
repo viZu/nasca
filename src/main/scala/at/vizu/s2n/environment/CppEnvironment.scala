@@ -24,6 +24,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
       val (scope, fileContents) = typeSystem.checkTrees(trees)
       generator.generateCode(args, scope, fileContents)
       extCompiler.compile(args)
+      logger.error("Test")
     })
   }
 

@@ -1,6 +1,6 @@
 package at.vizu.s2n.types
 
-import at.vizu.s2n.log.Profiler._
+import at.vizu.s2n.log.ProfilerWithErrors._
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.result.ScalaFileWrapper
 import at.vizu.s2n.types.symbol.TScope

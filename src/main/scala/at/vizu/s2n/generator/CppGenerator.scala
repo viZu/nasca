@@ -2,7 +2,7 @@ package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.log.Debug
-import at.vizu.s2n.log.Profiler._
+import at.vizu.s2n.log.ProfilerWithErrors._
 import at.vizu.s2n.types.result._
 import at.vizu.s2n.types.symbol.{BaseTypes, TScope}
 import com.typesafe.scalalogging.LazyLogging

@@ -1,6 +1,6 @@
 package at.vizu.s2n.types
 
-import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.generator.expression.{Expression, ExpressionOptions}
 import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.log.{Debug, Trace}
@@ -205,7 +205,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   private def addTypeAlias(pkgName: String, selector: ImportSelector, line: Int): Unit = {
     val typeName: String = pkgName + "." + selector.name.toString
     currentScope.findClass(typeName)
-      .orElse(throw new TypeException(currentScope.currentFile, line, s"No type with name $typeName found")).get
+      .getOrElse(TypeErrors.addError(currentScope, line, s"No type with name $typeName found"))
     currentScope.addTypeAlias(selector.rename.toString, typeName)
   }
 

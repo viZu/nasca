@@ -1,5 +1,6 @@
 package at.vizu.s2n.log
 
+import at.vizu.s2n.error.Errors
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -35,4 +36,22 @@ object Profiler {
     s"(${timeInMillis}ms)"
   }
 
+}
+
+object ProfilerWithErrors {
+  def profileFunc[U](logger: Logger, tag: String, execution: () => U, logLevelFinish: LogLevel = Info): U = {
+    val result = Profiler.profileFunc(logger, tag, execution, logLevelFinish)
+    validateErrors(tag)
+    result
+  }
+
+  def profile[U](logger: Logger, tag: String, execution: => U, logLevelFinish: LogLevel = Info): U = {
+    val result = Profiler.profile(logger, tag, execution, logLevelFinish)
+    validateErrors(tag)
+    result
+  }
+
+  private def validateErrors(tag: String) = {
+    Errors.validate(s => s"${s.size} errors occurred during phase: $tag")
+  }
 }

@@ -1,6 +1,6 @@
 package at.vizu.s2n.types
 
-import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.log.Profiler.profile
 import at.vizu.s2n.log.Trace
 import at.vizu.s2n.types.symbol.{BaseTypes, TScope, TType, TypeUtils}
@@ -37,8 +37,8 @@ object TypeInference extends LazyLogging {
       case l: Literal => getTypeLiteral(baseTypes, scope, l)
       case i: If => getTypeIf(baseTypes, scope, i)
       case l: LabelDef => baseTypes.unit
-      case f: Function => throw new TypeException(scope.currentFile, tree.pos.line, "Anonymous functions are currently not supported")
-      case EmptyTree => throw new TypeException(scope.currentFile, tree.pos.line, "EmptyTree")
+      case f: Function => TypeErrors.addError(scope, tree.pos.line, "Anonymous functions are currently not supported")
+      case EmptyTree => TypeErrors.addError(scope, tree.pos.line, "EmptyTree")
     }
   }
 

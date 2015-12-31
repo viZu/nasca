@@ -1,6 +1,6 @@
 package at.vizu.s2n.types
 
-import at.vizu.s2n.exception.TypeException
+import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.log.Debug
 import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.parser.AST
@@ -62,7 +62,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       val typeName: String = pkgName + "." + selector.name.toString
       currentScope.findClass(typeName)
         .orElse(currentScope.findObject(typeName))
-        .getOrElse(throw new TypeException(currentScope.currentFile, line, s"No type with name $typeName found"))
+        .getOrElse(TypeErrors.addError(currentScope, line, s"No type with name $typeName found"))
       currentScope.addTypeAlias(selector.rename.toString, typeName)
       imports += ImportStmt(pkgName, selector.name.toString, selector.rename.toString)
     }
@@ -112,7 +112,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case d: DefDef => checkDefMember(scope, d)
       case a: Apply => checkApply(scope, a)
       case s: Select => checkSelect(scope, s)
-      case _ => throw new TypeException(scope.currentFile, member.pos.line, s"unrecognized member ${member.toString()}")
+      case _ => TypeErrors.addError(scope, member.pos.line, s"unrecognized member ${member.toString()}")
     }
   }
 
@@ -123,7 +123,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         val returnType: Option[TType] = checkValOrDefBody(s, v.rhs, field.tpe)
         returnType match {
           case Some(tpe) => if (field.tpe == null) field.tpe = tpe
-          case None => if (field.tpe == null) throw new TypeException(scope.currentFile, v.pos.line,
+          case None => if (field.tpe == null) TypeErrors.addError(scope, v.pos.line,
             s"Value definition ${v.name} requires a valid return type")
         }
       })
@@ -149,7 +149,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
             found: ${returned.get.fullClassName}
             expected: ${expected.fullClassName}""".stripMargin
 
-      throw new TypeException(scope.currentFile, line, msg)
+      TypeErrors.addError(scope, line, msg)
     }
   }
 
@@ -173,7 +173,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case l: Literal => Some(checkLiteral(scope, l))
       case i: If => Some(checkIf(scope, i))
       case l: LabelDef => Some(checkLabel(scope, l))
-      case f: Function => throw new TypeException(scope.currentFile, body.pos.line, "Anonymous functions are currently not supported")
+      case f: Function => Some(TypeErrors.addError(scope, body.pos.line,
+        "Anonymous functions are currently not supported"))
       case EmptyTree => None
     }
   }
@@ -191,8 +192,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case l: Literal => checkLiteral(scope, l)
       case i: If => checkIf(scope, i)
       case l: LabelDef => checkLabel(scope, l)
-      case f: Function => throw new TypeException(scope.currentFile, block.pos.line,
-        "Anonymous functions are currently not supported")
+      case f: Function => TypeErrors.addError(scope, block.pos.line, "Anonymous functions are currently not supported")
     }
 
     block.expr match {
@@ -205,8 +205,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case l: Literal => checkLiteral(scope, l)
       case i: If => checkIf(scope, i)
       case l: LabelDef => checkLabel(scope, l)
-      case f: Function => throw new TypeException(scope.currentFile, block.pos.line,
-        "Anonymous functions are currently not supported")
+      case f: Function => TypeErrors.addError(scope, block.pos.line, "Anonymous functions are currently not supported")
     }
   }
 
@@ -275,7 +274,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
             val thisTpe: TType = scope.findThis()
             thisTpe.findField(thisTpe, iName) match {
               case Some(f) => f.tpe
-              case None => throw new TypeException(scope.currentFile, ident.pos.line, s"Value $iName not found")
+              case None => TypeErrors.addError(scope, ident.pos.line, s"Value $iName not found")
             }
         }
     }
@@ -291,8 +290,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     returnTpe match {
       case Some(tpe) =>
         TypeUtils.createIdentifier(scope, v, tpe)
-      case None => throw new TypeException(scope.currentFile, v.pos.line,
-        s"Value definition ${v.name} requires a valid return type")
+      case None => TypeErrors.addError(scope, v.pos.line, s"Value definition ${v.name} requires a valid return type")
     }
 
     TypeUtils.unitType(scope)
@@ -340,7 +338,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkCond(scope: TScope, t: Tree): Unit = {
     checkBody(scope, t).map(_ == baseTypes.boolean).
-      orElse(throw new TypeException(scope.currentFile, t.pos.line, "If condition must be a boolean expression"))
+      getOrElse(TypeErrors.addError(scope, t.pos.line, "If condition must be a boolean expression"))
   }
 
   private def checkElse(scope: TScope, t: Tree): Option[TType] = {
@@ -367,7 +365,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def handleIdentAssign(scope: TScope, i: Ident): TType = {
     val identifier = TypeUtils.findIdentifier(scope, i)
-    if (!identifier.mutable) throw new TypeException(scope.currentFile, i.pos.line, "Reassignment to val")
+    if (!identifier.mutable) TypeErrors.addError(scope, i.pos.line, "Reassignment to val")
     identifier.tpe
   }
 
@@ -395,7 +393,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   }
 
   private def checkFieldAssign(scope: TScope, t: Tree, f: Field): TType = {
-    if (!f.isMutable) throw new TypeException(scope.currentFile, t.pos.line, "Reassignment to val")
+    if (!f.isMutable) TypeErrors.addError(scope, t.pos.line, "Reassignment to val")
     f.tpe
   }
 

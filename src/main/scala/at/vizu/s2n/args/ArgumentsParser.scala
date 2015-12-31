@@ -39,9 +39,15 @@ object ArgumentsParser {
       opt[String]('q', "quiet") valueName "<quiet>" optional() action { (x, a) =>
         a.copy(logLevel = Error)
       } text "quiet mode - sets the log level to 'error'"
+      opt[String]("stdout") valueName "<stdout>" optional() action { (x, a) =>
+        a.copy(stdout = Some(x))
+      } text "standard out - writes the standard output to the given file"
+      opt[String]("stderr") valueName "<stderr>" optional() action { (x, a) =>
+        a.copy(stderr = Some(x))
+      } text "standard error - writes the error output to the given file"
     }
     optParser.parse(rawArgs, Arguments()) match {
-      case Some(Arguments(_, Seq(), _, _, _, _)) => throw new IllegalArgumentException
+      case Some(Arguments(_, Seq(), _, _, _, _, _, _)) => throw new IllegalArgumentException
       case Some(args) => args
       case _ => throw new IllegalArgumentException
     }

@@ -1,5 +1,6 @@
 package at.vizu.s2n.types.symbol
 
+import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.exception.TypeException
 import com.typesafe.scalalogging.LazyLogging
 
@@ -80,9 +81,9 @@ object TypeUtils extends LazyLogging {
     */
 
   def findType(scope: TScope, typeTree: Tree): TType = {
-    def throwTypeNotFound(typeName: String): Nothing = {
+    def throwTypeNotFound(typeName: String) = {
       val msg = s"value $typeName not found"
-      throw new TypeException(scope.currentFile, typeTree.pos.line, msg)
+      TypeErrors.addError(scope, typeTree.pos.line, msg)
     }
     typeTree match {
       case s: Select => findClass(scope, s.toString, s.pos.line)
@@ -98,14 +99,14 @@ object TypeUtils extends LazyLogging {
         findType(scope, att.tpt) match {
           case gt: GenericType =>
             if (gt.genericModifiers.size != appliedTypes.size)
-              throw new TypeException(scope.currentFile, att.pos.line,
+              TypeErrors.addError(scope, att.pos.line,
                 s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${appliedTypes.size}")
             if (gt.genericModifiers == appliedTypes) gt
             else {
               val appliedMap = gt.genericModifiers.zip(appliedTypes).toMap
               gt.applyTypes(appliedMap)
             }
-          case _ => throw new TypeException(scope.currentFile, att.pos.line,
+          case _ => TypeErrors.addError(scope, att.pos.line,
             s"Wrong number of type arguments. Expected 0, but was ${appliedTypes.size}")
         }
       case tt: TypeTree => null
@@ -118,9 +119,9 @@ object TypeUtils extends LazyLogging {
   }
 
   def findClass(scope: TScope, className: String, pos: Int = 0): TType = {
-    def throwTypeNotFound(): Nothing = {
+    def throwTypeNotFound() = {
       val msg = s"value $className not found"
-      throw new TypeException(scope.currentFile, pos, msg)
+      TypeErrors.addError(scope, pos, msg)
     }
     scope.findClass(className).getOrElse(throwTypeNotFound())
   }
@@ -135,7 +136,8 @@ object TypeUtils extends LazyLogging {
       case c: Character => "scala.Char"
       case u: BoxedUnit => "scala.Unit"
       case null => "scala.Null"
-      case _@n => throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type ${n.getClass.getName} not supported")
+      case _@n =>
+        throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type ${n.getClass.getName} not supported")
     }
     if (tpeString != null) scope.findClass(tpeString) else Some(null)
   }
@@ -232,7 +234,7 @@ object TypeUtils extends LazyLogging {
     onType match {
       case gt: GenericType =>
         if (gt.genericModifiers.size != appliedTypes.size)
-          throw new TypeException(scope.currentFile, line,
+          TypeErrors.addError(scope, line,
             s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${appliedTypes.size}")
         else {
           val map = gt.genericModifiers.zip(appliedTypes).map(pair => {
@@ -247,11 +249,11 @@ object TypeUtils extends LazyLogging {
 
   def checkTypeToApply(scope: TScope, line: Int, genericModifier: GenericModifier, tpeToApply: TType) = {
     if (!tpeToApply.hasParent(genericModifier.upperBound) || !tpeToApply.isAssignableFrom(genericModifier.lowerBound)) {
-      throw new TypeException("", 0, s"Type $tpeToApply is not applicatple for generic modifier $genericModifier")
+      TypeErrors.addError(scope, line, s"Type $tpeToApply is not applicatple for generic modifier $genericModifier")
     }
   }
 
-  private def throwMethodNotFound(scope: TScope, methodName: String, args: Seq[TType], line: Int): Nothing = {
+  private def throwMethodNotFound(scope: TScope, methodName: String, args: Seq[TType], line: Int) = {
     val argList = TypeUtils.toString(args)
     val msg = s"No method $methodName($argList) found"
     throw new TypeException(scope.currentFile, line, msg)
@@ -272,7 +274,7 @@ object TypeUtils extends LazyLogging {
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
     if (retType == null && !constructor) {
-      throw new TypeException(ctx.fileName, ctx.line, s"A return type for Method $methodName is required ")
+      TypeErrors.addError(ctx, s"A return type for Method $methodName is required ")
     }
     //TODO check if Method exists in current scope
     Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, constructor, instanceMethod)
@@ -304,7 +306,7 @@ object TypeUtils extends LazyLogging {
   }
 
   def findField(scope: TScope, fieldName: String, line: Int, onType: TType): Field = {
-    def throwFieldNotFound(fieldName: String, tpe: TType): Nothing = {
+    def throwFieldNotFound(fieldName: String, tpe: TType) = {
       val msg = s"value $fieldName is not a member of type ${tpe.name}"
       throw new TypeException(scope.currentFile, line, msg)
     }
@@ -318,9 +320,9 @@ object TypeUtils extends LazyLogging {
   }
 
   def findMethodOrFieldType(scope: TScope, name: String, line: Int, onType: TType = null) = {
-    def throwMethodNotFound(selectName: String): Nothing = {
+    def throwMethodNotFound(selectName: String) = {
       val msg = s"No value $selectName found"
-      throw new TypeException(scope.currentFile, line, msg)
+      TypeErrors.addError(scope, line, msg)
     }
     val thisTpe: TType = scope.findThis()
     val tpe: TType = if (onType == null) thisTpe else onType
@@ -332,7 +334,7 @@ object TypeUtils extends LazyLogging {
     */
 
   def findIdentifier(scope: TScope, i: Ident): Identifier = {
-    def throwIdentifierNotFound(identName: String): Nothing = {
+    def throwIdentifierNotFound(identName: String) = {
       val msg = s"value $identName not found"
       throw new TypeException(scope.currentFile, i.pos.line, msg)
     }
@@ -347,7 +349,7 @@ object TypeUtils extends LazyLogging {
     if (scope.findIdentifierInCurrentScope(name).isEmpty) {
       scope.add(Identifier(Context(scope.currentFile, v.pos.line), v.name.toString, tpe, v.mods.hasFlag(Flag.MUTABLE)))
     } else {
-      throw new TypeException(scope.currentFile, v.pos.line, s"$name is already defined as value $name")
+      TypeErrors.addError(scope.currentFile, v.pos.line, s"$name is already defined as value $name")
     }
   }
 

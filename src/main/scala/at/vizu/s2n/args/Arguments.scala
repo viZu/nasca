@@ -12,4 +12,6 @@ case class Arguments(env: String = "",
                      out: Path = Paths.get(""),
                      main: String = "",
                      binName: String = "binary",
-                     logLevel: LogLevel = Warn)
+                     logLevel: LogLevel = Warn,
+                     stdout: Option[String] = None,
+                     stderr: Option[String] = None)
