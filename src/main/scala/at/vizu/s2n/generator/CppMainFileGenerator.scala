@@ -40,7 +40,7 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
   }
 
   private def writeFile(args: Arguments, content: String) = {
-    ScalaFiles.writeToFile(args.out, "main.cpp", content)
+    ScalaFiles.writeToFile(args.generatedDir, "main.cpp", content)
   }
 
   private def checkMainClass() = {

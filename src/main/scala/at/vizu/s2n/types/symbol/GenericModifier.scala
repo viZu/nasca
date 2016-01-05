@@ -1,11 +1,15 @@
 package at.vizu.s2n.types.symbol
 
+import at.vizu.s2n.id.IdGenerator
+
 /**
   * Phil on 07.12.15.
   */
 class GenericModifier(private val _ctx: Context, val genericName: String,
                       val upperBound: TType, val lowerBound: TType,
                       val covariance: Boolean, val contravariance: Boolean) extends TType {
+
+  lazy val serializationId: String = IdGenerator.generateId()
 
   override def ctx: Context = _ctx
 

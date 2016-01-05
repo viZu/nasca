@@ -1,6 +1,8 @@
 package at.vizu.s2n.generator
 
+import at.vizu.s2n.conf.GlobalConfig
 import at.vizu.s2n.generator.handles._
+import at.vizu.s2n.types.symbol.TypeUtils._
 import at.vizu.s2n.types.symbol._
 
 /**
@@ -66,6 +68,9 @@ object GeneratorUtils {
 
   def generateCppTypeName(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
+    else if (GlobalConfig.classConfig.hasRenamingHandle(tpe)) {
+      GlobalConfig.classConfig.getRenamingHandle(tpe)(baseTypes, tpe)
+    }
     else tpe match {
       case a: AppliedGenericModifier if a.isGenericModifier => a.name
       case a: AppliedGenericModifier => generateSmartPtr(baseTypes, tpe)
@@ -156,6 +161,11 @@ object GeneratorUtils {
     mergeGeneratorContexts(contexts, ", ")
   }
 
+  def generateParamsStringWithTypes(baseTypes: BaseTypes, params: Seq[TType]) = {
+    val contexts: Seq[GeneratorContext] = params.map(generateCppTypeName(baseTypes, _))
+    mergeGeneratorContexts(contexts, ", ")
+  }
+
   def generateTemplatesStringFromType(tpe: TType, withTypeName: Boolean = false): String = {
     tpe match {
       case gt: GenericType => generateTemplatesString(gt.genericModifiers, withTypeName)
@@ -208,7 +218,7 @@ object GeneratorUtils {
   }
 
   def generateParamAccessor(baseTypes: BaseTypes, field: Field): String = {
-    if (field.isPublicField) {
+    if (field.isProperty) {
       Vector(generateGetterDefinition(baseTypes, field), generateSetterDefinition(baseTypes, field))
         .filter(_.nonEmpty)
         .mkString("\n")
@@ -242,10 +252,15 @@ object GeneratorUtils {
   }
 
   def generateIncludes(usedTypes: Iterable[TType]): String = {
-    (Vector("#include <memory>") ++ usedTypes.map(t => {
-      val headerFile = getHeaderFileName(t)
+    (Vector("#include <memory>") ++ usedTypes.map(generateInclude)).mkString("\n")
+  }
+
+  def generateInclude(tpe: TType): String = {
+    if (GlobalConfig.classConfig.hasIncludeHandle(tpe)) GlobalConfig.classConfig.getIncludeHandle(tpe).content
+    else {
+      val headerFile = getHeaderFileName(tpe)
       s"""#include "$headerFile""""
-    })).mkString("\n")
+    }
   }
 
   def generateCopyConstructorsHeader(tpe: TType): String = {
@@ -330,7 +345,7 @@ object GeneratorUtils {
   }
 
   def generateFieldAccessor(f: Field) = {
-    if (f.isPublicField) generateGetter(f)
+    if (f.isProperty) generateGetter(f)
     else f.name
   }
 
@@ -347,10 +362,15 @@ object GeneratorUtils {
     s"$fieldName(t.$getter)"
   }
 
-  val primitiveNames = Map("scala.String" -> "std::string", "scala.Boolean" -> "bool", "scala.Unit" -> "void")
+  val primitiveNames = Map(RootScalaPackage + ".String" -> "std::string", RootScalaPackage + ".Boolean" -> "bool",
+    RootScalaPackage + ".Unit" -> "void")
 
   def getPrimitiveName(primitive: TType): GeneratorContext = {
-    val handles: Set[GeneratorHandle] = if (primitive.name == "scala.String") Set(IncludeHandle("string", AngleWrapper)) else Set()
+    val handles: Set[GeneratorHandle] = if (primitive.name == RootScalaPackage + ".String") {
+      Set(IncludeHandle("string", AngleWrapper))
+    } else {
+      Set()
+    }
     val primitiveName: String = primitiveNames.getOrElse(primitive.name, primitive.simpleName.toLowerCase)
     GeneratorContext(primitiveName, handles)
   }

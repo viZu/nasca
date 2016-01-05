@@ -58,13 +58,13 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
     case ChainedExpression(IndexedSeq()) => None
     case ChainedExpression(p +: IndexedSeq()) => p match {
       case NestedExpression(_, _, _, vn, f, _) => f match {
-        case f: Field if vn.nonEmpty && f.isPublicField => Some(f)
+        case f: Field if vn.nonEmpty && f.isProperty => Some(f)
         case _ => None
       }
     }
     case ChainedExpression(path) => path.last match {
       case NestedExpression(_, _, _, _, f, _) => f match {
-        case f: Field => if (f.isPublicField) Some(f) else None
+        case f: Field => if (f.isProperty) Some(f) else None
         case _ => None
       }
       case _ => None

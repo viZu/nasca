@@ -52,6 +52,13 @@ object ProfilerWithErrors {
   }
 
   private def validateErrors(tag: String) = {
-    Errors.validate(s => s"${s.size} errors occurred during phase: $tag")
+    Errors.validate(s => {
+      val size: String = pluralize(s.size)
+      s"${s.size} $size occurred during phase: $tag"
+    })
+  }
+
+  private def pluralize(count: Int) = {
+    if (count == 1) "error" else "errors"
   }
 }

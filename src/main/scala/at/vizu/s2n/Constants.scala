@@ -6,4 +6,5 @@ package at.vizu.s2n
 object Constants {
   val Version: String = "1.0"
   val CmdName = "s2n"
+  val GeneratedDir = "generated"
 }

@@ -13,7 +13,11 @@ import scala.runtime.BoxedUnit
  */
 object TypeUtils extends LazyLogging {
 
-  val ConstructorName = "<init>"
+  val RootPackage = "_root_"
+  val ScalaPackage = "scala"
+  val RootScalaPackage = s"$RootPackage.$ScalaPackage"
+  val ConstructorName: String = "<init>"
+  val ApplyMethodName: String = "apply"
 
   private var unitTpe: TType = null
   private var nullTpe: TType = null
@@ -129,13 +133,13 @@ object TypeUtils extends LazyLogging {
   private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
     val tpeString = literal.value.value match {
       case i: Integer => findTypeForInteger(i)
-      case l: java.lang.Long => "scala.Long"
-      case s: String => "scala.String"
-      case d: java.lang.Double => "scala.Double"
-      case b: java.lang.Boolean => "scala.Boolean"
-      case c: Character => "scala.Char"
-      case u: BoxedUnit => "scala.Unit"
-      case null => "scala.Null"
+      case l: java.lang.Long => RootScalaPackage + ".Long"
+      case s: String => RootScalaPackage + ".String"
+      case d: java.lang.Double => RootPackage + ".Double"
+      case b: java.lang.Boolean => RootScalaPackage + ".Boolean"
+      case c: Character => RootScalaPackage + ".Char"
+      case u: BoxedUnit => RootScalaPackage + ".Unit"
+      case null => RootScalaPackage + ".Null"
       case _@n =>
         throw new TypeException(scope.currentFile, literal.pos.line, s"literal of type ${n.getClass.getName} not supported")
     }
@@ -145,11 +149,11 @@ object TypeUtils extends LazyLogging {
   private def findTypeForInteger(i: Integer): String = {
     //TODO: if the given integer is forced to be a short -> return short, else -> return Int
     if (i >= -128 && i <= 127) {
-      "scala.Short" // C++ does not have a byte datatype
+      RootScalaPackage + ".Short" // C++ does not have a byte datatype
     } else if (i >= -32768 && i <= 32767) {
-      "scala.Short"
+      RootScalaPackage + ".Short"
     } else {
-      "scala.Int"
+      RootScalaPackage + ".Int"
     }
   }
 
@@ -283,6 +287,21 @@ object TypeUtils extends LazyLogging {
   /**
     * Params
     */
+
+  def createParams(scope: TScope, params: Seq[Tree]) = {
+    params.map(createParam(scope, _))
+  }
+
+  def createParam(scope: TScope, param: Tree) = param match {
+    case v: ValDef =>
+      val ctx = Context(scope.currentFile, v.pos.line)
+      val tpe: TType = TypeUtils.findType(scope, v.tpt)
+      Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
+  }
+
+  def addReflectParamsToScope(scope: TScope, params: Seq[ValDef]) = {
+    params.foreach(createIdentifier(scope, _))
+  }
 
   def addParamsToScope(scope: TScope, params: Seq[Param]) = {
     params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
@@ -455,6 +474,26 @@ object TypeUtils extends LazyLogging {
   }
 
   /**
+    * Functions
+    */
+
+  def methodAsFunctionType(scope: TScope, method: Method, line: Int) = {
+    createFunctionTypeFromParams(scope, method.params, method.tpe, line)
+  }
+
+  def createFunctionTypeFromParams(scope: TScope, params: Seq[Param], retType: TType, line: Int) = {
+    createFunctionType(scope, params.map(_.tpe), retType, line)
+  }
+
+  def createFunctionType(scope: TScope, paramTypes: Seq[TType], retType: TType, line: Int) = {
+    val funcName = "Function" + paramTypes.size
+    val funcType = findClass(scope, funcName, line).asInstanceOf[GenericType]
+    val types = paramTypes :+ retType
+    val typeMap = funcType.genericModifiers.zip(types).toMap
+    funcType.applyTypes(typeMap)
+  }
+
+  /**
    * Utility
    */
 
@@ -481,28 +520,28 @@ object TypeUtils extends LazyLogging {
 
   def unitType(scope: TScope) = {
     if (unitTpe == null) {
-      unitTpe = scope.findClass("scala.Unit").get
+      unitTpe = scope.findClass(RootScalaPackage + ".Unit").get
     }
     unitTpe
   }
 
   def nullType(scope: TScope) = {
     if (nullTpe == null) {
-      nullTpe = scope.findClass("scala.Null").get
+      nullTpe = scope.findClass(RootScalaPackage + ".Null").get
     }
     nullTpe
   }
 
   def anyType(scope: TScope) = {
     if (anyTpe == null) {
-      anyTpe = scope.findClass("scala.Any").get
+      anyTpe = scope.findClass(RootScalaPackage + ".Any").get
     }
     anyTpe
   }
 
   def nothingType(scope: TScope) = {
     if (nothingTpe == null) {
-      nothingTpe = scope.findClass("scala.Nothing").get
+      nothingTpe = scope.findClass(RootScalaPackage + ".Nothing").get
     }
     nothingTpe
   }
@@ -536,5 +575,9 @@ object TypeUtils extends LazyLogging {
       at.appliedTypes.foreach(addTpe(baseTypes, _, buffer))
     case c: ConcreteType if !baseTypes.isPrimitive(c) => buffer.add(c)
     case _ =>
+  }
+
+  def isFunctionType(tpe: TType) = {
+    tpe.fullClassName.startsWith(TypeUtils.RootScalaPackage + ".Function")
   }
 }

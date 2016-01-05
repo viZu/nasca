@@ -6,7 +6,7 @@
             <maxLevel>WARN</maxLevel>
         </filter>
         <encoder>
-            <pattern>[%highlight(%level)] %msg%n</pattern>
+            <pattern>%-19([%highlight(%level)]) %msg%n</pattern>
         </encoder>
     </appender>
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
@@ -15,7 +15,7 @@
             <level>ERROR</level>
         </filter>
         <encoder>
-            <pattern>[%highlight(%level)] %msg%n</pattern>
+            <pattern>%-19([%highlight(%level)]) %msg%n</pattern>
         </encoder>
     </appender>
 

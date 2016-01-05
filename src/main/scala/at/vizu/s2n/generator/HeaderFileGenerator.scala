@@ -30,11 +30,9 @@ trait HeaderFileGenerator extends LazyLogging {
     val usedTypes = TypeUtils.getUsedTypes(baseTypes, selfType)
     val content: String = includeGuard + GeneratorUtils.generateIncludes(usedTypes) + generateHeaderContent(packageName)
 
-    ScalaFiles.createDirectory(args.out)
-
     logger.debug("Writing header file " + name)
     val prettyContent = CodePrettifier.prettify(content)
-    ScalaFiles.writeToFile(args.out, name, prettyContent)
+    ScalaFiles.writeToFile(args.generatedDir, name, prettyContent)
   }
 
   protected def generateHeaderContent(pkg: String): String = {
@@ -140,8 +138,8 @@ trait HeaderFileGenerator extends LazyLogging {
     val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
     val accesors = ("public", GeneratorUtils.generateParamAccessor(baseTypes, field))
-    //d + (if (accesors.nonEmpty) "\n" + accesors + "\n" else "")
-    Seq(accesors, ("private", d))
+    val fieldDefinition = ("private", d) //if(field.isProperty) ("private", d) else (field.visibility, d)
+    Vector(accesors, fieldDefinition)
   }
 
   protected def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {

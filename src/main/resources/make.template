@@ -1,6 +1,8 @@
 # Declaration of variables
 CC = clang++
 CC_FLAGS = -g -std=c++11
+AR = ar
+AR_FLAGS = -rv
 
 # File names
 EXEC = {{bin_name}}
@@ -10,6 +12,9 @@ OBJECTS = $(SOURCES:.cpp=.o)
 # Main target
 $(EXEC): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $(EXEC)
+
+library: $(OBJECTS)
+	$(AR) $(AR_FLAGS) $(EXEC) $(OBJECTS)
 
 # To obtain object files
 %.o: %.cpp

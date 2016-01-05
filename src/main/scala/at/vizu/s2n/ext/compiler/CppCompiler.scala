@@ -24,13 +24,14 @@ class CppCompiler extends ExtCompiler with LazyLogging {
 
   private def copyMakeFile(args: Arguments) = {
     val makeContent: String = createMakeFile(args)
-    ScalaFiles.writeToFile(args.out, "Makefile", makeContent)
+    ScalaFiles.writeToFile(args.generatedDir, "Makefile", makeContent)
   }
 
   private def createMakeFile(args: Arguments) = {
     val makeUrl = classOf[CppCompiler].getResource("/make.template")
     val content: String = Source.fromURL(makeUrl, "UTF-8").mkString
-    content.replace("{{bin_name}}", args.binName)
+    val binName = if (args.binType.isExecutable) args.binName else "lib" + args.binName + ".a"
+    content.replace("{{bin_name}}", binName)
   }
 
   private def copyAnyFiles(args: Arguments): Any = {
@@ -39,8 +40,8 @@ class CppCompiler extends ExtCompiler with LazyLogging {
   }
 
   private def copyAnyFiles(anyString: String, args: Arguments) = {
-    copyFromResource(anyString + ".cpp", args.out)
-    copyFromResource(anyString + ".h", args.out)
+    copyFromResource(anyString + ".cpp", args.generatedDir)
+    copyFromResource(anyString + ".h", args.generatedDir)
   }
 
   private def copyFromResource(fileName: String, out: Path): Unit = {
@@ -50,12 +51,21 @@ class CppCompiler extends ExtCompiler with LazyLogging {
   }
 
   private def executeMakeFile(args: Arguments) = {
-    import scala.sys.process._
-    val outDir = args.out.toString
-    val result = s"make -C $outDir".!(new CompilerProcessLogger)
-    if (result < 0) {
-      logger.error(s"C++ compiler exited with status code $result")
+    val outDir = args.generatedDir.toString
+    val result = if (args.binType.isExecutable) executeMakeFileExecutable(outDir) else executeMakeFileLibrary(outDir)
+    if (result != 0) {
+      throw new ExtCompilerException(s"C++ compiler failed with exit code $result")
     }
+  }
+
+  private def executeMakeFileExecutable(outDir: String) = {
+    import scala.sys.process._
+    s"make -C $outDir".!(new CompilerProcessLogger)
+  }
+
+  private def executeMakeFileLibrary(outDir: String) = {
+    import scala.sys.process._
+    s"make library -C $outDir".!(new CompilerProcessLogger)
   }
 
   private class CompilerProcessLogger extends ProcessLogger with LazyLogging {

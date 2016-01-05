@@ -30,4 +30,6 @@ trait BaseTypes {
     case _ => false
   }
 
+  def isBaseType(tpe: TType) = tpe.pkg.startsWith(TypeUtils.RootScalaPackage)
+
 }

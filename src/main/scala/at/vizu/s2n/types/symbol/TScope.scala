@@ -1,6 +1,7 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.error.TypeErrors
+import at.vizu.s2n.types.symbol.TypeUtils._
 
 /**
  * Phil on 07.10.15.
@@ -220,7 +221,9 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
    * Type aliases
    */
 
-  def addTypeAlias(alias: String, aliasFor: String) = _typeAliases = _typeAliases + (alias -> aliasFor)
+  def addTypeAlias(alias: String, aliasFor: String) = {
+    _typeAliases = _typeAliases + (alias -> aliasFor) + (ScalaPackage + "." + alias -> aliasFor)
+  }
 
   private def getTypeAlias(name: String): String = {
     _typeAliases.getOrElse(name, name)
@@ -256,8 +259,11 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
     findObjectWithAlias(name) match {
-      case Some(tpe) => tpe.findMethod(findThis(), "apply", args)
-      case None => None
+      case Some(tpe) => tpe.findApply(findThis(), args)
+      case None => findIdentifier(name) match {
+        case Some(i) => i.tpe.findApply(findThis(), args)
+        case None => None
+      }
     }
   }
 
@@ -270,16 +276,12 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     */
 
   private def findNullType(): TType = {
-    findClass("scala.Null").get
+    findClass(RootScalaPackage + ".Null").get
   }
 
   private def addNullTypeAsSubType(tpe: TType): Unit = {
     findNullType().asInstanceOf[ConcreteType].addParent(Parent(tpe))
   }
-
-  /**
-   * Check scope
-   */
 
   def baseTypes: BaseTypes = {
     _baseTypes match {
@@ -287,6 +289,23 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
       case None if parent.isDefined => parent.get.baseTypes
       case _ => throw new RuntimeException("No basetypes found")
     }
+  }
+
+  def getRootScope: TScope = {
+    parent match {
+      case None => this
+      case Some(s) => s.getRootScope
+    }
+  }
+
+  def getNonBaseTypes: Seq[TType] = {
+    val myBaseTypes = baseTypes
+    types.filter(!myBaseTypes.isBaseType(_))
+  }
+
+  def getNonBaseObjects: Seq[TType] = {
+    val myBaseTypes = baseTypes
+    objects.filter(!myBaseTypes.isBaseType(_))
   }
 
 }

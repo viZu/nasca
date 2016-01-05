@@ -1,0 +1,108 @@
+package at.vizu.s2n.gen;
+
+message MetaContext {
+    required string fileName = 1;
+    required int32 line = 2;
+}
+
+enum MetaModifier {
+    PRIVATE = 0;
+    PACKAGEPRIVATE = 1;
+    PROTECTED = 2;
+    PARAM_ACCESSOR = 3;
+    TRAIT = 4;
+    ABSTRACT = 5;
+    OVERRIDE = 6;
+    SEALED = 7;
+    FINAL = 8;
+    CASE = 9;
+    MUTABLE = 10;
+}
+
+message MetaField {
+    required MetaContext ctx = 1;
+    repeated MetaModifier mods = 2;
+    required string name = 3;
+    required string typeName = 4;
+}
+
+message MetaIdentifier {
+    required MetaContext ctx = 1;
+    required string name = 2;
+    required string typeName = 3;
+    optional bool mutable = 4;
+    optional bool fromField = 5;
+}
+
+message MetaParam {
+    required MetaContext ctx = 1;
+    required string typeName = 2;
+    required string name = 3;
+    optional bool hasDefaultVal = 4;
+    optional bool mutable = 5;
+}
+
+message MetaMethod {
+    required MetaContext ctx = 1;
+    required string name = 2;
+    required string typeName = 3;
+    repeated MetaModifier mods = 4;
+    repeated MetaParam params = 5;
+    repeated MetaGenericModifier genericModifiers = 6;
+    optional bool constructor = 7;
+    optional bool instanceMethod = 8;
+    optional bool operator = 9;
+}
+
+message MetaGenericModifier {
+    required string serializationId = 1;
+    required MetaContext ctx = 2;
+    required string genericName = 3;
+    optional string upperBoundTypeId = 4;
+    optional string lowerBoundTypeId = 5;
+    optional bool covariant = 6;
+    optional bool contravariant = 7;
+}
+
+message MetaAppliedGenericModifier {
+    required string serializationId = 1;
+    required MetaContext ctx = 2;
+    required string appliedTypeName = 3;
+    required string genericModifier = 4;
+}
+
+message MetaConcreteType {
+    required MetaContext ctx = 1;
+    required string simpleName = 2;
+    optional string pkg = 3;
+    repeated MetaModifier mods = 4;
+    optional bool isObject = 5;
+    repeated MetaMethod methods = 6;
+    repeated MetaField fields = 7;
+    repeated string parents = 8;
+}
+
+message MetaGenericType {
+    required MetaContext ctx = 1;
+    required string simpleName = 2;
+    optional string pkg = 3;
+    repeated MetaModifier mods = 4;
+    optional bool isObject = 5;
+    repeated MetaGenericModifier genericModifiers = 6;
+    repeated MetaMethod methods = 7;
+    repeated MetaField fields = 8;
+    repeated string parents = 9;
+}
+
+message MetaAppliedGenericType {
+    required string serializationId = 1;
+    required string genericType = 2;
+    repeated string appliedTypes = 3;
+}
+
+message MetaInfo {
+    repeated MetaConcreteType concreteTypes = 1;
+    repeated MetaGenericType genericTypes = 2;
+    repeated MetaAppliedGenericType appliedGenericTypes = 3;
+    repeated MetaAppliedGenericModifier appliedGenericModifier = 4;
+}

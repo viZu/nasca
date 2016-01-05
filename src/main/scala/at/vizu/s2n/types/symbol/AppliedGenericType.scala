@@ -1,11 +1,15 @@
 package at.vizu.s2n.types.symbol
 
+import at.vizu.s2n.id.IdGenerator
+
 /**
   * Phil on 07.12.15.
   */
 class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
                          val genericType: GenericType) extends GenericType(
   genericType.ctx, genericType.simpleName, genericType.pkg, genericType.mods, genericType.isObject) {
+
+  lazy val serializationId: String = IdGenerator.generateId()
 
   genericType.memberAddedListener += memberAddedInGenericType
 

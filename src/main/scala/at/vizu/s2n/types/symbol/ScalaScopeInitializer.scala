@@ -1,27 +1,29 @@
 package at.vizu.s2n.types.symbol
 
+import at.vizu.s2n.types.symbol.TypeUtils._
+
 /**
  * Phil on 16.10.15.
  */
 class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   lazy val ctx: Context = Context("", 0)
-  lazy val any = new ConcreteType(_simpleName = "Any", _pkg = "scala")
-  lazy val anyVal = new ConcreteType(_simpleName = "AnyVal", _pkg = "scala")
-  lazy val anyRef = new ConcreteType(_simpleName = "AnyRef", _pkg = "scala")
-  lazy val string = new ConcreteType(_simpleName = "String", _pkg = "scala", _mods = Vector(Trait))
-  lazy val numeric = new ConcreteType(_simpleName = "NumericPrimitive", _pkg = "scala", _mods = Vector(Trait))
-  lazy val unit = new ConcreteType(_simpleName = "Unit", _pkg = "scala", _mods = Vector(Trait))
-  lazy val boolean = new ConcreteType(_simpleName = "Boolean", _pkg = "scala", _mods = Vector(Trait))
-  lazy val byte = new ConcreteType(_simpleName = "Byte", _pkg = "scala", _mods = Vector(Trait))
-  lazy val short = new ConcreteType(_simpleName = "Short", _pkg = "scala", _mods = Vector(Trait))
-  lazy val char = new ConcreteType(_simpleName = "Char", _pkg = "scala", _mods = Vector(Trait))
-  lazy val int = new ConcreteType(_simpleName = "Int", _pkg = "scala", _mods = Vector(Trait))
-  lazy val long = new ConcreteType(_simpleName = "Long", _pkg = "scala", _mods = Vector(Trait))
-  lazy val float = new ConcreteType(_simpleName = "Float", _pkg = "scala", _mods = Vector(Trait))
-  lazy val double = new ConcreteType(_simpleName = "Double", _pkg = "scala", _mods = Vector(Trait))
-  lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = "scala", _mods = Vector(Trait))
-  lazy val nothing = new ConcreteType(_simpleName = "Nothing", _pkg = "scala", _mods = Vector(Trait))
+  lazy val any = new ConcreteType(_simpleName = "Any", _pkg = RootScalaPackage)
+  lazy val anyVal = new ConcreteType(_simpleName = "AnyVal", _pkg = RootScalaPackage)
+  lazy val anyRef = new ConcreteType(_simpleName = "AnyRef", _pkg = RootScalaPackage)
+  lazy val string = new ConcreteType(_simpleName = "String", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val numeric = new ConcreteType(_simpleName = "NumericPrimitive", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val unit = new ConcreteType(_simpleName = "Unit", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val boolean = new ConcreteType(_simpleName = "Boolean", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val byte = new ConcreteType(_simpleName = "Byte", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val short = new ConcreteType(_simpleName = "Short", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val char = new ConcreteType(_simpleName = "Char", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val int = new ConcreteType(_simpleName = "Int", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val long = new ConcreteType(_simpleName = "Long", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val float = new ConcreteType(_simpleName = "Float", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val double = new ConcreteType(_simpleName = "Double", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val nothing = new ConcreteType(_simpleName = "Nothing", _pkg = RootScalaPackage, _mods = Vector(Trait))
 
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
@@ -46,6 +48,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     })
 
     initRootMethods.foreach(scope.addMethod)
+    addFunctionTypes(scope, 6)
 
     scope
   }
@@ -253,6 +256,33 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     nothing
   }
 
+  private def createGenericModifier(name: String, covariant: Boolean = false, contravariant: Boolean = false) = {
+    new GenericModifier(ctx, name, any, nothing, covariant, contravariant)
+  }
+
+  private def addFunctionTypes(scope: TScope, num: Int) = {
+    val types = (0 until num).map(i => createFunctionType(i))
+    types.foreach(c => {
+      scope.addClass(c)
+      scope.addTypeAlias(c.simpleName, c.fullClassName)
+    })
+  }
+
+  private def createFunctionType(paramSize: Int) = {
+    val paramTypes = (1 to paramSize).map(i => createGenericModifier("T" + i, contravariant = true))
+    val returnType = createGenericModifier("R", covariant = true)
+    val fType = new GenericType(_simpleName = "Function" + paramSize, _pkg = RootScalaPackage, _mods = Vector(Trait))
+    (paramTypes :+ returnType).foreach(fType.addGenericModifier)
+    addApplyMethod(fType, paramTypes, returnType)
+    fType
+  }
+
+  private def addApplyMethod(tpe: ConcreteType, paramTypes: Seq[GenericModifier], returnType: GenericModifier) = {
+    val params = paramTypes.zipWithIndex.map(p => typeToParam(p._1, p._2))
+    val apply: Method = Method(ctx, "apply", returnType, Vector(Abstract), params)
+    tpe.addMethod(apply)
+  }
+
   override def unitType: TType = unit
 
   override def booleanType: TType = boolean
@@ -260,4 +290,6 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   override def nullType: TType = nullTpe
 
   private implicit def typeToParam(tpe: TType): Param = Param(ctx, tpe, "arg0")
+
+  private def typeToParam(tpe: TType, argNum: Int): Param = Param(ctx, tpe, "arg" + argNum)
 }

@@ -24,6 +24,10 @@ object ScalaFiles {
     }
   }
 
+  def readFileRaw(path: Path): Array[Byte] = {
+    Files.readAllBytes(path)
+  }
+
   def checkFile(path: Path): Unit = {
     if (!Files.exists(path)) {
       throw new ArgumentException(s"Could not find file '${path.toString}'")
@@ -64,8 +68,17 @@ object ScalaFiles {
     }
   }
 
-  def writeToFile(directory: Path, fileName: String, content: String) = {
+  def deleteDirectory(directory: Path) = {
+    val path = scalax.file.Path(directory.toFile)
+    path.deleteRecursively(continueOnFailure = true)
+  }
+
+  def writeToFile(directory: Path, fileName: String, content: String): Unit = {
+    writeToFile(directory, fileName, content.getBytes("utf-8"))
+  }
+
+  def writeToFile(directory: Path, fileName: String, content: Array[Byte]): Unit = {
     val path: Path = Paths.get(directory.toString, fileName)
-    Files.write(path, content.getBytes("utf-8"))
+    Files.write(path, content)
   }
 }

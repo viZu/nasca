@@ -1,6 +1,6 @@
 package at.vizu.s2n.error
 
-import at.vizu.s2n.types.symbol.{Context, NoType, TScope, TType}
+import at.vizu.s2n.types.symbol.{Context, EmptyType, TScope, TType}
 
 /**
   * Phil on 31.12.15.
@@ -9,7 +9,7 @@ object TypeErrors {
 
   def addError(file: String, line: Int, msg: String): TType = {
     Errors.addError(file, line, msg)
-    NoType
+    EmptyType
   }
 
   def addError(ctx: Context, msg: String): TType = {

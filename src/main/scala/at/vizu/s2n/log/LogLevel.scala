@@ -22,6 +22,10 @@ object LogLevel extends LazyLogging {
       logger.warn(s"Log level $str not known. Using warn as log level.")
       Warn
   }
+
+  def values = Set(Trace, Debug, Info, Warn, Error)
+
+  def stringValues = values.map(_.toString.toLowerCase)
 }
 
 object Trace extends LogLevel {

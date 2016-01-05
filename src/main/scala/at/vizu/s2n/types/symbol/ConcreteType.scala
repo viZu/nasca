@@ -13,14 +13,11 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
 
   protected var _methods: Seq[Method] = Vector()
   protected var _fields: Seq[Field] = Vector()
-  private[symbol] var memberAddedListener: ArrayBuffer[Member => Unit] = ArrayBuffer()
+  private[symbol] var _parents: Seq[Parent] = Vector()
+  private[symbol] var memberAddedListener: ArrayBuffer[Member => Any] = ArrayBuffer()
 
   def parents = _parents
-
-  private[symbol] var _parents: Seq[Parent] = Vector()
-
   def methods = _methods
-
   def fields = _fields
 
   def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = {
@@ -166,7 +163,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
     parentTypes.zipWithIndex.foreach(validateParent)
   }
 
-  private def isNullType = "scala.Null" == fullClassName
+  private def isNullType = TypeUtils.RootScalaPackage + ".Null" == fullClassName
 
   override def toString = fullClassName
 

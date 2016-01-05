@@ -1,16 +1,16 @@
-#ifndef SCALA_ANYREF_H
-#define SCALA_ANYREF_H
+#ifndef ROOT_SCALA_ANYREF_H
+#define ROOT_SCALA_ANYREF_H
 
 #include <memory>
 #include "Any.h"
 
-namespace scala {
+namespace _root__scala {
 
 	class AnyRef : public Any {
 
 		public:
-			bool eq(std::shared_ptr<scala::Any>);
-			bool ne(std::shared_ptr<scala::Any>);
+			bool eq(std::shared_ptr<_root__scala::Any>);
+			bool ne(std::shared_ptr<_root__scala::Any>);
 
 	};
 	

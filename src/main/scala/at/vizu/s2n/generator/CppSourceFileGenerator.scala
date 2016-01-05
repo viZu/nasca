@@ -33,7 +33,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
 
     logger.debug("Writing source file " + fileName)
     val prettyContent = CodePrettifier.prettify(context.content)
-    ScalaFiles.writeToFile(args.out, fileName, prettyContent)
+    ScalaFiles.writeToFile(args.generatedDir, fileName, prettyContent)
     context.handles
   }
 
@@ -146,7 +146,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
                              params: Seq[Param] = Vector(), templateString: String = ""): GeneratorContext = {
     val cppMethodName = getMethodName(methodName)
     val rhsBlock: Block = Expression.wrapInBlock(rhs)
-    val methodBody: GeneratorContext = Expression.getBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).generate //  generateMethodBody(scope, rhs, _baseTypes.unit != returnType)
+    val methodBody: GeneratorContext = Expression
+      .getBaseBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).generate
     val returnTypeString = GeneratorUtils.generateCppTypeName(_baseTypes, returnType)
     val paramsString = GeneratorUtils.generateParamsString(_baseTypes, params, withVars = true)
     val methodString: String = s"""$templateString$returnTypeString $cppMethodName($paramsString) ${methodBody.content}"""

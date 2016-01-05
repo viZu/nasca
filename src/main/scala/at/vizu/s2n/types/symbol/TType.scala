@@ -30,6 +30,8 @@ trait TType extends Modifiable with Nameable {
 
   def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method]
 
+  def findApply(execCtx: TType, args: Seq[TType]) = findMethod(execCtx, TypeUtils.ApplyMethodName, args)
+
   def findConstructor(execCtx: TType, args: Seq[TType]) = findMethod(execCtx, TypeUtils.ConstructorName, args)
 
   def findField(execCtx: TType, name: String): Option[Field]
@@ -50,7 +52,7 @@ trait TType extends Modifiable with Nameable {
 
 }
 
-object NoType extends TType {
+object EmptyType extends TType {
   override def ctx: Context = Context("", 0)
 
   override def isObject: Boolean = false
@@ -76,4 +78,5 @@ object NoType extends TType {
   override def parents: Seq[Parent] = Seq()
 
   override def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = None
+
 }

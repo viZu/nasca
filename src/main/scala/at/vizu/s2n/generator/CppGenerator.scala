@@ -1,6 +1,7 @@
 package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
+import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.log.Debug
 import at.vizu.s2n.log.ProfilerWithErrors._
 import at.vizu.s2n.types.result._
@@ -16,13 +17,19 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator with LazyLogging {
 
   override def generateCode(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]): Unit = {
     profileFunc(logger, "Generate C++ sources", () => {
+      createGeneratedDir(args)
       invokeGeneratorTuples(args, scope, fileContents)
       invokeMain(args, scope, fileContents)
     })
   }
 
+  private def createGeneratedDir(args: Arguments) = {
+    ScalaFiles.deleteDirectory(args.out)
+    ScalaFiles.createDirectory(args.generatedDir)
+  }
+
   def invokeMain(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
-    if (args.main.isNonEmpty) {
+    if (args.binType.isExecutable) {
       val mainGenerator = getMainClassGenerator(args, scope, fileContents)
       mainGenerator.generateMainFile(args)
     }

@@ -7,6 +7,7 @@ import at.vizu.s2n.ext.compiler.ExtCompiler
 import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.generator.Generator
 import at.vizu.s2n.log.Profiler
+import at.vizu.s2n.packaging.Packager
 import at.vizu.s2n.parser.{AST, Parser}
 import at.vizu.s2n.types.TypeSystem
 import com.typesafe.scalalogging.LazyLogging
@@ -14,7 +15,8 @@ import com.typesafe.scalalogging.LazyLogging
 /**
  * Phil on 06.11.15.
  */
-class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generator, extCompiler: ExtCompiler)
+class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generator,
+                     extCompiler: ExtCompiler, packager: Packager)
   extends Environment with LazyLogging {
 
   override def compile(args: Arguments): Unit = {
@@ -24,13 +26,15 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
       val (scope, fileContents) = typeSystem.checkTrees(trees)
       generator.generateCode(args, scope, fileContents)
       extCompiler.compile(args)
+      packager.packageBinary(args, scope)
       logger.error("Test")
     })
   }
 
   private def readFileContents(files: Seq[Path]) = {
+    logger.debug(s"Reading file contents:")
     val pathStrings: Seq[String] = files.map(_.toString)
-    logger.debug(s"Reading file contents: ${pathStrings.mkString(",")}")
+    pathStrings.foreach(s => logger.debug("    " + s))
     pathStrings.zip(ScalaFiles.readFiles(files))
   }
 

@@ -1,13 +1,13 @@
-#ifndef SCALA_ANYREF_CPP
-#define SCALA_ANYREF_CPP
+#ifndef ROOT_SCALA_ANYREF_CPP
+#define ROOT_SCALA_ANYREF_CPP
 
 #include "AnyRef.h"
 
-bool scala::AnyRef::eq(std::shared_ptr<scala::Any> ptr) {
+bool _root__scala::AnyRef::eq(std::shared_ptr<_root__scala::Any> ptr) {
 	return this == ptr.get();
 }
 
-bool scala::AnyRef::ne(std::shared_ptr<scala::Any> ptr) {
+bool _root__scala::AnyRef::ne(std::shared_ptr<_root__scala::Any> ptr) {
 	return this != ptr.get();
 }
 

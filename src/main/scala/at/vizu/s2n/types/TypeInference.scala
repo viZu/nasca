@@ -3,7 +3,7 @@ package at.vizu.s2n.types
 import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.log.Profiler.profile
 import at.vizu.s2n.log.Trace
-import at.vizu.s2n.types.symbol.{BaseTypes, TScope, TType, TypeUtils}
+import at.vizu.s2n.types.symbol._
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
@@ -37,7 +37,7 @@ object TypeInference extends LazyLogging {
       case l: Literal => getTypeLiteral(baseTypes, scope, l)
       case i: If => getTypeIf(baseTypes, scope, i)
       case l: LabelDef => baseTypes.unit
-      case f: Function => TypeErrors.addError(scope, tree.pos.line, "Anonymous functions are currently not supported")
+      case f: Function => getTypeFunction(scope, f) //TypeErrors.addError(scope, tree.pos.line, "Anonymous functions are currently not supported")
       case EmptyTree => TypeErrors.addError(scope, tree.pos.line, "EmptyTree")
     }
   }
@@ -109,6 +109,12 @@ object TypeInference extends LazyLogging {
     }
     val thenType = getTypeInternal(baseTypes, scope, i.thenp)
     TypeUtils.findCommonBaseClass(scope, thenType, elseType)
+  }
+
+  def getTypeFunction(scope: TScope, f: Function): TType = {
+    val params: Seq[Param] = TypeUtils.createParams(scope, f.vparams)
+    val retType = getTypeInternal(scope.baseTypes, scope, f.body)
+    TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
   }
 
   def getTypeNew(baseTypes: BaseTypes, scope: TScope, n: New): TType = {

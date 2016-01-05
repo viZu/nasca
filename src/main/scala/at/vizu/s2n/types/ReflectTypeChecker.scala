@@ -155,58 +155,59 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkValOrDefBody(scope: TScope, body: Tree, expectedType: TType): Option[TType] = {
     var expected = expectedType
-    val returnType = checkBody(scope, body)
+    val returnType = checkBodyOptional(scope, body)
     if (expectedType == null && returnType.isDefined) expected = returnType.get // For type inference
     checkReturnExpected(returnType, expected, body.pos.line, scope)
     returnType
   }
 
-  private def checkBody(scope: TScope, body: Tree): Option[TType] = {
+  private def checkBody(scope: TScope, body: Tree): TType = {
     body match {
-      case b: Block => Some(checkBlock(scope, b))
-      case v: ValDef => Some(checkVal(scope, v))
-      case d: DefDef => Some(checkDef(scope, d))
-      case a: Assign => Some(checkAssign(scope, a))
-      case a: Apply => Some(checkApply(scope, a))
-      case s: Select => Some(checkSelect(scope, s))
-      case i: Ident => Some(checkIdent(scope, i))
-      case l: Literal => Some(checkLiteral(scope, l))
-      case i: If => Some(checkIf(scope, i))
-      case l: LabelDef => Some(checkLabel(scope, l))
-      case f: Function => Some(TypeErrors.addError(scope, body.pos.line,
-        "Anonymous functions are currently not supported"))
-      case EmptyTree => None
+      case EmptyTree => EmptyType
+      case _ => checkStatement(scope, body)
+    }
+    //    body match {
+    //      case b: Block => Some(checkBlock(scope, b))
+    //      case v: ValDef => Some(checkVal(scope, v))
+    //      case d: DefDef => Some(checkDef(scope, d))
+    //      case a: Assign => Some(checkAssign(scope, a))
+    //      case a: Apply => Some(checkApply(scope, a))
+    //      case s: Select => Some(checkSelect(scope, s))
+    //      case i: Ident => Some(checkIdent(scope, i))
+    //      case l: Literal => Some(checkLiteral(scope, l))
+    //      case i: If => Some(checkIf(scope, i))
+    //      case l: LabelDef => Some(checkLabel(scope, l))
+    //      case f: Function => Some(checkFunction(scope, f))
+    //      case EmptyTree => None
+    //    }
+  }
+
+  private def checkBodyOptional(scope: TScope, body: Tree): Option[TType] = {
+    checkBody(scope, body) match {
+      case EmptyType => None
+      case _@t => Option(t)
     }
   }
 
   private def checkBlock(scope: TScope, block: Block): TType = {
     //TODO new Scope?
-    block.stats.foreach {
-      case b: Block => checkBlock(scope, b)
-      case v: ValDef => checkVal(scope, v)
-      case a: Assign => checkAssign(scope, a)
-      case d: DefDef => checkDef(scope, d)
-      case a: Apply => checkApply(scope, a)
-      case s: Select => checkSelect(scope, s)
-      case i: Ident => checkIdent(scope, i)
-      case l: Literal => checkLiteral(scope, l)
-      case i: If => checkIf(scope, i)
-      case l: LabelDef => checkLabel(scope, l)
-      case f: Function => TypeErrors.addError(scope, block.pos.line, "Anonymous functions are currently not supported")
-    }
+    block.stats.foreach(checkStatement(scope, _))
 
-    block.expr match {
-      case b: Block => checkBlock(scope, b)
-      case v: ValDef => checkVal(scope, v)
-      case d: DefDef => checkDef(scope, d)
-      case a: Apply => checkApply(scope, a)
-      case s: Select => checkSelect(scope, s)
-      case i: Ident => checkIdent(scope, i)
-      case l: Literal => checkLiteral(scope, l)
-      case i: If => checkIf(scope, i)
-      case l: LabelDef => checkLabel(scope, l)
-      case f: Function => TypeErrors.addError(scope, block.pos.line, "Anonymous functions are currently not supported")
-    }
+    checkStatement(scope, block.expr)
+  }
+
+  private def checkStatement(scope: TScope, tree: Tree) = tree match {
+    case b: Block => checkBlock(scope, b)
+    case v: ValDef => checkVal(scope, v)
+    case a: Assign => checkAssign(scope, a)
+    case d: DefDef => checkDef(scope, d)
+    case a: Apply => checkApply(scope, a)
+    case s: Select => checkSelect(scope, s)
+    case i: Ident => checkIdent(scope, i)
+    case l: Literal => checkLiteral(scope, l)
+    case i: If => checkIf(scope, i)
+    case l: LabelDef => checkLabel(scope, l)
+    case f: Function => checkFunction(scope, f)
   }
 
   private def checkApply(scope: TScope, apply: Apply): TType = {
@@ -330,14 +331,14 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkIf(scope: TScope, i: If): TType = {
     checkCond(scope, i.cond)
-    val thenTpe: Option[TType] = checkBody(scope, i.thenp)
+    val thenTpe: Option[TType] = checkBodyOptional(scope, i.thenp)
     val elseTpe: Option[TType] = checkElse(scope, i.elsep)
 
     TypeUtils.findCommonBaseClass(scope, thenTpe, elseTpe)
   }
 
   private def checkCond(scope: TScope, t: Tree): Unit = {
-    checkBody(scope, t).map(_ == baseTypes.boolean).
+    checkBodyOptional(scope, t).map(_ == baseTypes.boolean).
       getOrElse(TypeErrors.addError(scope, t.pos.line, "If condition must be a boolean expression"))
   }
 
@@ -345,9 +346,9 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     t match {
       case l: Literal => l.value.value match {
         case bu: BoxedUnit => None
-        case _ => checkBody(scope, l)
+        case _ => checkBodyOptional(scope, l)
       }
-      case _ => checkBody(scope, t)
+      case _ => checkBodyOptional(scope, t)
     }
   }
 
@@ -395,6 +396,15 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkFieldAssign(scope: TScope, t: Tree, f: Field): TType = {
     if (!f.isMutable) TypeErrors.addError(scope, t.pos.line, "Reassignment to val")
     f.tpe
+  }
+
+  private def checkFunction(scope: TScope, f: Function) = {
+    val params: Seq[Param] = TypeUtils.createParams(scope, f.vparams)
+    val retType = scoped(scope, (s: TScope) => {
+      TypeUtils.addParamsToScope(scope, params)
+      checkBody(s, f.body)
+    })
+    TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
   }
 
   private def scoped(scope: TScope, f: TScope => Option[TType]) = {

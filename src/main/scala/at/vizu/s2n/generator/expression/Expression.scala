@@ -51,7 +51,7 @@ object Expression extends LazyLogging {
       case i: Ident =>
         generateIdentExpression(baseTypes, scope, i, opts = opts)
       case InlineBlock(_) | Block(_, _) =>
-        getBlockExpression(baseTypes, scope, t)
+        getBaseBlockExpression(baseTypes, scope, t)
       case d: DefDef =>
         generateInlineDefExpression(baseTypes, scope, d)
       case v: ValDef =>
@@ -62,6 +62,8 @@ object Expression extends LazyLogging {
         generateLabelDefExpression(baseTypes, scope, l)
       case i: If =>
         generateIfExpression(baseTypes, scope, i)
+      case f: Function =>
+        generateFunctionExpression(scope, f)
       case EmptyTree =>
         logger.warn("Empty Tree!")
         EmptyExpression(baseTypes.unit)
@@ -105,13 +107,13 @@ object Expression extends LazyLogging {
   }
 
   def generateWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
-    val blockExpr = getBlockExpression(baseTypes, scope, block) // we are only taking stats since the expr is the recursive while method call
+    val blockExpr = getBaseBlockExpression(baseTypes, scope, block) // we are only taking stats since the expr is the recursive while method call
     val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     WhileExpression(baseTypes, condExpr, blockExpr)
   }
 
   def generateDoWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
-    val blockExpr = getBlockExpression(baseTypes, scope, block)
+    val blockExpr = getBaseBlockExpression(baseTypes, scope, block)
     val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     DoWhileExpression(baseTypes, condExpr, blockExpr)
   }
@@ -144,7 +146,7 @@ object Expression extends LazyLogging {
       TypeUtils.addParamsToScope(childScope, nestedMethod.params)
       scope.addMethod(nestedMethod)
       val block = wrapInBlock(d.rhs)
-      val blockExpr = getBlockExpression(baseTypes, childScope, block, returnable = true)
+      val blockExpr = getBaseBlockExpression(baseTypes, childScope, block, returnable = true)
       InlineDefExpression(baseTypes, nestedMethod, blockExpr)
     })
   }
@@ -168,15 +170,21 @@ object Expression extends LazyLogging {
     }
   }
 
-  def getBlockExpression(baseTypes: BaseTypes, scope: TScope, t: Any, returnable: Boolean = false) = {
+  def getBaseBlockExpression(baseTypes: BaseTypes, scope: TScope, t: Any, returnable: Boolean = false) = {
     t match {
-      case ib: InlineBlock =>
-        val (stats, expr) = getBlockContent(baseTypes, scope, ib.stats, ib.expr)
-        InlineBlockExpression(stats, expr, returnable)
-      case b: Block =>
-        val (stats, expr) = getBlockContent(baseTypes, scope, b.stats, b.expr)
-        BlockExpression(stats, expr, returnable)
+      case ib: InlineBlock => getInlineBlockExpression(scope, ib, returnable)
+      case b: Block => getBlockExpression(scope, b, returnable)
     }
+  }
+
+  def getInlineBlockExpression(scope: TScope, ib: InlineBlock, returnable: Boolean = false) = {
+    val (stats, expr) = getBlockContent(scope.baseTypes, scope, ib.stats, ib.expr)
+    InlineBlockExpression(stats, expr, returnable)
+  }
+
+  def getBlockExpression(scope: TScope, b: Block, returnable: Boolean = false) = {
+    val (stats, expr) = getBlockContent(scope.baseTypes, scope, b.stats, b.expr)
+    BlockExpression(stats, expr, returnable)
   }
 
   def getBlockContent(baseTypes: BaseTypes, scope: TScope, statsT: List[Tree], exprT: Tree): (List[Expression], Expression) = {
@@ -189,7 +197,7 @@ object Expression extends LazyLogging {
                                       opts: ExpressionOptions = ExpressionOptions()): Expression = {
     val iName: String = ident.name.toString
     val argTypes = TypeInference.getTypes(baseTypes, scope, args)
-    TypeUtils.findIdent(scope, iName.toString, withParams = argTypes) match {
+    TypeUtils.findIdent(scope, iName, withParams = argTypes) match {
       case m: Method =>
         val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         val methodInvocation = generateMethodInvocation(scope, m, argExpr)
@@ -198,7 +206,12 @@ object Expression extends LazyLogging {
           IdentExpression(m.returnType, tmp)
         } else IdentExpression(m.returnType, methodInvocation)
       case f: Field => IdentExpression(f.tpe, s"this->$iName")
-      case i: Identifier => IdentExpression(i.tpe, s"$iName")
+      case i: Identifier =>
+        if (TypeUtils.isFunctionType(i.tpe)) {
+          val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
+          val methodInvocation = generateMethodInvocation(scope, i, argExpr)
+          IdentExpression(i.tpe, methodInvocation)
+        } else IdentExpression(i.tpe, s"$iName")
       case _ => throw new RuntimeException("TODO")
     }
   }
@@ -210,6 +223,12 @@ object Expression extends LazyLogging {
       val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
       paramsAsContext.enhance(s"${method.name}($paramsAsString)")
     }
+  }
+
+  private def generateMethodInvocation(scope: TScope, ident: Identifier, params: Seq[Expression]): GeneratorContext = {
+    val paramsAsString = params.map(_.generate.content).mkString
+    val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
+    paramsAsContext.enhance(s"${ident.name}($paramsAsString)")
   }
 
   private def hasInvocationHandle(scope: TScope, method: Method): Boolean = {
@@ -299,6 +318,13 @@ object Expression extends LazyLogging {
       case Select(t: This, n) =>
         Vector(NestedExpression(baseTypes, scope, scope.findThis(), "this", TypeUtils.findMember(scope, n.toString)))
     }
+  }
+
+  private def generateFunctionExpression(scope: TScope, function: Function): Expression = {
+    val body = getBlockExpression(scope, wrapInBlock(function.body))
+    val params = TypeUtils.createParams(scope, function.vparams)
+    val returnable = scope.baseTypes.unit != body.exprTpe
+    FunctionExpression(scope, params, body, returnable = true)
   }
 
   private def scoped(parentScope: TScope, f: TScope => Expression): Expression = {
