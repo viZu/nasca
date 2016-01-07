@@ -23,7 +23,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
     Profiler.profileFunc(logger, "Success. Total time:", () => {
       val contents: Seq[(String, String)] = readFileContents(args.files)
       val trees: Seq[AST] = parser.parseContents(contents)
-      val (scope, fileContents) = typeSystem.checkTrees(trees)
+      val (scope, fileContents) = typeSystem.checkTrees(args, trees)
       generator.generateCode(args, scope, fileContents)
       extCompiler.compile(args)
       packager.packageBinary(args, scope)

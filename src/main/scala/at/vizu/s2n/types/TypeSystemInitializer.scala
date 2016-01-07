@@ -1,5 +1,6 @@
 package at.vizu.s2n.types
 
+import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.parser.AST
 import at.vizu.s2n.types.symbol.TScope
 
@@ -8,6 +9,6 @@ import at.vizu.s2n.types.symbol.TScope
  */
 trait TypeSystemInitializer {
 
-  def initTypeSystem(trees: Seq[AST]): TScope
+  def initTypeSystem(args: Arguments, trees: Seq[AST]): TScope
 
 }

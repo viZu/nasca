@@ -135,7 +135,7 @@ class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
     tpe match {
       case am: AppliedGenericModifier =>
         appliedGenericModifiers += am
-        am.serializationId
+        handleType(am.getConcreteType)
       case gm: GenericModifier =>
         gm.serializationId
       case at: AppliedGenericType =>

@@ -101,8 +101,8 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   private def validateParam(ctx: Context, p: Param) = {
     TypeUtils.findGenericModifiers(p.tpe).foreach(gm => {
       if (gm.covariance) {
-        TypeErrors.addError(ctx, s"Covariant type ${gm.name} occurs in contravariant position" +
-          s" in type ${p.tpe.name} of value ${p.name}")
+        //TypeErrors.addError(ctx, s"Covariant type ${gm.name} occurs in contravariant position" +
+        //  s" in type ${p.tpe.name} of value ${p.name}")
       }
     })
   }

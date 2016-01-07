@@ -31,7 +31,27 @@ class CppCompiler extends ExtCompiler with LazyLogging {
     val makeUrl = classOf[CppCompiler].getResource("/make.template")
     val content: String = Source.fromURL(makeUrl, "UTF-8").mkString
     val binName = if (args.binType.isExecutable) args.binName else "lib" + args.binName + ".a"
-    content.replace("{{bin_name}}", binName)
+    val libFlags = createLibFlags(args)
+    val includeFlags = createIncludeFlags(args)
+    content.replace("{{bin_name}}", binName).replace("{{i_flags}}", includeFlags).replace("{{lib_flags}}", libFlags)
+  }
+
+  private def createLibFlags(args: Arguments) = {
+    args.libs.map(l => {
+      val libName = "lib" + l.getFileName.toString + ".a"
+      l.resolve(libName).toString
+    }).mkString(" ")
+  }
+
+  private def createIncludeFlags(args: Arguments) = {
+    args.libs.map(l => {
+      val header = l.resolve("header").toString
+      s"-I$header"
+    }).mkString(" ")
+  }
+
+  private def createLibraryDependencies(args: Arguments) = {
+
   }
 
   private def copyAnyFiles(args: Arguments): Any = {

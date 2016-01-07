@@ -1,6 +1,8 @@
 # Declaration of variables
 CC = clang++
 CC_FLAGS = -g -std=c++11
+LIB_FLAGS = {{lib_flags}}
+I_FLAGS = {{i_flags}}
 AR = ar
 AR_FLAGS = -rv
 
@@ -11,14 +13,14 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 # Main target
 $(EXEC): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $(EXEC)
+	$(CC) $(OBJECTS) $(LIB_FLAGS) -o $(EXEC)
 
 library: $(OBJECTS)
-	$(AR) $(AR_FLAGS) $(EXEC) $(OBJECTS)
+	$(AR) $(AR_FLAGS) $(EXEC) $(OBJECTS) $(LIB_FLAGS)
 
 # To obtain object files
 %.o: %.cpp
-	$(CC) -c $(CC_FLAGS) $< -o $@
+	$(CC) -c $(CC_FLAGS) $(I_FLAGS) $< -o $@
 
 # To remove generated files
 clean:

@@ -19,7 +19,7 @@ class ClassMetaInfoServiceImpl(serializerProvider: () => ClassMetaInfoSerializer
   }
 
   override def loadClassMetaInfo(scope: TScope, directory: Path): Seq[TType] = {
-    val rawData = ScalaFiles.readFileRaw(directory)
+    val rawData = ScalaFiles.readFileRaw(directory.resolve(MetaInfoFileName))
     val deserializer = deserializerProvider(scope)
     deserializer.deserialize(rawData)
   }

@@ -14,15 +14,21 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   def addGenericModifier(genericModifier: GenericModifier) = _genericModifiers = _genericModifiers :+ genericModifier
 
-  def applyTypes(typeMap: Map[GenericModifier, TType]) = {
-    val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
-    val newMethods = mapMethods(typeMap, appliedType)
-    val newFields = mapFields(typeMap, appliedType)
-    val newParents = mapParents(typeMap)
-    newMethods.foreach(appliedType.addMethod)
-    newFields.foreach(appliedType.addField)
-    newParents.foreach(appliedType.addParent)
-    appliedType
+  def applyTypeSeq(types: Seq[TType]): AppliedGenericType = applyTypes(_genericModifiers.zip(types).toMap)
+
+  def applyTypes(typeMap: Map[GenericModifier, TType]): AppliedGenericType = {
+    this match {
+      case a: AppliedGenericType if !typeMap.values.exists(_ != null) => a
+      case _ =>
+        val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
+        val newMethods = mapMethods(typeMap, appliedType)
+        val newFields = mapFields(typeMap, appliedType)
+        val newParents = mapParents(typeMap)
+        newMethods.foreach(appliedType.addMethod)
+        newFields.foreach(appliedType.addField)
+        newParents.foreach(appliedType.addParent)
+        appliedType
+    }
   }
 
   protected def mapParents(types: Map[GenericModifier, TType]): Seq[Parent] = {
@@ -37,7 +43,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   protected def mapMethod(types: Map[GenericModifier, TType], method: Method, appliedType: TType) = {
-    val returnType = getNewTpe(types, method.returnType, appliedType, applyPartly = false)
+    val returnType = getNewTpe(types, method.returnType, appliedType, applyPartly = true)
     val params = method.params.map(mapParam(types, _, appliedType))
     Method(method.ctx, method.name, returnType, method.mods, params, method.generics,
       method.constructor, method.instanceMethod, method.operator)
@@ -65,7 +71,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
-    _genericModifiers.map(gm => {
+    getGenericModifiers.map(gm => {
       if (appliedTypes.get(gm).get == null) gm
       else gm.applyType(appliedTypes.get(gm).get)
     })
@@ -74,25 +80,31 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   private def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, appliedType: TType, applyPartly: Boolean = false) = {
     oldType match {
       case am: AppliedGenericModifier =>
-        ???
+        am.getConcreteType match {
+          case g: GenericModifier => types.get(g) match {
+            case None => g
+            case Some(t) => g.applyType(t)
+          }
+          case _ => ???
+        }
       case g: GenericModifier => types.get(g) match {
         case None => g
         case Some(t) => g.applyType(t)
       }
       case g: GenericType if this == g => appliedType
       case g: GenericType =>
-        val typesToApply = if (applyPartly) findTypesToApply(types, g) else findTypesToApplyPartly(types, g)
+        val typesToApply = if (applyPartly) findTypesToApplyPartly(types, g) else findTypesToApply(types, g)
         g.applyTypes(typesToApply) // TODO apply partly
       case _ => oldType
     }
   }
 
   private def findTypesToApply(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
-    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
+    g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
   }
 
   private def findTypesToApplyPartly(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
-    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
+    g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
   }
 
   override def toString: String = s"$name[${TypeUtils.toString(_genericModifiers)}]"
@@ -123,8 +135,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     case _ => false
   }
 
-  def checkTypeArguments(other: GenericType) = other match {
-    case a: AppliedGenericType =>
-    case b: GenericType =>
+  def getGenericModifiers: Seq[GenericModifier] = {
+    genericModifiers
   }
 }

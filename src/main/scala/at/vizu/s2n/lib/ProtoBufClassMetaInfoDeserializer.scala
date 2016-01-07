@@ -16,6 +16,8 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
   override def deserialize(bytes: Array[Byte]): Seq[TType] = {
     val metaInfo: MetaInfo = MetaInfo.parseFrom(bytes)
     gatherTypes(metaInfo)
+    fillGenericModifier(metaInfo)
+    gatherAppliedTypes(metaInfo)
     fillTypes(metaInfo)
     types.values.filter {
       case a: AppliedGenericType => false
@@ -28,6 +30,16 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
     metaInfo.concreteTypes.foreach(c => types += (getTypeNameMeta(c) -> concreteTypeShell(c)))
     metaInfo.genericTypes.foreach(g => types += (getTypeNameMeta(g) -> genericTypeShell(g)))
     metaGenericModifier.foreach(gm => types += (gm.serializationId -> metaGenericModifierToReal(gm)))
+  }
+
+  private def fillGenericModifier(metaInfo: MetaInfo) = {
+    metaInfo.genericTypes.foreach(meta => {
+      val tpe = getGenericType(getTypeNameMeta(meta))
+      meta.genericModifiers.map(g => getGenericModifier(g.serializationId)).foreach(g => tpe.addGenericModifier(g))
+    })
+  }
+
+  private def gatherAppliedTypes(metaInfo: MetaInfo) = {
     metaInfo.appliedGenericModifier.foreach(gm => types += (gm.serializationId -> metaAppliedGenericModifierToReal(gm)))
     metaInfo.appliedGenericTypes.foreach(gt => types += (gt.serializationId -> metaAppliedGenericTypeToReal(gt)))
   }
@@ -68,8 +80,8 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
 
   private def metaAppliedGenericTypeToReal(meta: MetaAppliedGenericType) = {
     val genericType = getGenericType(meta.genericType)
-    val appliedTypes = meta.appliedTypes.map(getGenericModifier)
-    new AppliedGenericType(appliedTypes, genericType)
+    val appliedTypes = meta.appliedTypes.map(findType)
+    genericType.applyTypeSeq(appliedTypes)
   }
 
   private def metaContextToReal(metaContext: MetaContext) = {
@@ -105,7 +117,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
   private def fillGenericType(meta: MetaGenericType) = {
     val tpe = getGenericType(getTypeNameMeta(meta))
     fillConcreteType(tpe, meta.fields, meta.methods, meta.parents)
-    meta.genericModifiers.map(g => getGenericModifier(g.serializationId)).foreach(g => tpe.addGenericModifier(g))
+    //meta.genericModifiers.map(g => getGenericModifier(g.serializationId)).foreach(g => tpe.addGenericModifier(g))
   }
 
   private def fillConcreteType(ct: ConcreteType, fs: Seq[MetaField], ms: Seq[MetaMethod], ps: Seq[String]): Unit = {
@@ -143,15 +155,15 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
   }
 
   private def getGenericModifier(id: String): GenericModifier = {
-    types.collect({ case (id: String, t: GenericModifier) => id -> t }).getOrElse(id, throw new RuntimeException("Halp"))
+    findType(id).asInstanceOf[GenericModifier]
   }
 
   private def getGenericType(id: String): GenericType = {
-    types.collect({ case (id: String, t: GenericType) => id -> t }).getOrElse(id, throw new RuntimeException("Halp"))
+    findType(id).asInstanceOf[GenericType]
   }
 
   private def getConcreteType(id: String): ConcreteType = {
-    types.collect({ case (id: String, t: ConcreteType) => id -> t }).getOrElse(id, throw new RuntimeException("Halp"))
+    findType(id).asInstanceOf[ConcreteType]
   }
 
   private def findType(id: String) = {

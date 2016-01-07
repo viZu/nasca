@@ -22,6 +22,12 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
     }
   }
 
+
+  override def applyTypes(typeMap: Map[GenericModifier, TType]): AppliedGenericType = {
+    if (getGenericModifiers.isEmpty) this
+    else super.applyTypes(typeMap)
+  }
+
   override def genericModifiers: Seq[GenericModifier] = genericType.genericModifiers
 
   override def toString: String = {
@@ -75,5 +81,11 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
         case _ => false
       }
     }
+  }
+
+  override def getGenericModifiers: Seq[GenericModifier] = {
+    appliedTypes.map({
+      case a: AppliedGenericModifier => a.getConcreteType
+    }).collect({ case g: GenericModifier => g })
   }
 }

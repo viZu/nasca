@@ -429,18 +429,18 @@ object TypeUtils extends LazyLogging {
   }
 
   private def findTypesToApply(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
-    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
+    g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
   }
 
   private def findTypesToApplyPartly(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
-    g.genericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
+    g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
   }
 
   def findGenericModifiers(tpe: TType): Seq[GenericModifier] = tpe match {
     case a: AppliedGenericModifier => Vector(a)
     case g: GenericModifier => Vector(g)
-    case a: AppliedGenericType => a.appliedTypes.flatMap(findGenericModifiers)
-    case g: GenericType => g.genericModifiers
+    case a: AppliedGenericType => Vector() //a.appliedTypes.flatMap(findGenericModifiers)
+    case g: GenericType => Vector() //g.genericModifiers
     case c: ConcreteType => Vector()
     case _ => Vector()
   }

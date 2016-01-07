@@ -1,7 +1,9 @@
 package at.vizu.s2n.types
 
+import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.generator.expression.{Expression, ExpressionOptions}
+import at.vizu.s2n.lib.LibraryService
 import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.log.{Debug, Trace}
 import at.vizu.s2n.parser.AST
@@ -14,20 +16,29 @@ import scala.reflect.runtime.universe._
 /**
  * Phil on 06.11.15.
  */
-class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends TypeSystemInitializer with LazyLogging {
+class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryService: LibraryService)
+  extends TypeSystemInitializer with LazyLogging {
 
   private val rootScope: TScope = scopeInitializer.initScope
   private var currentScope = rootScope
   private var trees: Seq[AST] = Vector()
 
-  override def initTypeSystem(trees: Seq[AST]): TScope = {
+  override def initTypeSystem(args: Arguments, trees: Seq[AST]): TScope = {
     this.trees = trees
+    loadClassesFromLibraries(args)
     initScopePhase1()
     initScopePhase2()
     initScopePhase3()
     initScopePhase4()
     validateTypes()
     rootScope
+  }
+
+  private def loadClassesFromLibraries(args: Arguments) = {
+    if (args.libs.nonEmpty) {
+      logger.debug("Reading libraries")
+      args.libs.foreach(libraryService.readLibraryToScope(rootScope, _))
+    }
   }
 
   /**
@@ -271,7 +282,8 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
             val bt: BaseTypes = currentScope.baseTypes
             val args = TypeInference.getTypes(bt, currentScope, p)
             TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
-            val expressions = profile(logger, "Expression", p.map(Expression(bt, currentScope, _, ExpressionOptions(true))))
+            val expressions = profile(logger, "Expression",
+              p.map(Expression(bt, currentScope, _, ExpressionOptions(true))), Debug)
             Parent(tpe, expressions)
         }
       }, Trace)
@@ -286,7 +298,11 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer) extends Type
   private def createField(v: ValDef): Field = {
     logger.trace("Create Field: " + v.name)
     val ctx = Context(currentScope.currentFile, v.pos.line)
-    val f: Field = Field(ctx, TypeUtils.getModifiers(v.mods), v.name.toString, TypeUtils.findType(currentScope, v.tpt))
+    val tpe: TType = TypeUtils.findType(currentScope, v.tpt)
+    if (tpe == null) {
+      TypeErrors.addError(ctx, s"A type for Field ${v.name} is required ")
+    }
+    val f: Field = Field(ctx, TypeUtils.getModifiers(v.mods), v.name.toString, tpe)
     if (v.mods.hasFlag(Flag.PARAMACCESSOR)) {
       // we need to add the paramaccessors
       // we need to know the information when applying the super constructor

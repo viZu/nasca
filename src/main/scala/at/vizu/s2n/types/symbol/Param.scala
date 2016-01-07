@@ -10,4 +10,13 @@ case class Param(ctx: Context, tpe: TType, name: String, hasDefaultVal: Boolean 
     s"$v name: ${tpe.toString}"
   }
 
+  def applyTypes(types: Map[GenericModifier, TType]) = {
+    tpe match {
+      case g: GenericType =>
+        val newTpe = g.applyTypes(types)
+        this.copy(tpe = newTpe)
+      case _ => this
+    }
+  }
+
 }
