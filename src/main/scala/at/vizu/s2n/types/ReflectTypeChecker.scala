@@ -91,6 +91,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkImplementation(scope: TScope, c: ImplDef) = {
     checkGenerics(scope)
     checkMembers(scope, c.impl)
+    checkMembers(scope, c.impl)
   }
 
   private def checkGenerics(scope: TScope) = {

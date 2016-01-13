@@ -1,14 +1,16 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.error.TypeErrors
+import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.types.symbol.TypeUtils._
+import com.typesafe.scalalogging.LazyLogging
 
 /**
  * Phil on 07.10.15.
  */
 class TScope(private var parent: Option[TScope] = None, private val _this: Option[TType] = None,
              private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None,
-             private val _baseTypes: Option[BaseTypes] = None) {
+             private val _baseTypes: Option[BaseTypes] = None) extends LazyLogging {
 
   private var _types: Seq[TType] = Vector()
   private var _objects: Seq[TType] = Vector()
@@ -150,7 +152,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def findObjectWithAlias(name: String): Option[TType] = {
     val alias: String = getTypeAlias(name)
-    _objects.find(_.fullClassName == alias) orElse findObjectInParent(alias)
+    _objects.find(_.fullClassName == alias) orElse parent.flatMap(_.findObjectWithAlias(alias))
   }
 
   private def findObjectInParent(name: String): Option[TType] = {
@@ -258,9 +260,9 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
-    findObjectWithAlias(name) match {
+    profile(logger, "findObjectWithAlias", findObjectWithAlias(name)) match {
       case Some(tpe) => tpe.findApply(findThis(), args)
-      case None => findIdentifier(name) match {
+      case None => profile(logger, "findIdentifier", findIdentifier(name)) match {
         case Some(i) => i.tpe.findApply(findThis(), args)
         case None => None
       }

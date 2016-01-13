@@ -1,9 +1,5 @@
-class Foo(i: Int) {
+import at.vizu.s2n.LinkedList
 
-  def this(i: String, i2: Int) = {
-    this(i2)
-  }
-
-}
-
-class Bar5(i: Int) extends Foo("Hello", i)
+val l = new LinkedList[Int]
+l.prepend(43)
+l.toString

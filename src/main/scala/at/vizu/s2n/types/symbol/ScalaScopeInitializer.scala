@@ -66,7 +66,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     any.addMethod(Method(ctx, "$eq$eq", boolean, Vector(Final), Vector(Param(ctx, any, "arg0"))))
     any.addMethod(Method(ctx, "equals", boolean, Vector(), Vector(Param(ctx, any, "arg0"))))
     any.addMethod(Method(ctx, "hashCode", int, Vector(), Vector()))
-    //any.addMethod(Method(ctx, "toString", any, Vector(), Vector(Param(any, "arg0"))))
+    //any.addMethod(Method(ctx, "toString", any, Vector(), Vector()))
     any
   }
 

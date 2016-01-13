@@ -15,3 +15,5 @@ class Box[+T](_x: T) {
 }
 
 class Test[+T](x: T)
+
+object Foo extends Box[Int](4)

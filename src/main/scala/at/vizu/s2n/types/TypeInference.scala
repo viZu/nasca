@@ -80,10 +80,10 @@ object TypeInference extends LazyLogging {
 
   def getTypeIdent(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: Seq[TType] = Vector()): TType = {
     val iName = ident.name.toString
-    scope.findMethod(iName, args) match {
+    profile(logger, "ti: ident - findmethod", scope.findMethod(iName, args), Trace) match {
       case Some(m) => m.tpe
       case None =>
-        scope.findIdentifier(iName) match {
+        profile(logger, "ti: ident - findidentifier", scope.findIdentifier(iName), Trace) match {
           case Some(i) => i.tpe
           case None =>
             val thisTpe: TType = scope.findThis()

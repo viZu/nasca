@@ -151,7 +151,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     val returnTypeString = GeneratorUtils.generateCppTypeName(_baseTypes, returnType)
     val paramsString = GeneratorUtils.generateParamsString(_baseTypes, params, withVars = true)
     val methodString: String = s"""$templateString$returnTypeString $cppMethodName($paramsString) ${methodBody.content}"""
-    methodBody.enhance(methodString, paramsString.handles)
+    methodBody.enhance(methodString, paramsString.handles ++ returnTypeString.handles)
   }
 
   private def getMethodName(mName: String) = {

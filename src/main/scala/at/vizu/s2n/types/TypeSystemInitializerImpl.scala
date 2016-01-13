@@ -155,7 +155,6 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
    */
 
   private def initScopePhase4() = {
-    logger.trace("Filling Types")
     profileFunc(logger, "Fill types", () => {
       trees.foreach(tree => {
         currentScope.currentFile = tree.fileName
@@ -280,7 +279,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
           case Apply(subTree: Tree, p: List[Tree]) =>
             val tpe: TType = TypeUtils.findType(currentScope, subTree)
             val bt: BaseTypes = currentScope.baseTypes
-            val args = TypeInference.getTypes(bt, currentScope, p)
+            val args = profile(logger, "Type inference", TypeInference.getTypes(bt, currentScope, p))
             TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
             val expressions = profile(logger, "Expression",
               p.map(Expression(bt, currentScope, _, ExpressionOptions(true))), Debug)

@@ -39,6 +39,7 @@ object Expression extends LazyLogging {
         val tpe = TypeUtils.findType(scope, l)
         val literalStr = l.value.value match {
           case s: java.lang.String => s""""$s""""
+          case null => "NULL"
           case _@v => v.toString
         }
         LiteralExpression(tpe, literalStr)

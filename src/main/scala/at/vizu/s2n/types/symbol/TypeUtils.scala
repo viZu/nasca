@@ -269,11 +269,7 @@ object TypeUtils extends LazyLogging {
     logger.trace("Generics")
     val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
     logger.trace("Before Params")
-    val params: List[Param] = d.vparamss.head.map {
-      case v: ValDef =>
-        val tpe: TType = TypeUtils.findType(scope, v.tpt)
-        Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
-    }
+    val params: Seq[Param] = createParamsForMethod(scope, d.vparamss)
     logger.trace("After Params")
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
@@ -282,6 +278,11 @@ object TypeUtils extends LazyLogging {
     }
     //TODO check if Method exists in current scope
     Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, constructor, instanceMethod)
+  }
+
+  def createParamsForMethod(scope: TScope, params: Seq[Seq[Tree]]): Seq[Param] = {
+    if (params.isEmpty) Vector()
+    else createParams(scope, params.head)
   }
 
   /**
@@ -554,7 +555,7 @@ object TypeUtils extends LazyLogging {
       case _ =>
     }
     tpe.fields.foreach(f => addTpe(baseTypes, f.tpe, set))
-    tpe.methods.flatMap(_.params.map(_.tpe)).foreach(addTpe(baseTypes, _, set))
+    tpe.methods.flatMap(m => m.params.map(_.tpe) :+ m.tpe).foreach(addTpe(baseTypes, _, set))
     tpe.parentTypes.foreach(addTpe(baseTypes, _, set))
     tpe match {
       case a: AppliedGenericType => set.toSet
