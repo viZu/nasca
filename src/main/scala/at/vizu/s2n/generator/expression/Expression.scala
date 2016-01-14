@@ -322,10 +322,13 @@ object Expression extends LazyLogging {
   }
 
   private def generateFunctionExpression(scope: TScope, function: Function): Expression = {
-    val body = getBlockExpression(scope, wrapInBlock(function.body))
-    val params = TypeUtils.createParams(scope, function.vparams)
-    val returnable = scope.baseTypes.unit != body.exprTpe
-    FunctionExpression(scope, params, body, returnable = true)
+    scoped(scope, (s: TScope) => {
+      val params = TypeUtils.createParams(s, function.vparams)
+      TypeUtils.addParamsToScope(s, params)
+      val body = getBlockExpression(s, wrapInBlock(function.body))
+      val returnable = s.baseTypes.unit != body.exprTpe
+      FunctionExpression(s, params, body, returnable)
+    })
   }
 
   private def scoped(parentScope: TScope, f: TScope => Expression): Expression = {

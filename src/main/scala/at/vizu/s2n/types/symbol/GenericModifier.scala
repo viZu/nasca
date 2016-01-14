@@ -76,6 +76,17 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
     }
   }
 
+  def typeEquals(that: TType) = {
+    that match {
+      case g: GenericModifier =>
+        g.upperBound == upperBound &&
+          g.lowerBound == lowerBound &&
+          g.covariance == covariance &&
+          g.contravariance == contravariance
+      case _ => false
+    }
+  }
+
   override def hashCode(): Int = {
     val prime = 31
     var result = 1

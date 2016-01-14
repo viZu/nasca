@@ -2,6 +2,7 @@ package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.error.TypeErrors
 import at.vizu.s2n.log.Profiler._
+import at.vizu.s2n.log.Trace
 import at.vizu.s2n.types.symbol.TypeUtils._
 import com.typesafe.scalalogging.LazyLogging
 
@@ -260,9 +261,9 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
-    profile(logger, "findObjectWithAlias", findObjectWithAlias(name)) match {
+    profile(logger, "findApply-findObjectWithAlias", findObjectWithAlias(name), Trace) match {
       case Some(tpe) => tpe.findApply(findThis(), args)
-      case None => profile(logger, "findIdentifier", findIdentifier(name)) match {
+      case None => profile(logger, "findApply-findIdentifier", findIdentifier(name), Trace) match {
         case Some(i) => i.tpe.findApply(findThis(), args)
         case None => None
       }

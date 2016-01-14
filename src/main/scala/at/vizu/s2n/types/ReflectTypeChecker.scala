@@ -261,6 +261,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case a: Apply => checkApply(scope, a)
       case s: Select => checkSelect(scope, s)
       case t: This => scope.findThis()
+      case f: Function => checkFunction(scope, f)
     })
   }
 

@@ -10,7 +10,7 @@ package object expression {
     Vector(pathElement)
   }
 
-  val operatorMapping = Map("\\$plus" -> "+", "\\$less" -> "<", "\\$greater" -> ">", "\\$band" -> "!", "$eq" -> "=",
+  val operatorMapping = Map("\\$plus" -> "+", "\\$less" -> "<", "\\$greater" -> ">", "\\$bang" -> "!", "\\$eq" -> "=",
     "\\$times" -> "*", "\\$amp" -> "&", "\\$bar" -> "|", "\\$div" -> "/", "\\$minus" -> "-",
     "\\$percent" -> "%")
 

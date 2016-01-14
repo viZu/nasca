@@ -27,7 +27,6 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
       generator.generateCode(args, scope, fileContents)
       extCompiler.compile(args)
       packager.packageBinary(args, scope)
-      logger.error("Test")
     })
   }
 

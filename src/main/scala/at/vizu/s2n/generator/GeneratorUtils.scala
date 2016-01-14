@@ -185,9 +185,10 @@ object GeneratorUtils {
 
   def generateTypeArgsFromType(baseTypes: BaseTypes, tpe: TType, withTypeName: Boolean = false): GeneratorContext = {
     tpe match {
-      case agt: AppliedGenericType => generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
+      case agt: AppliedGenericType =>
+        generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
       case gt: GenericType =>
-        GeneratorContext(generateTypeArgs(gt.genericModifiers, withTypeName)) + generateIncludeHandles(gt)
+        GeneratorContext(generateTypeArgs(gt.getGenericModifiers, withTypeName)) + generateIncludeHandles(gt)
       case _ => generateIncludeHandles(tpe)
     }
   }
@@ -252,7 +253,7 @@ object GeneratorUtils {
   }
 
   def generateIncludes(usedTypes: Iterable[TType]): String = {
-    (Vector("#include <memory>") ++ usedTypes.map(generateInclude)).mkString("\n")
+    (Vector("#include <memory>") ++ usedTypes.map(generateInclude) :+ "").mkString("\n")
   }
 
   def generateInclude(tpe: TType): String = {
@@ -265,7 +266,8 @@ object GeneratorUtils {
 
   def generateCopyConstructorsHeader(tpe: TType): String = {
     generateCopyConstructors(tpe, g => {
-      val typeName: String = tpe.simpleName
+      val typeName: String = g.simpleName
+      val typeArgs = generateTypeArgs(g.getGenericModifiers)
       val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
       val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
       s"""
@@ -277,7 +279,7 @@ object GeneratorUtils {
          |$typeName(const $typeName$tmpTypeArgs& t);
          |
            |$tmpTemplateArgs
-         |$typeName<T>& operator=(const $typeName$tmpTypeArgs& t);
+         |$typeName$typeArgs& operator=(const $typeName$tmpTypeArgs& t);
          |""".stripMargin
     })
   }

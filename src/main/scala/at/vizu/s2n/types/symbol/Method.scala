@@ -34,7 +34,7 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
     paramToArg match {
       //TODO: check if arg == generic modifier && != generic modifier
       //case (agm: AppliedGenericModifier, _) => Vector()
-      case (gmParam: GenericModifier, atArg: AppliedGenericModifier) => Vector(gmParam -> atArg)
+      case (gmParam: GenericModifier, atArg: GenericModifier) => Vector(gmParam -> atArg)
       case (gmParam: GenericModifier, ctArg: ConcreteType) => Vector(gmParam -> ctArg)
       case (atParam: AppliedGenericType, atArg: AppliedGenericType) =>
         atParam.appliedTypes.zip(atArg.appliedTypes).flatMap(extractAppliedType)

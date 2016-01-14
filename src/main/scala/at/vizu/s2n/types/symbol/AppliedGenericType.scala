@@ -23,6 +23,8 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   }
 
 
+  override def parents: Seq[Parent] = genericType.parents
+
   override def applyTypes(typeMap: Map[GenericModifier, TType]): AppliedGenericType = {
     if (getGenericModifiers.isEmpty) this
     else super.applyTypes(typeMap)

@@ -111,7 +111,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   override def equals(obj: scala.Any): Boolean = obj match {
     case a: AppliedGenericType =>
-      this == a.genericType && genericModifiers == a.appliedTypes
+      this == a.genericType && genericModifiers.zip(a.appliedTypes).forall(t => t._1.typeEquals(t._2))
     case g: GenericType => this.eq(g)
     case _ => false
   }

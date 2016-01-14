@@ -200,11 +200,18 @@ object TypeUtils extends LazyLogging {
     */
 
   def findMethodForDef(scope: TScope, defdef: DefDef, onType: TType = null): Method = {
-    val args: List[TType] = defdef.vparamss.head.map {
-      case v: ValDef => findType(scope, v.tpt)
-    }
+    val args: Seq[TType] = findParamTypes(scope, defdef.vparamss)
     val defName: String = defdef.name.toString
     findMethod(scope, defName, defdef.pos.line, args, onType)
+  }
+
+  private def findParamTypes(scope: TScope, params: Seq[Seq[Tree]]) = {
+    if (params.isEmpty) Vector()
+    else {
+      params.head.map {
+        case v: ValDef => findType(scope, v.tpt)
+      }
+    }
   }
 
   def findMethodForIdent(scope: TScope, ident: Ident, onType: TType = null): Method = {

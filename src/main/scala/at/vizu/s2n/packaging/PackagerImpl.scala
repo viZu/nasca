@@ -14,7 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 class PackagerImpl(libraryService: LibraryService) extends Packager with LazyLogging {
 
   override def packageBinary(args: Arguments, scope: TScope): Unit = {
-    Profiler.profileFunc(logger, "Packager", () => {
+    Profiler.profileFunc(logger, "Packaging binary", () => {
       if (args.binType.isLibrary) {
         packageLibrary(args, scope)
       } else {
