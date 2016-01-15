@@ -90,10 +90,10 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   }
 
   private def generateMethod(scope: TScope, d: DefDef, initCtx: GeneratorContext): GeneratorContext = {
-    scoped(scope, (s: TScope) => {
+    scope.scoped((s: TScope) => {
       TypeUtils.createAndAddGenericModifiers(s, d.tparams)
       val method: Method = TypeUtils.findMethodForDef(s, d)
-      if (method.isAbstract || tpe.isTrait && method.constructor) ""
+      val ctx: GeneratorContext = if (method.isAbstract || tpe.isTrait && method.constructor) ""
       else if (method.constructor) generateConstructor(s, method, initCtx)
       else {
         TypeUtils.addParamsToScope(s, method.params)
@@ -101,7 +101,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
         val templateString = classString + GeneratorUtils.generateMethodTemplate(method)
         generateMethod(s, d.rhs, method.returnType, method.name, method.params, templateString)
       }
-    })
+      ctx
+    }, MethodScope)
   }
 
   private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext): GeneratorContext = {
@@ -181,14 +182,6 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     val mHandle = MethodHandle(methodCtx.content)
 
     methodCtx.enhance("", Set(mHandle, mdHandle))
-  }
-
-
-  private def scoped(parentScope: TScope, f: TScope => GeneratorContext): GeneratorContext = {
-    val childScope: TScope = parentScope.enterScope(BlockScope)
-    val generated = f(childScope)
-    childScope.exitScope()
-    generated
   }
 
   // TODO many types of pathelements...

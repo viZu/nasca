@@ -87,11 +87,13 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
           }
           case _ => ???
         }
-      case g: GenericModifier => types.get(g) match {
-        case None => g
-        case Some(t) => g.applyType(t)
-      }
-      case g: GenericType if this == g => appliedType
+      case g: GenericModifier =>
+        types.get(g) match {
+          case None => g
+          case Some(t) => g.applyType(t)
+        }
+      case g: GenericType if this == g =>
+        appliedType
       case g: GenericType =>
         val typesToApply = if (applyPartly) findTypesToApplyPartly(types, g) else findTypesToApply(types, g)
         g.applyTypes(typesToApply) // TODO apply partly
@@ -110,6 +112,13 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   override def toString: String = s"$name[${TypeUtils.toString(_genericModifiers)}]"
 
   override def equals(obj: scala.Any): Boolean = obj match {
+    case a: AppliedGenericType =>
+      this == a.genericType && genericModifiers == a.appliedTypes
+    case g: GenericType => this.eq(g)
+    case _ => false
+  }
+
+  override def typeEquals(obj: Any): Boolean = obj match {
     case a: AppliedGenericType =>
       this == a.genericType && genericModifiers.zip(a.appliedTypes).forall(t => t._1.typeEquals(t._2))
     case g: GenericType => this.eq(g)

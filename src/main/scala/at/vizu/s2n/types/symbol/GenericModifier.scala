@@ -76,7 +76,7 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
     }
   }
 
-  def typeEquals(that: TType) = {
+  override def typeEquals(that: Any) = {
     that match {
       case g: GenericModifier =>
         g.upperBound == upperBound &&

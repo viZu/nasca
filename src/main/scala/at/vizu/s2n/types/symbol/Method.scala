@@ -5,7 +5,7 @@ package at.vizu.s2n.types.symbol
  */
 case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Vector(),
                   generics: Seq[GenericModifier] = Vector(), constructor: Boolean = false, instanceMethod: Boolean = true,
-                  operator: Boolean = false)
+                  operator: Boolean = false, nonPointer: Boolean = false)
   extends Member {
 
   def checkArgs(argsToCheck: Seq[TType]) = {

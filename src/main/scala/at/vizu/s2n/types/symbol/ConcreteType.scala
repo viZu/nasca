@@ -65,7 +65,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
 
   def hasParent(tpe: TType): Boolean = {
     if (isNullType && tpe.isInstanceOf[GenericType]) true
-    else if (tpe == this) true
+    else if (tpe.typeEquals(this)) true
     else parentTypes.exists(_.hasParent(tpe))
   }
 

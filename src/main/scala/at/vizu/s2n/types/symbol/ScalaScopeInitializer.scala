@@ -88,6 +88,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     string._parents = Vector(Parent(anyRef))
     string.addMethod(Method(ctx, "$times", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "$plus", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
+    string.addMethod(Method(ctx, "length", int, Vector(Abstract), nonPointer = true))
     string
   }
 

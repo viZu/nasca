@@ -58,8 +58,8 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   }
 
   override def baseTypeEquals(obj: TType): Boolean = obj match {
-    case a: AppliedGenericType => a.genericType == genericType
-    case b: GenericType => genericType == b
+    case a: AppliedGenericType => a.genericType.typeEquals(genericType)
+    case b: GenericType => genericType.typeEquals(b)
     case _ => false
   }
 

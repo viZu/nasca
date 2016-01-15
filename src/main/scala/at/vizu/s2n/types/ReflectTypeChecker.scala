@@ -120,19 +120,19 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkValMember(scope: TScope, v: ValDef) = {
     val field: Field = TypeUtils.findField(scope, v)
     if (!field.isAbstract) {
-      scoped(scope, (s: TScope) => {
+      scope.scoped((s: TScope) => {
         val returnType: Option[TType] = checkValOrDefBody(s, v.rhs, field.tpe)
         returnType match {
           case Some(tpe) => if (field.tpe == null) field.tpe = tpe
           case None => if (field.tpe == null) TypeErrors.addError(scope, v.pos.line,
             s"Value definition ${v.name} requires a valid return type")
         }
-      })
+      }, BlockScope)
     }
   }
 
   private def checkDefMember(scope: TScope, d: DefDef) = {
-    scoped(scope, (s: TScope) => {
+    scope.scoped((s: TScope) => {
       TypeUtils.createAndAddGenericModifiers(s, d.tparams)
       val method: Method = TypeUtils.findMethodForDef(s, d)
       if (!method.constructor && !method.isAbstract) {
@@ -140,15 +140,15 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         TypeUtils.addParamsToScope(s, method.params)
         checkValOrDefBody(s, d.rhs, expected)
       }
-    })
+    }, MethodScope)
   }
 
   private def checkReturnExpected(returned: Option[TType], expected: TType, line: Int, scope: TScope): Unit = {
     if (returned.isDefined && returned.get != null && returned.get != expected && !returned.get.hasParent(expected)) {
       val msg =
         s"""type mismatch;
-            found: ${returned.get.fullClassName}
-            expected: ${expected.fullClassName}""".stripMargin
+            found: ${returned.get}
+            expected: $expected""".stripMargin
 
       TypeErrors.addError(scope, line, msg)
     }
@@ -289,7 +289,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkVal(scope: TScope, v: ValDef): TType = {
     val expected: TType = TypeUtils.findType(scope, v.tpt)
-    val returnTpe: Option[TType] = scoped(scope, checkValOrDefBody(_: TScope, v.rhs, expected))
+    val returnTpe: Option[TType] = scope.scoped(checkValOrDefBody(_: TScope, v.rhs, expected), BlockScope)
     returnTpe match {
       case Some(tpe) =>
         TypeUtils.createIdentifier(scope, v, tpe)
@@ -303,10 +303,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     val expected: TType = TypeUtils.findType(scope, d.tpt)
 
     val m: Method = TypeUtils.createMethod(scope, d)
-    scoped(scope, (s: TScope) => {
+    scope.scoped((s: TScope) => {
       TypeUtils.addParamsToScope(s, m.params)
       checkValOrDefBody(s, d.rhs, expected)
-    })
+    }, MethodScope)
     scope.addMethod(m)
 
     TypeUtils.unitType(scope)
@@ -321,13 +321,13 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkLabel(scope: TScope, l: LabelDef): TType = {
     l match {
       case LabelDef(n, _, t) =>
-        scoped(scope, (s: TScope) => {
+        scope.scoped((s: TScope) => {
           s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Vector()))
           t match {
             case i: If => checkIf(s, i) // while
             case b: Block => checkBlock(s, b) // do while
           }
-        })
+        }, BlockScope)
     }
   }
 
@@ -361,7 +361,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case _ => handleFieldAssign(scope, a.lhs)
     }
 
-    scoped(scope, checkValOrDefBody(_: TScope, a.rhs, tpe))
+    scope.scoped(checkValOrDefBody(_: TScope, a.rhs, tpe), BlockScope)
 
     TypeUtils.unitType(scope)
   }
@@ -402,31 +402,11 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkFunction(scope: TScope, f: Function) = {
     val params: Seq[Param] = TypeUtils.createParams(scope, f.vparams)
-    val retType = scoped(scope, (s: TScope) => {
+    val retType = scope.scoped((s: TScope) => {
       TypeUtils.addParamsToScope(scope, params)
       checkBody(s, f.body)
-    })
+    }, MethodScope)
     TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
-  }
-
-  private def scoped(scope: TScope, f: TScope => Option[TType]) = {
-    val childScope: TScope = scope.enterScope(BlockScope)
-    val tpe = f(childScope)
-    childScope.exitScope()
-    tpe
-  }
-
-  private def scoped(scope: TScope, f: TScope => TType) = {
-    val childScope: TScope = scope.enterScope(BlockScope)
-    val tpe = f(childScope)
-    childScope.exitScope()
-    tpe
-  }
-
-  private def scoped[U](scope: TScope, f: TScope => U) = {
-    val childScope: TScope = scope.enterScope(BlockScope)
-    f(childScope)
-    childScope.exitScope()
   }
 
 }

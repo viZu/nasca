@@ -50,6 +50,8 @@ trait TType extends Modifiable with Nameable {
 
   def validate(): Unit
 
+  def typeEquals(obj: Any): Boolean = this.equals(obj)
+
 }
 
 object EmptyType extends TType {

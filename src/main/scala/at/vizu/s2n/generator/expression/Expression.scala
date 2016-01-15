@@ -142,14 +142,14 @@ object Expression extends LazyLogging {
   }
 
   def generateInlineDefExpression(baseTypes: BaseTypes, scope: TScope, d: DefDef) = {
-    scoped(scope, (childScope: TScope) => {
+    scope.scoped((childScope: TScope) => {
       val nestedMethod: Method = TypeUtils.createMethod(scope, d, instanceMethod = false)
       TypeUtils.addParamsToScope(childScope, nestedMethod.params)
       scope.addMethod(nestedMethod)
       val block = wrapInBlock(d.rhs)
       val blockExpr = getBaseBlockExpression(baseTypes, childScope, block, returnable = true)
       InlineDefExpression(baseTypes, nestedMethod, blockExpr)
-    })
+    }, MethodScope)
   }
 
   def generateIfExpression(baseTypes: BaseTypes, scope: TScope, i: If) = {
@@ -310,9 +310,9 @@ object Expression extends LazyLogging {
         else {
           val member = TypeUtils.findIdent(scope, n.toString, tpe)
           member match {
-            case m: Method => Vector(NestedExpression(baseTypes, scope, scope.findThis(), identCtx.content, m))
-            case i: Identifier => Vector(NestedExpression(baseTypes, scope, i.tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
-            case f: Field => Vector(NestedExpression(baseTypes, scope, scope.findThis(), identCtx.content, f))
+            case m: Method => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, m))
+            case i: Identifier => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
+            case f: Field => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, f))
             case _ => throw new RuntimeException("Todo")
           }
         }
@@ -322,20 +322,12 @@ object Expression extends LazyLogging {
   }
 
   private def generateFunctionExpression(scope: TScope, function: Function): Expression = {
-    scoped(scope, (s: TScope) => {
+    scope.scoped((s: TScope) => {
       val params = TypeUtils.createParams(s, function.vparams)
       TypeUtils.addParamsToScope(s, params)
       val body = getBlockExpression(s, wrapInBlock(function.body))
       val returnable = s.baseTypes.unit != body.exprTpe
       FunctionExpression(s, params, body, returnable)
-    })
+    }, MethodScope)
   }
-
-  private def scoped(parentScope: TScope, f: TScope => Expression): Expression = {
-    val childScope: TScope = parentScope.enterScope(BlockScope)
-    val expr = f(childScope)
-    childScope.exitScope()
-    expr
-  }
-
 }

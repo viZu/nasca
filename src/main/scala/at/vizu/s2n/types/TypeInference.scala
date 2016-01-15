@@ -113,15 +113,12 @@ object TypeInference extends LazyLogging {
   }
 
   def getTypeFunction(scope: TScope, f: Function): TType = {
-    val childScope: TScope = scope.enterScope(MethodScope)
-
-    val params: Seq[Param] = TypeUtils.createParams(childScope, f.vparams)
-    TypeUtils.addParamsToScope(childScope, params)
-    val retType = getTypeInternal(childScope.baseTypes, childScope, f.body)
-    val tpe = TypeUtils.createFunctionTypeFromParams(childScope, params, retType, f.pos.line)
-
-    childScope.exitScope()
-    tpe
+    scope.scoped((childScope: TScope) => {
+      val params: Seq[Param] = TypeUtils.createParams(childScope, f.vparams)
+      TypeUtils.addParamsToScope(childScope, params)
+      val retType = getTypeInternal(childScope.baseTypes, childScope, f.body)
+      TypeUtils.createFunctionTypeFromParams(childScope, params, retType, f.pos.line)
+    }, MethodScope)
   }
 
   def getTypeNew(baseTypes: BaseTypes, scope: TScope, n: New): TType = {

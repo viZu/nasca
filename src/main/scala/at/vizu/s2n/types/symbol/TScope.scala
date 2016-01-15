@@ -1,6 +1,8 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.error.TypeErrors
+import at.vizu.s2n.generator.GeneratorContext
+import at.vizu.s2n.generator.expression.Expression
 import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.log.Trace
 import at.vizu.s2n.types.symbol.TypeUtils._
@@ -312,6 +314,45 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     objects.filter(!myBaseTypes.isBaseType(_))
   }
 
+
+  /**
+    * Scoped functions, for entering new scopes
+    */
+
+  def scoped(f: TScope => Option[TType], scopeType: ScopeType): Option[TType] = {
+    val childScope: TScope = enterScope(scopeType)
+    val tpe = f(childScope)
+    childScope.exitScope()
+    tpe
+  }
+
+  def scoped(f: TScope => TType, scopeType: ScopeType): TType = {
+    val childScope: TScope = enterScope(scopeType)
+    val tpe = f(childScope)
+    childScope.exitScope()
+    tpe
+  }
+
+  def scoped[U](f: TScope => U, scopeType: ScopeType): U = {
+    val childScope: TScope = enterScope(scopeType)
+    val ret = f(childScope)
+    childScope.exitScope()
+    ret
+  }
+
+  def scoped(f: TScope => Expression, scopeType: ScopeType): Expression = {
+    val childScope: TScope = enterScope(scopeType)
+    val expr = f(childScope)
+    childScope.exitScope()
+    expr
+  }
+
+  def scoped(f: TScope => GeneratorContext, scopeType: ScopeType): GeneratorContext = {
+    val childScope: TScope = enterScope(scopeType)
+    val generated = f(childScope)
+    childScope.exitScope()
+    generated
+  }
 }
 
 object TScope {

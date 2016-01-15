@@ -41,9 +41,9 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
   }
 
   override def equals(that: Any): Boolean = that match {
-    case a: AppliedGenericModifier => a.appliedType == appliedType
+    case a: AppliedGenericModifier => a.getConcreteType == getConcreteType
     case g: GenericModifier => appliedType == g
-    case c: ConcreteType => appliedType == c
+    case c: ConcreteType => getConcreteType == c
     case _ => false
   }
 
