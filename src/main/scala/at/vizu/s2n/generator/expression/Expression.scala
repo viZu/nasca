@@ -332,7 +332,7 @@ object Expression extends LazyLogging {
   }
 
   private def scoped(parentScope: TScope, f: TScope => Expression): Expression = {
-    val childScope: TScope = parentScope.enterScope()
+    val childScope: TScope = parentScope.enterScope(BlockScope)
     val expr = f(childScope)
     childScope.exitScope()
     expr

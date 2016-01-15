@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
  */
 class TScope(private var parent: Option[TScope] = None, private val _this: Option[TType] = None,
              private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None,
-             private val _baseTypes: Option[BaseTypes] = None) extends LazyLogging {
+             private val _baseTypes: Option[BaseTypes] = None, private val scopeType: ScopeType = BlockScope) extends LazyLogging {
 
   private var _types: Seq[TType] = Vector()
   private var _objects: Seq[TType] = Vector()
@@ -42,7 +42,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   // TODO: Optimize?
   def isEmptyScope: Boolean = (_types ++ _objects ++ _identifiers ++ _methods).isEmpty
 
-  def enterScope(): TScope = TScope(this)
+  def enterScope(scopeType: ScopeType): TScope = TScope(this, scopeType)
 
   def enterScope(_this: TType): TScope = TScope(this, _this)
 
@@ -95,7 +95,8 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   def findGeneric(name: String): Option[TType] = {
-    _types.find(_.fullClassName == name) orElse parent.flatMap(_.findGeneric(name))
+    if (scopeType == ClassScope) _types.find(_.fullClassName == name)
+    else _types.find(_.fullClassName == name) orElse parent.flatMap(_.findGeneric(name))
   }
 
   def findClass(name: String): Option[TType] = {
@@ -314,9 +315,19 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 }
 
 object TScope {
-  def apply(baseTypes: BaseTypes) = new TScope(_baseTypes = Option(baseTypes))
+  def apply(baseTypes: BaseTypes) = new TScope(_baseTypes = Option(baseTypes), scopeType = RootScope)
 
-  def apply(parent: TScope) = new TScope(Option(parent))
+  def apply(parent: TScope, scopeType: ScopeType) = new TScope(Option(parent), scopeType = scopeType)
 
-  def apply(parent: TScope, _this: TType) = new TScope(Option(parent), Option(_this))
+  def apply(parent: TScope, _this: TType) = new TScope(Option(parent), Option(_this), scopeType = ClassScope)
 }
+
+trait ScopeType
+
+object RootScope extends ScopeType
+
+object ClassScope extends ScopeType
+
+object MethodScope extends ScopeType
+
+object BlockScope extends ScopeType

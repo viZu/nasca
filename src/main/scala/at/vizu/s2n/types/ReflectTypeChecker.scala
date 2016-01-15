@@ -69,7 +69,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
     private def handleEnterChildScope() = {
       if (!scoped) {
-        currentScope = currentScope.enterScope()
+        currentScope = currentScope.enterScope(BlockScope)
         currentScope.currentFile = ast.fileName
         currentScope.currentPackage = packageName
         scoped = true
@@ -410,21 +410,21 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   }
 
   private def scoped(scope: TScope, f: TScope => Option[TType]) = {
-    val childScope: TScope = scope.enterScope()
+    val childScope: TScope = scope.enterScope(BlockScope)
     val tpe = f(childScope)
     childScope.exitScope()
     tpe
   }
 
   private def scoped(scope: TScope, f: TScope => TType) = {
-    val childScope: TScope = scope.enterScope()
+    val childScope: TScope = scope.enterScope(BlockScope)
     val tpe = f(childScope)
     childScope.exitScope()
     tpe
   }
 
   private def scoped[U](scope: TScope, f: TScope => U) = {
-    val childScope: TScope = scope.enterScope()
+    val childScope: TScope = scope.enterScope(BlockScope)
     f(childScope)
     childScope.exitScope()
   }

@@ -72,6 +72,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
         val tpe: ConcreteType = getType(packageName, c, rootScope.findClass)
         handleEnterChildScope()
         addGenericModifiers(c.tparams, tpe)
+        handleExitChildScope()
       case PackageDef(Ident(name), subtree) =>
         pkgBuilder.append(name.toString)
         super.traverse(tree)
@@ -80,10 +81,15 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
 
     private def handleEnterChildScope() = {
       if (!scoped) {
-        currentScope = currentScope.enterScope()
+        currentScope = currentScope.enterScope(ClassScope)
         currentScope.currentPackage = packageName
         scoped = true
       }
+    }
+
+    private def handleExitChildScope() = {
+      currentScope = currentScope.exitScope()
+      scoped = false
     }
 
     private def packageName = pkgBuilder.mkString(".")
@@ -93,7 +99,6 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
     tpe match {
       case g: GenericType =>
         generics.map(TypeUtils.createGenericModifier(currentScope, _)).foreach(gm => {
-          currentScope.addClass(gm)
           g.addGenericModifier(gm)
         })
       case _ =>
@@ -110,6 +115,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
         val traverser = new Phase3Traverser
         traverser.traverse(t.internalTree)
       })
+      currentScope = currentScope.exitScope()
     }, Debug)
   }
 
@@ -120,8 +126,9 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
     override def traverse(tree: Tree): Unit = tree match {
       case c: ClassDef =>
         val tpe: ConcreteType = getType(packageName, c, rootScope.findClass)
-        handleEnterChildScope()
+        handleEnterChildScope(tpe)
         addConstructorToTpe(currentScope, c.impl.body, tpe)
+        handleExitChildScope()
       case m: ModuleDef =>
         val tpe: ConcreteType = getType(packageName, m, rootScope.findObject)
         handleEnterChildScope()
@@ -132,12 +139,18 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
       case _ => super.traverse(tree)
     }
 
-    private def handleEnterChildScope() = {
+    private def handleEnterChildScope(c: TType = null) = {
       if (!scoped) {
-        currentScope = currentScope.enterScope()
+        currentScope = currentScope.enterScope(ClassScope)
+        if (c != null) TypeUtils.addGenericModifiersToScope(currentScope, c)
         currentScope.currentPackage = packageName
         scoped = true
       }
+    }
+
+    private def handleExitChildScope() = {
+      currentScope = currentScope.exitScope()
+      scoped = false
     }
 
     private def packageName = pkgBuilder.mkString(".")
@@ -181,7 +194,9 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
           handleEnterChildScope()
           val thisTpe: TType = TypeUtils.findType(currentScope, c)
           currentScope = currentScope.enterScope(thisTpe)
+          TypeUtils.addGenericModifiersToScope(currentScope, thisTpe)
           tpe = enhanceClass(packageName, c)
+          handleExitChildScope()
         case m: ModuleDef =>
           handleEnterChildScope()
           tpe = enhanceObject(packageName, m)
@@ -201,10 +216,15 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
 
     private def handleEnterChildScope() = {
       if (!scoped) {
-        currentScope = currentScope.enterScope()
+        currentScope = currentScope.enterScope(BlockScope)
         currentScope.currentPackage = packageName
         scoped = true
       }
+    }
+
+    private def handleExitChildScope() = {
+      currentScope = currentScope.exitScope()
+      scoped = false
     }
   }
 
@@ -291,7 +311,10 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
 
   private def createMethod(d: DefDef): Method = {
     logger.trace("Create Method: " + d.name)
-    profile(logger, "Create Method: " + d.name, TypeUtils.createMethod(currentScope, d), Trace)
+    val mScope = currentScope.enterScope(MethodScope)
+    val r = profile(logger, "Create Method: " + d.name, TypeUtils.createMethod(mScope, d), Trace)
+    mScope.exitScope()
+    r
   }
 
   private def createField(v: ValDef): Field = {

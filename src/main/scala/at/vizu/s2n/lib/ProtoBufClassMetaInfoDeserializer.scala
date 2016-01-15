@@ -168,7 +168,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
 
   private def findType(id: String) = {
     types.get(id) orElse scope.findClass(id) orElse
-      scope.findObject(id) getOrElse (throw new RuntimeException("Halp"))
+      scope.findObject(id) getOrElse (throw new RuntimeException("Halp: " + id))
   }
 
   private def getTypeName(tpe: TType) = {

@@ -273,11 +273,8 @@ object TypeUtils extends LazyLogging {
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
-    logger.trace("Generics")
     val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
-    logger.trace("Before Params")
     val params: Seq[Param] = createParamsForMethod(scope, d.vparamss)
-    logger.trace("After Params")
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
     if (retType == null && !constructor) {
@@ -478,6 +475,20 @@ object TypeUtils extends LazyLogging {
     arg match {
       case a: AppliedGenericType => true
       case b: GenericType => true
+    }
+  }
+
+  def addGenericModifiersToScope(scope: TScope, generics: Seq[TypeDef]): Unit = {
+    generics.map(createGenericModifier(scope, _)).foreach(gm => {
+      scope.addClass(gm)
+    })
+  }
+
+  def addGenericModifiersToScope(scope: TScope, t: TType): Unit = {
+    t match {
+      case a: AppliedGenericType =>
+      case g: GenericType => scope.addAllClasses(g.genericModifiers)
+      case _ =>
     }
   }
 

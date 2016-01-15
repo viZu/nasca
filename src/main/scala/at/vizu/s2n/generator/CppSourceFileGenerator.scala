@@ -91,10 +91,10 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
 
   private def generateMethod(scope: TScope, d: DefDef, initCtx: GeneratorContext): GeneratorContext = {
     scoped(scope, (s: TScope) => {
-      TypeUtils.createAndAddGenericModifiers(scope, d.tparams)
-      val method: Method = TypeUtils.findMethodForDef(scope, d)
+      TypeUtils.createAndAddGenericModifiers(s, d.tparams)
+      val method: Method = TypeUtils.findMethodForDef(s, d)
       if (method.isAbstract || tpe.isTrait && method.constructor) ""
-      else if (method.constructor) generateConstructor(scope, method, initCtx)
+      else if (method.constructor) generateConstructor(s, method, initCtx)
       else {
         TypeUtils.addParamsToScope(s, method.params)
         val classString = GeneratorUtils.generateClassTemplate(tpe)
@@ -185,7 +185,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
 
 
   private def scoped(parentScope: TScope, f: TScope => GeneratorContext): GeneratorContext = {
-    val childScope: TScope = parentScope.enterScope()
+    val childScope: TScope = parentScope.enterScope(BlockScope)
     val generated = f(childScope)
     childScope.exitScope()
     generated
