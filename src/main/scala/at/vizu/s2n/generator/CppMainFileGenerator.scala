@@ -32,6 +32,8 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
     //TODO program args!!! -> array to vector
     s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}"
         |#include <iostream>
+        |#include <vector>
+        |#include <string>
         |
         |int main(int argc, char **argv) {
         |  std::shared_ptr<std::vector<std::string>> args = std::shared_ptr<std::vector<std::string>>(new std::vector<std::string>());
