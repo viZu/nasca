@@ -24,6 +24,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   lazy val double = new ConcreteType(_simpleName = "Double", _pkg = RootScalaPackage, _mods = Vector(Trait))
   lazy val nullTpe = new ConcreteType(_simpleName = "Null", _pkg = RootScalaPackage, _mods = Vector(Trait))
   lazy val nothing = new ConcreteType(_simpleName = "Nothing", _pkg = RootScalaPackage, _mods = Vector(Trait))
+  lazy val array = new GenericType(_simpleName = "Array", _pkg = RootScalaPackage, _mods = Vector(Sealed))
 
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
@@ -39,7 +40,8 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     val pris = initPrimitives()
     val nullT = initNull()
     val nothing = initNothing((pris :+ nullT).map(Parent(_)))
-    val allTypes = anys ++ pris :+ numericPrimitive :+ str :+ nullT :+ nothing
+    val array = initArray()
+    val allTypes = anys ++ pris ++ Vector(numericPrimitive, str, nullT, nothing, array)
 
     scope.addAllClasses(allTypes)
 
@@ -90,6 +92,15 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     string.addMethod(Method(ctx, "$plus", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "length", int, Vector(Abstract), nonPointer = true))
     string
+  }
+
+  private def initArray() = {
+    array._parents = Vector(Parent(anyRef))
+    val typeArg = createGenericModifier("T")
+    array.addGenericModifier(typeArg)
+    array.addMethod(Method(ctx, "length", int, Vector()))
+    array.addMethod(Method(ctx, "apply", typeArg, Vector(), Vector(Param(ctx, int, "i"))))
+    array
   }
 
   private def initNumericPrimitive() = {

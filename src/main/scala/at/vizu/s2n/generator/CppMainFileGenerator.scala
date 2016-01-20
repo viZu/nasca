@@ -29,11 +29,17 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
   }
 
   private def generateContent(): String = {
+    //TODO program args!!! -> array to vector
     s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}"
         |#include <iostream>
         |
-       |int main(int argc, char **argv) {
-        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "")}::getInstance()->main();
+        |int main(int argc, char **argv) {
+        |  std::shared_ptr<std::vector<std::string>> args = std::shared_ptr<std::vector<std::string>>(new std::vector<std::string>());
+        |  for (int i = 1; i < argc; ++i) {
+        |      std::string val = std::string(argv[i]);
+        |      args->push_back(val);
+        |  }
+        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "")}::getInstance()->main(args);
         |  return 0;
         |}
      """.stripMargin
@@ -47,8 +53,11 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
     impl match {
       case o: ObjectImplementation =>
         o.tpe.methods.find(_.name == "main") match {
-          case Some(_) =>
-          case None => throw new GeneratorException(s"Class ${impl.tpe.simpleName} does not have a main method")
+          case Some(m) if m.params.size == 1 =>
+            // TODO: handle typeargs
+            if (m.params.map(_.tpe).head.simpleName != "Array")
+              throw new GeneratorException(s"Class ${impl.tpe.simpleName} does not have a main(args: Array[String]) method")
+          case None => throw new GeneratorException(s"Class ${impl.tpe.simpleName} does not have a main(args: Array[String]) method")
         }
       case _ =>
         throw new GeneratorException(s"Class ${impl.tpe.simpleName} was expected to be an object, but was a class")

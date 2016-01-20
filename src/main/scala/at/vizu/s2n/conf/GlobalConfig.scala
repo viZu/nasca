@@ -25,7 +25,20 @@ object GlobalConfig {
 
       withInvocation(new MethodInvocationHandle("print") {
         withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (params) =>
-          getPrintCtx( s"""std::cout << ${params.head}""")
+          getPrintCtx(s"""std::cout << ${params.head}""")
+        }
+      })
+    }
+
+    val array = new ClassInvocations(TypeUtils.RootScalaPackage + ".Array") {
+      withInvocation(new MethodInvocationHandle("length") {
+        withParams() handleAs {
+          GeneratorContext("->size()")
+        }
+      })
+      withInvocation(new MethodInvocationHandle("apply") {
+        withParams(TypeUtils.RootScalaPackage + ".Int") handleAs { params =>
+          GeneratorContext(s"->at(${params.head})")
         }
       })
     }
@@ -45,6 +58,19 @@ object GlobalConfig {
           }
         })
         withIncludeHandle(IncludeHandle("functional", AngleWrapper))
+      })
+      addClassRenamingHandle(new ClassRenamingHandle {
+        withMatcher(t => t.fullClassName == TypeUtils.RootScalaPackage + ".Array")
+        withRename((b, t) => {
+          val typeArgs = t match {
+            case a: AppliedGenericType =>
+              GeneratorUtils.generateTypeArgs(b, a.appliedTypes)
+            case g: GenericType =>
+              GeneratorUtils.generateTypeArgs(b, g.genericModifiers)
+          }
+          typeArgs.enhance(s"std::shared_ptr<std::vector$typeArgs>", Set(this.includeHandle))
+        })
+        withIncludeHandle(IncludeHandle("vector", AngleWrapper))
       })
     }
   }

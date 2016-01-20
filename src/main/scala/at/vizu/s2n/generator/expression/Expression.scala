@@ -125,7 +125,7 @@ object Expression extends LazyLogging {
     TypeUtils.createIdentifier(scope, v, varTpe)
     val rhs = wrapInlineBlockIfBlock(v.rhs)
     val rhsExpr = Expression.applyInternal(baseTypes, scope, rhs)
-    ValDefExpression(baseTypes, varName, rhsExpr)
+    ValDefExpression(baseTypes, varName, varTpe, rhsExpr)
   }
 
   def generateAssignExpression(baseTypes: BaseTypes, scope: TScope, a: Assign) = {
