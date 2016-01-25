@@ -41,27 +41,54 @@ object GlobalConfig {
           GeneratorContext(s"->at(${params.head})")
         }
       })
+      withInvocation(new MethodInvocationHandle("update") {
+        withParams(TypeUtils.RootScalaPackage + ".Int", "T") handleAs { params =>
+          val first = params.head
+          val second = params(1)
+          GeneratorContext(s"->insert(internalArray->begin() + $first, $second)")
+        }
+      })
     }
-    MethodInvocationHandleConfig(Vector(root))
+
+    val string = new ClassInvocations(TypeUtils.RootScalaPackage + ".String") {
+      withInvocation(new MethodInvocationHandle("contains") {
+        withParams(TypeUtils.RootScalaPackage + ".String") handleAs { params =>
+          GeneratorContext(s".find(${params.head}) != std::string::npos")
+        }
+      })
+    }
+    MethodInvocationHandleConfig(Vector(root, array, string))
+  }
+
+  private def getParams(classes: String*): Seq[String] = {
+    classes.map(TypeUtils.RootScalaPackage + "." + _)
   }
 
   private def initClassHandlesConfig() = {
     new ClassHandlesConfig {
       addClassRenamingHandle(new ClassRenamingHandle {
         withMatcher(t => TypeUtils.isFunctionType(t))
-        withRename((b, t) => {
+        withRename(new Renamer((b, t) => {
           t match {
             case a: AppliedGenericType =>
               getFuncCtx(b, a.appliedTypes)
             case g: GenericType =>
               getFuncCtx(b, g.genericModifiers)
           }
-        })
+        }))
         withIncludeHandle(IncludeHandle("functional", AngleWrapper))
       })
       addClassRenamingHandle(new ClassRenamingHandle {
         withMatcher(t => t.fullClassName == TypeUtils.RootScalaPackage + ".Array")
-        withRename((b, t) => {
+        withRename(new Renamer((b, t) => {
+          val typeArgs = t match {
+            case a: AppliedGenericType =>
+              GeneratorUtils.generateTypeArgs(b, a.appliedTypes)
+            case g: GenericType =>
+              GeneratorUtils.generateTypeArgs(b, g.genericModifiers)
+          }
+          typeArgs.enhance(s"std::vector$typeArgs", Set(this.includeHandle))
+        }, (b, t) => {
           val typeArgs = t match {
             case a: AppliedGenericType =>
               GeneratorUtils.generateTypeArgs(b, a.appliedTypes)
@@ -69,7 +96,7 @@ object GlobalConfig {
               GeneratorUtils.generateTypeArgs(b, g.genericModifiers)
           }
           typeArgs.enhance(s"std::shared_ptr<std::vector$typeArgs>", Set(this.includeHandle))
-        })
+        }))
         withIncludeHandle(IncludeHandle("vector", AngleWrapper))
       })
     }

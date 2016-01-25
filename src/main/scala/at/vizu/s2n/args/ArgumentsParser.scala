@@ -57,7 +57,7 @@ object ArgumentsParser {
         if (BinaryType.stringValues.contains(x)) success else failure("value <binarytype> must be either 'exe' or 'lib'")
       } text "binary type - sets the binary type - possible values 'exe,lib' - default 'exe'"
       checkConfig { c =>
-        if (c.binType == Executable && c.main == "") failure("value <mainclass> must be set if <binarytype>='exe'")
+        if (c.binType == Executable && c.main.isEmpty) failure("value <mainclass> must be set if <binarytype>='exe'")
         else if (c.files.isEmpty) failure("<files> must contain at least 1 file")
         else success
       }

@@ -69,7 +69,7 @@ object GeneratorUtils {
   def generateCppTypeName(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else if (GlobalConfig.classConfig.hasRenamingHandle(tpe)) {
-      GlobalConfig.classConfig.getRenamingHandle(tpe)(baseTypes, tpe)
+      GlobalConfig.classConfig.getRenamingHandle(tpe).pointerRenamer(baseTypes, tpe)
     }
     else tpe match {
       case a: AppliedGenericModifier if a.isGenericModifier => a.name
@@ -81,6 +81,9 @@ object GeneratorUtils {
 
   def getCppTypeName(baseTypes: BaseTypes, tpe: TType, withTypeDef: Boolean = false, withTypeName: Boolean = false): GeneratorContext = {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
+    else if (GlobalConfig.classConfig.hasRenamingHandle(tpe)) {
+      GlobalConfig.classConfig.getRenamingHandle(tpe).typeRenamer(baseTypes, tpe)
+    }
     else {
       val typeString = generateTypeArgsFromType(baseTypes, tpe, withTypeName)
       getCppTypeName(tpe.pkg, tpe.simpleName, typeString) + generateIncludeHandles(tpe)

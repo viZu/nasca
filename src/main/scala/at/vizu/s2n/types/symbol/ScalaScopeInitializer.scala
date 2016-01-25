@@ -91,6 +91,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     string.addMethod(Method(ctx, "$times", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "$plus", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "length", int, Vector(Abstract), nonPointer = true))
+    string.addMethod(Method(ctx, "contains", boolean, Vector(Abstract), Vector(Param(ctx, string, "x")), nonPointer = true))
     string
   }
 
@@ -100,6 +101,8 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     array.addGenericModifier(typeArg)
     array.addMethod(Method(ctx, "length", int, Vector()))
     array.addMethod(Method(ctx, "apply", typeArg, Vector(), Vector(Param(ctx, int, "i"))))
+    array.addMethod(Method(ctx, "update", unit, Vector(), Vector(Param(ctx, int, "index"), Param(ctx, typeArg, "value"))))
+    array.addMethod(Method(ctx, TypeUtils.ConstructorName, array, Vector(), Vector(Param(ctx, int, "size")), constructor = true))
     array
   }
 

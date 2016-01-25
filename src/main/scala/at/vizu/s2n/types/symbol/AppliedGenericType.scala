@@ -58,8 +58,8 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   }
 
   override def baseTypeEquals(obj: TType): Boolean = obj match {
-    case a: AppliedGenericType => a.genericType.typeEquals(genericType)
-    case b: GenericType => genericType.typeEquals(b)
+    case a: AppliedGenericType => a.getBaseType.typeEquals(getBaseType)
+    case b: GenericType => getBaseType.typeEquals(b)
     case _ => false
   }
 
@@ -89,5 +89,21 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
     appliedTypes.map({
       case a: AppliedGenericModifier => a.getConcreteType
     }).collect({ case g: GenericModifier => g })
+  }
+
+  override protected def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
+    this.appliedTypes.map({
+      case a: AppliedGenericModifier => a.getConcreteType match {
+        case g: GenericModifier => g.applyType(appliedTypes.get(g).get)
+        case _@t => a
+      }
+    })
+  }
+
+  def getBaseType: GenericType = {
+    genericType match {
+      case a: AppliedGenericType => a.getBaseType
+      case g: GenericType => g
+    }
   }
 }

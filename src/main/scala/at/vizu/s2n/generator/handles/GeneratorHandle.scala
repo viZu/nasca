@@ -26,15 +26,15 @@ case class MethodHandle(content: String) extends GeneratorHandle {
   def key = ""
 }
 
-trait IncludeWrapperStrategy {
+sealed trait IncludeWrapperStrategy {
   def wrapInclude(include: String): String
 }
 
-object AngleWrapper extends IncludeWrapperStrategy {
+case object AngleWrapper extends IncludeWrapperStrategy {
   override def wrapInclude(include: String): String = s"<$include>"
 }
 
-object QuotationWrapper extends IncludeWrapperStrategy {
+case object QuotationWrapper extends IncludeWrapperStrategy {
   override def wrapInclude(include: String): String = s""""$include""""
 }
 

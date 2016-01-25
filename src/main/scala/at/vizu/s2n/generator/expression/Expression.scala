@@ -66,7 +66,6 @@ object Expression extends LazyLogging {
       case f: Function =>
         generateFunctionExpression(scope, f)
       case EmptyTree =>
-        logger.warn("Empty Tree!")
         EmptyExpression(baseTypes.unit)
     }
   }
@@ -164,7 +163,7 @@ object Expression extends LazyLogging {
     val ifPart = IfPart(condExp, thenExp)
     i.elsep match {
       case ei: If => generateIfParts(baseTypes, scope, ei, parts :+ ifPart)
-      case Literal(Constant(b: BoxedUnit)) => (parts, EmptyExpression(baseTypes.unit))
+      case Literal(Constant(b: BoxedUnit)) => (parts :+ ifPart, EmptyExpression(baseTypes.unit))
       case _ =>
         val elseBlock = wrapInBlock(i.elsep)
         (parts :+ ifPart, Expression.applyInternal(baseTypes, scope, elseBlock))
@@ -201,11 +200,19 @@ object Expression extends LazyLogging {
     TypeUtils.findIdent(scope, iName, withParams = argTypes) match {
       case m: Method =>
         val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
-        val methodInvocation = generateMethodInvocation(scope, m, argExpr)
-        if (m.instanceMethod && !opts.ignoreThis) {
+        if (m.name == "apply") {
+          val tpe = TypeUtils.findIdent(scope, iName).tpe
+          val methodInvocation = generateMethodInvocation(scope, m, argExpr, tpe)
+          val tmp = methodInvocation.enhance(s"$iName$methodInvocation")
+          IdentExpression(m.returnType, tmp)
+        } else if (m.instanceMethod && !opts.ignoreThis) {
+          val methodInvocation = generateMethodInvocation(scope, m, argExpr)
           val tmp = methodInvocation.enhance(s"this->${methodInvocation.content}")
           IdentExpression(m.returnType, tmp)
-        } else IdentExpression(m.returnType, methodInvocation)
+        } else {
+          val methodInvocation = generateMethodInvocation(scope, m, argExpr)
+          IdentExpression(m.returnType, methodInvocation)
+        }
       case f: Field => IdentExpression(f.tpe, s"this->$iName")
       case i: Identifier =>
         if (TypeUtils.isFunctionType(i.tpe)) {
@@ -217,9 +224,11 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression]): GeneratorContext = {
-    if (hasInvocationHandle(scope, method)) executeInvocationHandle(scope, method, params)
-    else {
+  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression], onType: TType = null): GeneratorContext = {
+    val typeName = if (onType == null) "" else onType.fullClassName
+    if (hasInvocationHandle(scope, method, typeName)) {
+      executeInvocationHandle(scope, method, params, typeName)
+    } else {
       val paramsAsString = params.map(_.generate.content).mkString
       val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
       paramsAsContext.enhance(s"${method.name}($paramsAsString)")
@@ -232,14 +241,15 @@ object Expression extends LazyLogging {
     paramsAsContext.enhance(s"${ident.name}($paramsAsString)")
   }
 
-  private def hasInvocationHandle(scope: TScope, method: Method): Boolean = {
+  private def hasInvocationHandle(scope: TScope, method: Method, typeName: String = ""): Boolean = {
     val paramTypes = method.params.map(_.tpe)
-    GlobalConfig.invocationConfig.hasInvocationHandle(scope, "", method.name, paramTypes)
+    GlobalConfig.invocationConfig.hasInvocationHandle(scope, typeName, method.name, paramTypes)
   }
 
-  private def executeInvocationHandle(scope: TScope, method: Method, params: Seq[Expression]): GeneratorContext = {
+  private def executeInvocationHandle(scope: TScope, method: Method, params: Seq[Expression],
+                                      className: String = ""): GeneratorContext = {
     val paramTypes = method.params.map(_.tpe)
-    val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, "", method.name, paramTypes)
+    val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, className, method.name, paramTypes)
     val paramsAsString = params.map(_.generate.content)
     handle(paramsAsString)
   }
@@ -258,7 +268,7 @@ object Expression extends LazyLogging {
         val params: Seq[Expression] = apply.args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         val prevPath: Path = if (params.nonEmpty) {
           val argTypes: List[TType] = TypeInference.getTypes(baseTypes, scope, apply.args)
-          val tpe = TypeInference.getType(baseTypes, scope, s.qualifier, argTypes)
+          val tpe = TypeInference.getType(baseTypes, scope, s.qualifier)
           val method: Method = TypeUtils.findMethod(scope, s.name.toString, s.pos.line, argTypes, tpe)
           val appliedMethod = if (method.generics.nonEmpty) {
             val appliedTypes = method.getAppliedTypes(argTypes)

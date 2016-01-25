@@ -34,7 +34,8 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
     val paramsContent: String = paramsContext.content
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
-      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = callCtx.content)
+      val content = varName + callCtx
+      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = content)
     } else if (isOperator(m)) {
       val prettyOperator = prettifyOperator(m.name)
       paramsContext.enhance(s"$varName $prettyOperator $paramsContent")

@@ -91,7 +91,6 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkImplementation(scope: TScope, c: ImplDef) = {
     checkGenerics(scope)
     checkMembers(scope, c.impl)
-    checkMembers(scope, c.impl)
   }
 
   private def checkGenerics(scope: TScope) = {
@@ -107,12 +106,13 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     t.body.foreach(m => checkMember(scope, m))
   }
 
-  private def checkMember(scope: TScope, member: Tree) = {
+  private def checkMember(scope: TScope, member: Tree): Unit = {
     member match {
       case v: ValDef => checkValMember(scope, v)
       case d: DefDef => checkDefMember(scope, d)
       case a: Apply => checkApply(scope, a)
       case s: Select => checkSelect(scope, s)
+      case EmptyTree =>
       case _ => TypeErrors.addError(scope, member.pos.line, s"unrecognized member ${member.toString()}")
     }
   }
@@ -167,20 +167,6 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case EmptyTree => EmptyType
       case _ => checkStatement(scope, body)
     }
-    //    body match {
-    //      case b: Block => Some(checkBlock(scope, b))
-    //      case v: ValDef => Some(checkVal(scope, v))
-    //      case d: DefDef => Some(checkDef(scope, d))
-    //      case a: Assign => Some(checkAssign(scope, a))
-    //      case a: Apply => Some(checkApply(scope, a))
-    //      case s: Select => Some(checkSelect(scope, s))
-    //      case i: Ident => Some(checkIdent(scope, i))
-    //      case l: Literal => Some(checkLiteral(scope, l))
-    //      case i: If => Some(checkIf(scope, i))
-    //      case l: LabelDef => Some(checkLabel(scope, l))
-    //      case f: Function => Some(checkFunction(scope, f))
-    //      case EmptyTree => None
-    //    }
   }
 
   private def checkBodyOptional(scope: TScope, body: Tree): Option[TType] = {
@@ -209,6 +195,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case i: If => checkIf(scope, i)
     case l: LabelDef => checkLabel(scope, l)
     case f: Function => checkFunction(scope, f)
+    case m: Match => checkMatch(scope, m)
   }
 
   private def checkApply(scope: TScope, apply: Apply): TType = {
@@ -292,7 +279,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     val returnTpe: Option[TType] = scope.scoped(checkValOrDefBody(_: TScope, v.rhs, expected), BlockScope)
     returnTpe match {
       case Some(tpe) =>
-        TypeUtils.createIdentifier(scope, v, tpe)
+        val typeToAdd = if (expected != null) expected else tpe
+        TypeUtils.createIdentifier(scope, v, typeToAdd)
       case None => TypeErrors.addError(scope, v.pos.line, s"Value definition ${v.name} requires a valid return type")
     }
 
@@ -314,7 +302,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   /**
    * Check while / do while
-   * @param scope the current scope
+    *
+    * @param scope the current scope
    * @param l
    * @return
    */
@@ -409,4 +398,30 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
   }
 
+  private def checkMatch(scope: TScope, m: Match): TType = {
+    val selector = checkStatement(scope, m.selector)
+    val checkedCases = m.cases.map(checkCase(scope, selector, _))
+    TypeUtils.findCommonBaseClass(scope, checkedCases)
+  }
+
+  private def checkCase(scope: TScope, selectorType: TType, c: CaseDef) = {
+    scope.scoped((s: TScope) => {
+      checkPattern(s, selectorType, c.pat)
+      checkStatement(s, c.body)
+    }, BlockScope)
+  }
+
+  private def checkPattern(scope: TScope, selectorType: TType, pat: Tree) = {
+    pat match {
+      case l: Literal => checkLiteral(scope, l)
+      case ident: Ident => TypeUtils.findIdent(scope, ident.name.toString) match {
+        case i: Identifier if i.mutable => throw new RuntimeException
+        case m: Method => throw new RuntimeException
+        case f: Field if f.isMutable => throw new RuntimeException
+        case _@s => s.tpe
+      }
+      case a: Apply => TypeUtils.unitType(scope)
+      case b: Bind => TypeUtils.unitType(scope)
+    }
+  }
 }

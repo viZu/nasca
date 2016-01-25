@@ -54,6 +54,9 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     oldParam.tpe match {
       case g: GenericModifier => Param(oldParam.ctx, getNewTpe(types, g, appliedType, applyPartly = false),
         oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
+      case g: GenericType if g.genericModifiers.nonEmpty =>
+        val newTpe: TType = getNewTpe(types, g, appliedType, applyPartly = false)
+        Param(oldParam.ctx, newTpe, oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
       case _ => oldParam // Garbage collector?
     }
   }
@@ -66,11 +69,14 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     field.tpe match {
       case g: GenericModifier => Field(field.ctx, field.mods, field.name,
         getNewTpe(types, g, appliedType, applyPartly = false))
+      case g: GenericType =>
+        val newTpe: TType = getNewTpe(types, g, appliedType, applyPartly = false)
+        Field(field.ctx, field.mods, field.name, newTpe)
       case _ => field // Garbage collector?
     }
   }
 
-  private def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
+  protected def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
     getGenericModifiers.map(gm => {
       if (appliedTypes.get(gm).get == null) gm
       else gm.applyType(appliedTypes.get(gm).get)
@@ -85,7 +91,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
             case None => g
             case Some(t) => g.applyType(t)
           }
-          case _ => ???
+          case _@t => t
         }
       case g: GenericModifier =>
         types.get(g) match {

@@ -29,7 +29,6 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
   }
 
   private def generateContent(): String = {
-    //TODO program args!!! -> array to vector
     s"""#include "${GeneratorUtils.getHeaderFileName(tpe)}"
         |#include <iostream>
         |#include <vector>

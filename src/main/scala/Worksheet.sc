@@ -1,5 +1,6 @@
-import at.vizu.s2n.LinkedList
+val tw = new TWDict
 
-val l = new LinkedList[Int]
-l.prepend(43)
-l.toString
+tw.savePerson(new Person("Eli", "1"))
+tw.savePerson(new Person("Fritz", "2"))
+tw.savePerson(new Person("Friedrich", "3"))
+tw.searchPerson("Fri").size

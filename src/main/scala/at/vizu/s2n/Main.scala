@@ -22,13 +22,13 @@ object Main extends LazyLogging {
       val environment = Environments(arguments)
       environment.compile(arguments)
     } catch {
-      case ae: ArgumentException => logger.error("Wrong arguments", ae)
-      case iae: IllegalArgumentException => logger.error("Illegal arguments", iae)
-      case te: TypeException => logger.error(te.formattedMessage, te)
+      case ae: ArgumentException => logger.error("Wrong arguments: {}", ae.getMessage)
+      case iae: IllegalArgumentException => logger.error("Illegal arguments")
+      case te: TypeException => logger.error(te.formattedMessage)
       case ce: CompilerException => ce.logErrors(logger)
       case ec: ExtCompilerException => logger.error(ec.getMessage)
-      case e: Exception => logger.error("An error occurred", e)
-      case tb: ToolBoxError => logger.error("Error initializing scala toolbox", tb)
+      case e: Exception => logger.error("An error occurred: {}", e.getMessage)
+      case tb: ToolBoxError => logger.error("Error initializing scala toolbox: {}", tb.getMessage)
     }
   }
 

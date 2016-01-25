@@ -22,7 +22,7 @@ case class Arguments(env: String = "",
   lazy val generatedDir = out.resolve(Constants.GeneratedDir)
 }
 
-trait BinaryType {
+sealed trait BinaryType {
   def isLibrary: Boolean
 
   def isExecutable: Boolean = !isLibrary
@@ -40,10 +40,10 @@ object BinaryType {
   def stringValues = Set("lib", "exe")
 }
 
-object Executable extends BinaryType {
+case object Executable extends BinaryType {
   def isLibrary: Boolean = false
 }
 
-object Library extends BinaryType {
+case object Library extends BinaryType {
   def isLibrary: Boolean = true
 }

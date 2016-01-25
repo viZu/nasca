@@ -5,13 +5,13 @@ import com.typesafe.scalalogging.LazyLogging
 /**
   * Phil on 25.12.15.
   */
-trait LogLevel {
+sealed trait LogLevel {
   val logPriority: Int
 
   def >=(other: LogLevel) = logPriority >= other.logPriority
 }
 
-object LogLevel extends LazyLogging {
+case object LogLevel extends LazyLogging {
   def apply(str: String) = str.toLowerCase match {
     case "trace" => Trace
     case "debug" => Debug
@@ -28,32 +28,32 @@ object LogLevel extends LazyLogging {
   def stringValues = values.map(_.toString.toLowerCase)
 }
 
-object Trace extends LogLevel {
+case object Trace extends LogLevel {
   override val logPriority: Int = 0
 
   override def toString: String = "Trace"
 
 }
 
-object Debug extends LogLevel {
+case object Debug extends LogLevel {
   override val logPriority: Int = 1
 
   override def toString: String = "Debug"
 }
 
-object Info extends LogLevel {
+case object Info extends LogLevel {
   override val logPriority: Int = 2
 
   override def toString: String = "Info"
 }
 
-object Warn extends LogLevel {
+case object Warn extends LogLevel {
   override val logPriority: Int = 3
 
   override def toString: String = "Warn"
 }
 
-object Error extends LogLevel {
+case object Error extends LogLevel {
   override val logPriority: Int = 4
 
   override def toString: String = "Error"

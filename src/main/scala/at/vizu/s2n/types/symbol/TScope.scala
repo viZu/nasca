@@ -52,13 +52,13 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     val parent = this.parent
 
     // cleanup for garbage collector ?
-    this.parent = null
-    this._types = null
-    this._objects = null
-    this._identifiers = null
-    this._typeAliases = null
-    this._currentFile = null
-    this._currentPackage = null
+    //this.parent = null
+    //this._types = null
+    //this._objects = null
+    //this._identifiers = null
+    //this._typeAliases = null
+    //this._currentFile = null
+    //this._currentPackage = null
     parent.get //Throw exception if parent == None
   }
 
@@ -199,6 +199,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   /**
     * For finding object identifier
+    *
     * @param name
     * @return
     */
@@ -264,11 +265,15 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   }
 
   private def findApply(name: String, args: Seq[TType]): Option[Method] = {
+    val thisTpe = findThis()
     profile(logger, "findApply-findObjectWithAlias", findObjectWithAlias(name), Trace) match {
-      case Some(tpe) => tpe.findApply(findThis(), args)
+      case Some(tpe) => tpe.findApply(thisTpe, args)
       case None => profile(logger, "findApply-findIdentifier", findIdentifier(name), Trace) match {
-        case Some(i) => i.tpe.findApply(findThis(), args)
-        case None => None
+        case Some(i) => i.tpe.findApply(thisTpe, args)
+        case None => thisTpe.findField(thisTpe, name) match {
+          case Some(f) => f.tpe.findApply(thisTpe, args)
+          case None => None
+        }
       }
     }
   }
@@ -313,6 +318,8 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     val myBaseTypes = baseTypes
     objects.filter(!myBaseTypes.isBaseType(_))
   }
+
+  def isRootScope: Boolean = parent.isEmpty
 
 
   /**

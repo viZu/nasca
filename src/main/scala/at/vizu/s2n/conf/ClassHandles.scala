@@ -12,13 +12,13 @@ import scala.collection.mutable.ArrayBuffer
 class ClassRenamingHandle {
 
   private[conf] var matcher: TType => Boolean = null
-  private[conf] var renamer: (BaseTypes, TType) => GeneratorContext = null
+  private[conf] var renamer: Renamer = null
   private[conf] var includeHandle: IncludeHandle = null
 
   def withMatcher(f: TType => Boolean): Unit = matcher = f
 
 
-  def withRename(f: (BaseTypes, TType) => GeneratorContext): Unit = renamer = f
+  def withRename(renamer: Renamer): Unit = this.renamer = renamer
 
 
   def withIncludeHandle(i: IncludeHandle) = includeHandle = i
@@ -55,6 +55,17 @@ class ClassHandlesConfig {
       case None => null
       case Some(h) => h.renamer
     }
+  }
+
+}
+
+class Renamer(renamer: (BaseTypes, TType) => GeneratorContext, _pointerRenamer: (BaseTypes, TType) => GeneratorContext = null) {
+
+  def typeRenamer = renamer
+
+  def pointerRenamer = {
+    if (_pointerRenamer != null) _pointerRenamer
+    else renamer
   }
 
 }

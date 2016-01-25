@@ -381,7 +381,7 @@ object TypeUtils extends LazyLogging {
     * Member
     */
 
-  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): (Any) = {
+  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): Identifiable = {
     scope.findIdentifier(name) match {
       case Some(ident) => ident
       case None =>
@@ -517,6 +517,19 @@ object TypeUtils extends LazyLogging {
    */
 
   def toString(nameables: Seq[Nameable]) = nameables.map(_.name).mkString(", ")
+
+  def findCommonBaseClass(scope: TScope, tpes: Seq[TType]): TType = {
+    def findCommonBaseClassAcc(tpe: TType, nextTypes: Seq[TType]): TType = {
+      nextTypes match {
+        case Seq() => tpe
+        case head +: tail => findCommonBaseClassAcc(findCommonBaseClass(scope, tpe, head), tail)
+      }
+    }
+    tpes match {
+      case Seq() => nothingType(scope)
+      case head +: tail => findCommonBaseClassAcc(head, tail)
+    }
+  }
 
   def findCommonBaseClass(scope: TScope, tpe1: TType, tpe2: TType): TType = {
     val unit: TType = unitType(scope)

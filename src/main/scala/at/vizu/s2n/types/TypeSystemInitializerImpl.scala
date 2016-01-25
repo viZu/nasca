@@ -115,7 +115,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
         val traverser = new Phase3Traverser
         traverser.traverse(t.internalTree)
       })
-      currentScope = currentScope.exitScope()
+      if (!currentScope.isRootScope) currentScope = currentScope.exitScope()
     }, Debug)
   }
 
