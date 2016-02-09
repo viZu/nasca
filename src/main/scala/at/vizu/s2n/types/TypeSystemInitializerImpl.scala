@@ -157,9 +157,11 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
   }
 
   private def addConstructorToTpe(scope: TScope, member: List[Tree], tpe: ConcreteType) = {
+    var primary = true
     member.collect({ case d: DefDef => d }).filter(d => TypeUtils.isConstructor(d.name.toString)).foreach(d => {
-      val constructor = TypeUtils.createMethod(scope, d)
+      val constructor = TypeUtils.createMethod(scope, d, primaryConstructor = primary)
       tpe.addMethod(constructor)
+      if (primary) primary = false
     })
   }
 

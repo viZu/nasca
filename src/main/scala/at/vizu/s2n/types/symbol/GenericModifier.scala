@@ -21,7 +21,19 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
 
   override def simpleName: String = genericName
 
-  override def hasParent(tpe: TType): Boolean = upperBound.hasParent(tpe)
+  override def hasParent(tpe: TType): Boolean = this == tpe || upperBound.hasParent(tpe) || hasParentAsLowerType(tpe)
+
+  private def hasParentAsLowerType(tpe: TType): Boolean = tpe match {
+    case a: AppliedGenericModifier => false
+    case g: GenericModifier => hasParent(g.lowerBound)
+    case _ => false
+  }
+
+  private def hasLowerBoundAsParent(tpe: TType) = tpe match {
+    case a: AppliedGenericModifier => false
+    case g: GenericModifier => tpe.hasParent(this.lowerBound)
+    case _ => false
+  }
 
   override def isAssignableFrom(other: TType): Boolean = other.hasParent(upperBound)
 

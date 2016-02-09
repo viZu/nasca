@@ -1,6 +1,6 @@
 package at.vizu.s2n.lib
 
-import at.vizu.s2n.gen.proto.Meta._
+import at.vizu.s2n.gen.meta._
 import at.vizu.s2n.types.symbol.TypeUtils._
 import at.vizu.s2n.types.symbol._
 
@@ -69,16 +69,29 @@ class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
     MetaAppliedGenericModifier(agm.serializationId, metaCtx, appliedType, genericModifier)
   }
 
-  def methodToMeta(method: Method): MetaMethod = {
+  def methodToMeta(method: Method): MetaMethod = method match {
+    case c: Constructor => constructorToMeta(c)
+    case _ => instanceMethodToMeta(method)
+  }
+
+  def instanceMethodToMeta(method: Method): MetaMethod = {
     val metaCtx = contextToMeta(method.ctx)
     val typeName = handleType(method.tpe)
     val modifier = method.modifiers.map(modifierToMeta).toSeq
     val params = method.params.map(paramToMeta)
     val genericMods = method.generics.map(genericModToMeta)
-    val constructor = boolToOption(method.constructor)
     val instanceMethod = boolToOption(method.instanceMethod)
     val operator = boolToOption(method.operator)
-    MetaMethod(metaCtx, method.name, typeName, modifier, params, genericMods, constructor, instanceMethod, operator)
+    MetaMethod(metaCtx, method.name, typeName, modifier, params, genericMods, None, instanceMethod, operator)
+  }
+
+  def constructorToMeta(method: Constructor): MetaMethod = {
+    val metaCtx = contextToMeta(method.ctx)
+    val typeName = handleType(method.tpe)
+    val modifier = method.modifiers.map(modifierToMeta).toSeq
+    val params = method.params.map(paramToMeta)
+    val primary = boolToOption(method.primary)
+    MetaMethod(metaCtx, TypeUtils.ConstructorName, typeName, modifier, params, constructor = Some(true), primary = primary)
   }
 
   def genericModToMeta(gm: GenericModifier): MetaGenericModifier = {

@@ -3,10 +3,12 @@ package at.vizu.s2n.types.symbol
 /**
  * Phil on 07.10.15.
  */
-case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Vector(),
-                  generics: Seq[GenericModifier] = Vector(), constructor: Boolean = false, instanceMethod: Boolean = true,
-                  operator: Boolean = false, nonPointer: Boolean = false)
+class Method(val ctx: Context, val name: String, val returnType: TType, val mods: Seq[Modifier], val params: Seq[Param] = Vector(),
+             val generics: Seq[GenericModifier] = Vector(), val instanceMethod: Boolean = true,
+             val operator: Boolean = false, val nonPointer: Boolean = false)
   extends Member {
+
+  def constructor: Boolean = false
 
   def checkArgs(argsToCheck: Seq[TType]) = {
     params.map(_.tpe) == argsToCheck
@@ -71,4 +73,12 @@ case class Method(ctx: Context, name: String, returnType: TType, mods: Seq[Modif
   }
 
   override def tpe: TType = returnType
+}
+
+object Method {
+  def apply(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Vector(),
+            generics: Seq[GenericModifier] = Vector(), instanceMethod: Boolean = true,
+            operator: Boolean = false, nonPointer: Boolean = false) = {
+    new Method(ctx, name, returnType, mods, params, generics, instanceMethod, operator, nonPointer)
+  }
 }

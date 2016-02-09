@@ -83,8 +83,10 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def handleConstructor(m: Method) = {
-    if (m.constructor) Method(m.ctx, m.name, this, m.mods, m.params, m.generics, m.constructor)
-    else m
+    m match {
+      case c: Constructor => Constructor(c.ctx, this, c.mods, c.params, c.primary)
+      case _ => m
+    }
   }
 
   private def validateMethod(method: Method) = {

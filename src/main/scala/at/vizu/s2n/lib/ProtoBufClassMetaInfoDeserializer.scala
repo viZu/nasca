@@ -1,6 +1,6 @@
 package at.vizu.s2n.lib
 
-import at.vizu.s2n.gen.proto.Meta._
+import at.vizu.s2n.gen.meta._
 import at.vizu.s2n.types.symbol._
 
 import scala.collection.mutable
@@ -145,7 +145,9 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
     val constructor: Boolean = meta.constructor.isDefined
     val instanceMethod: Boolean = meta.instanceMethod.isDefined
     val operator: Boolean = meta.operator.isDefined
-    Method(ctx, meta.name, tpe, mods, params, generics, constructor, instanceMethod, operator)
+    val primary: Boolean = meta.primary.isDefined
+    if (constructor) Constructor(ctx, tpe, mods, params, primary)
+    else Method(ctx, meta.name, tpe, mods, params, generics, instanceMethod, operator)
   }
 
   private def metaParamToReal(meta: MetaParam): Param = {

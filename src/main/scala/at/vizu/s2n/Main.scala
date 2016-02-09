@@ -27,7 +27,7 @@ object Main extends LazyLogging {
       case te: TypeException => logger.error(te.formattedMessage)
       case ce: CompilerException => ce.logErrors(logger)
       case ec: ExtCompilerException => logger.error(ec.getMessage)
-      case e: Exception => logger.error("An error occurred: {}", e.getMessage)
+      case e: Exception => logger.error("An error occurred", e)
       case tb: ToolBoxError => logger.error("Error initializing scala toolbox: {}", tb.getMessage)
     }
   }

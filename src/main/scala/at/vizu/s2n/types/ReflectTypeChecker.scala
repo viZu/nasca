@@ -34,11 +34,16 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
     override def traverse(tree: Tree): Unit = {
       tree match {
-        case c: ImplDef =>
+        case c: ClassDef =>
           handleEnterChildScope()
           val thisTpe: TType = TypeUtils.findType(currentScope, c)
           checkImplementation(currentScope.enterScope(thisTpe), c)
           impls += getImplementation(c, thisTpe)
+        case m: ModuleDef =>
+          handleEnterChildScope()
+          val thisTpe: TType = TypeUtils.findType(currentScope, m, searchObject = true)
+          checkImplementation(currentScope.enterScope(thisTpe), m)
+          impls += getImplementation(m, thisTpe)
         case PackageDef(Ident(name), subtree) =>
           pkgBuilder.append(name.toString)
           super.traverse(tree)
@@ -188,6 +193,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case v: ValDef => checkVal(scope, v)
     case a: Assign => checkAssign(scope, a)
     case d: DefDef => checkDef(scope, d)
+    case Apply(s: Super, lst: List[Tree]) => scope.findThis() // skip super call in constructor
     case a: Apply => checkApply(scope, a)
     case s: Select => checkSelect(scope, s)
     case i: Ident => checkIdent(scope, i)
@@ -196,6 +202,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case l: LabelDef => checkLabel(scope, l)
     case f: Function => checkFunction(scope, f)
     case m: Match => checkMatch(scope, m)
+    case t: This => scope.findThis()
   }
 
   private def checkApply(scope: TScope, apply: Apply): TType = {
@@ -234,7 +241,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
   private def checkQualifier(scope: TScope, qualifier: Tree): TType = qualifier match {
     case l: Literal => TypeUtils.findType(scope, l)
-    case i: Ident => TypeUtils.findIdentifier(scope, i).tpe
+    case i: Ident => TypeUtils.findIdent(scope, i.name.toString).tpe
     case a: Apply => checkApply(scope, a)
     case t: This => scope.findThis()
     case s: Select => checkSelect(scope, s)
@@ -264,7 +271,11 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
             val thisTpe: TType = scope.findThis()
             thisTpe.findField(thisTpe, iName) match {
               case Some(f) => f.tpe
-              case None => TypeErrors.addError(scope, ident.pos.line, s"Value $iName not found")
+              case None =>
+                scope.findObject(iName) match {
+                  case Some(o) => o
+                  case None => TypeErrors.addError(scope, ident.pos.line, s"Value $iName not found")
+                }
             }
         }
     }

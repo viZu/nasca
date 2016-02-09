@@ -102,7 +102,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     array.addMethod(Method(ctx, "length", int, Vector()))
     array.addMethod(Method(ctx, "apply", typeArg, Vector(), Vector(Param(ctx, int, "i"))))
     array.addMethod(Method(ctx, "update", unit, Vector(), Vector(Param(ctx, int, "index"), Param(ctx, typeArg, "value"))))
-    array.addMethod(Method(ctx, TypeUtils.ConstructorName, array, Vector(), Vector(Param(ctx, int, "size")), constructor = true))
+    array.addMethod(Constructor(ctx, array, Vector(), Vector(Param(ctx, int, "size")), primary = true))
     array
   }
 

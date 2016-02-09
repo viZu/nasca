@@ -33,6 +33,10 @@ object Expression extends LazyLogging {
     applyInternal(baseTypes, scope, t, opts)
   }
 
+  def apply(scope: TScope, ts: Seq[Any]): Seq[Expression] = {
+    ts.map(apply(scope.baseTypes, scope, _, ExpressionOptions()))
+  }
+
   private def applyInternal(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
     t match {
       case l: Literal =>

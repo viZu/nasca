@@ -1,6 +1,6 @@
 package at.vizu.s2n.types.symbol
 
-import at.vizu.s2n.error.TypeErrors
+import at.vizu.s2n.error.{Errors, TypeErrors}
 import at.vizu.s2n.exception.TypeException
 import com.typesafe.scalalogging.LazyLogging
 
@@ -84,7 +84,7 @@ object TypeUtils extends LazyLogging {
     * Types
     */
 
-  def findType(scope: TScope, typeTree: Tree): TType = {
+  def findType(scope: TScope, typeTree: Tree, searchObject: Boolean = false): TType = {
     def throwTypeNotFound(typeName: String) = {
       val msg = s"value $typeName not found"
       TypeErrors.addError(scope, typeTree.pos.line, msg)
@@ -94,7 +94,8 @@ object TypeUtils extends LazyLogging {
       case rt: RefTree => findClass(scope, rt.name.toString, rt.pos.line)
       case id: ImplDef =>
         val tpeName: String = id.name.toString
-        scope.findClass(tpeName).orElse(scope.findObject(tpeName)).getOrElse(throwTypeNotFound(tpeName))
+        if (searchObject) scope.findObject(tpeName).getOrElse(throwTypeNotFound(tpeName))
+        else scope.findClass(tpeName).getOrElse(throwTypeNotFound(tpeName))
       case l: Literal => findTypeForLiteral(scope, l).getOrElse(throwTypeNotFound(l.value.value.getClass.getName))
       case t: This => scope.findThis()
       case n: New => findType(scope, n.tpt)
@@ -265,12 +266,13 @@ object TypeUtils extends LazyLogging {
   }
 
   private def throwMethodNotFound(scope: TScope, methodName: String, args: Seq[TType], line: Int) = {
+    Errors.validate(s => "")
     val argList = TypeUtils.toString(args)
     val msg = s"No method $methodName($argList) found"
     throw new TypeException(scope.currentFile, line, msg)
   }
 
-  def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true): Method = {
+  def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true, primaryConstructor: Boolean = false): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
     val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
@@ -281,7 +283,8 @@ object TypeUtils extends LazyLogging {
       TypeErrors.addError(ctx, s"A return type for Method $methodName is required ")
     }
     //TODO check if Method exists in current scope
-    Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, constructor, instanceMethod)
+    if (constructor) Constructor(ctx, retType, TypeUtils.getModifiers(d.mods), params, primaryConstructor)
+    else Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, instanceMethod)
   }
 
   def createParamsForMethod(scope: TScope, params: Seq[Seq[Tree]]): Seq[Param] = {
@@ -363,7 +366,8 @@ object TypeUtils extends LazyLogging {
       throw new TypeException(scope.currentFile, i.pos.line, msg)
     }
     val name: String = i.name.toString
-    scope.findIdentifier(name) orElse scope.findThis().findField(scope.findThis(), name)
+    val thisTpe: TType = scope.findThis()
+    scope.findIdentifier(name) orElse thisTpe.findField(thisTpe, name)
       .map(_.asIdentifier) getOrElse throwIdentifierNotFound(name)
   }
 
@@ -535,6 +539,7 @@ object TypeUtils extends LazyLogging {
     val unit: TType = unitType(scope)
     if (tpe1 == unit || tpe2 == unit) unit
     else {
+      val seq: Seq[Any] = if (true) Vector(1) else List("asdasd")
       var foundType: TType = null
       tpe1.foreachType(t => {
         if (foundType == null && tpe2.hasParent(t)) foundType = t

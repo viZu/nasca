@@ -2,7 +2,7 @@ package at.vizu.s2n.generator
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.file.ScalaFiles
-import at.vizu.s2n.generator.expression.{ConstructorExpression, Expression}
+import at.vizu.s2n.generator.expression.{Expression, PrimaryConstructorExpression, SecondaryConstructorExpression}
 import at.vizu.s2n.generator.handles._
 import at.vizu.s2n.types.result.Implementation
 import at.vizu.s2n.types.symbol._
@@ -94,7 +94,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
       TypeUtils.createAndAddGenericModifiers(s, d.tparams)
       val method: Method = TypeUtils.findMethodForDef(s, d)
       val ctx: GeneratorContext = if (method.isAbstract || tpe.isTrait && method.constructor) ""
-      else if (method.constructor) generateConstructor(s, method, initCtx)
+      else if (method.constructor) generateConstructor(s, method, initCtx, d)
       else {
         TypeUtils.addParamsToScope(s, method.params)
         val classString = GeneratorUtils.generateClassTemplate(tpe)
@@ -105,9 +105,21 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     }, MethodScope)
   }
 
-  private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext): GeneratorContext = {
-    if (initCtx.isEmpty) ConstructorExpression(scope, method, "").generate // no in
-    else ConstructorExpression(scope, method, classInitMethodName).generate
+  private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext,
+                                  d: DefDef): GeneratorContext = method match {
+    case c: Constructor if c.primary =>
+      if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").generate // no in
+      else PrimaryConstructorExpression(scope, c, classInitMethodName).generate
+    case c: Constructor =>
+      scope.scoped((childScope: TScope) => {
+        TypeUtils.addParamsToScope(scope, c.params)
+        val block = Expression.wrapInBlock(d.rhs)
+        val stats: List[Expression] = block.stats.tail.map(Expression(scope.baseTypes, scope, _))
+        val primaryCallArgs = block.stats.head match {
+          case Apply(i: Ident, args) if i.name.toString == TypeUtils.ConstructorName => Expression(scope, args)
+        }
+        SecondaryConstructorExpression(scope, c, primaryCallArgs, stats).generate
+      }, MethodScope)
   }
 
   private def generateField(scope: TScope, v: ValDef): GeneratorContext = {

@@ -52,6 +52,7 @@ message MetaMethod {
     optional bool constructor = 7;
     optional bool instanceMethod = 8;
     optional bool operator = 9;
+    optional bool primary = 10;
 }
 
 message MetaGenericModifier {
