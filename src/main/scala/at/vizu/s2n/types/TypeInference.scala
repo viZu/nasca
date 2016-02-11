@@ -38,6 +38,7 @@ object TypeInference extends LazyLogging {
       case i: If => getTypeIf(baseTypes, scope, i)
       case l: LabelDef => baseTypes.unit
       case f: Function => getTypeFunction(scope, f) //TypeErrors.addError(scope, tree.pos.line, "Anonymous functions are currently not supported")
+      case t: This => scope.findThis()
       case EmptyTree => TypeErrors.addError(scope, tree.pos.line, "EmptyTree")
     }
   }
@@ -71,7 +72,11 @@ object TypeInference extends LazyLogging {
         val args: Seq[TType] = getTypesInternal(baseTypes, scope, apply.args)
         val selectName: String = s.name.toString
 
-        TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe).returnType
+        val method: Method = TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe)
+        if (method.generics.nonEmpty) {
+          val newMethod = method.applyTypes(method.getAppliedTypes(args))
+          newMethod.returnType
+        } else method.returnType
       case i: Ident =>
         val args = getTypesInternal(baseTypes, scope, apply.args)
         getTypeIdent(baseTypes, scope, i, args)

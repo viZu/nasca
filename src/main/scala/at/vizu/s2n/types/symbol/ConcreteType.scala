@@ -185,6 +185,8 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
     case a: AppliedGenericModifier => this.isAssignableFrom(a.appliedType)
     case _ => false
   }
+
+  override def baseTypeEquals(obj: TType): Boolean = this == obj
 }
 
 object ConcreteType {

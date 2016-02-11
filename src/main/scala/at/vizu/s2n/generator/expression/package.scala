@@ -19,4 +19,8 @@ package object expression {
       case (tmp, (from, to)) => tmp.replaceAll(from, to)
     }
   }
+
+  def prettifyUnaryOperator(op: String) = {
+    prettifyOperator(op.replace("unary_", ""))
+  }
 }

@@ -47,6 +47,7 @@ object Expression extends LazyLogging {
           case _@v => v.toString
         }
         LiteralExpression(tpe, literalStr)
+      case t: This => LiteralExpression(scope.findThis(), "this")
       case a: Apply =>
         val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
         ChainedExpression(path)
@@ -222,8 +223,10 @@ object Expression extends LazyLogging {
         if (TypeUtils.isFunctionType(i.tpe)) {
           val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
           val methodInvocation = generateMethodInvocation(scope, i, argExpr)
-          IdentExpression(i.tpe, methodInvocation)
+          IdentExpression(TypeUtils.getFunctionReturnType(i.tpe), methodInvocation)
         } else IdentExpression(i.tpe, s"$iName")
+      case t: TType if t.isObject =>
+        IdentExpression(t, s"${GeneratorUtils.getCppTypeName(baseTypes, t)}::getInstance()")
       case _ => throw new RuntimeException("TODO")
     }
   }
@@ -319,7 +322,7 @@ object Expression extends LazyLogging {
         Vector(NestedExpression(baseTypes, scope, lTpe, l.value.value.toString, member))
       case Select(i: Ident, n) =>
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
-        val tpe = TypeUtils.findIdentifier(scope, i).tpe
+        val tpe = TypeUtils.findIdent(scope, i.name.toString).tpe
         if (method != null) Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, method))
         else {
           val member = TypeUtils.findIdent(scope, n.toString, tpe)

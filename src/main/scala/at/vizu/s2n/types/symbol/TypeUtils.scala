@@ -22,7 +22,10 @@ object TypeUtils extends LazyLogging {
   private var unitTpe: TType = null
   private var nullTpe: TType = null
   private var anyTpe: TType = null
+  private var anyRefTpe: TType = null
+  private var anyValTpe: TType = null
   private var nothingTpe: TType = null
+  private var anyTpes: Set[TType] = null
 
   /**
     * Modifiers
@@ -399,7 +402,11 @@ object TypeUtils extends LazyLogging {
               case None =>
                 tpe.findField(thisTpe, name) match {
                   case Some(tField) => tField
-                  case None => throw new RuntimeException("Todo")
+                  case None =>
+                    scope.findObject(name) match {
+                      case Some(obj) => obj
+                      case None => throw new RuntimeException("Todo")
+                    }
                 }
             }
         }
@@ -516,6 +523,15 @@ object TypeUtils extends LazyLogging {
     funcType.applyTypes(typeMap)
   }
 
+  def getFunctionReturnType(tpe: TType) = tpe match {
+    case a: AppliedGenericType if isFunctionType(tpe) => a.appliedTypes.last
+    case g: GenericType if isFunctionType(tpe) => g.genericModifiers.last
+  }
+
+  def isFunctionType(tpe: TType) = {
+    tpe.fullClassName.startsWith(TypeUtils.RootScalaPackage + ".Function")
+  }
+
   /**
    * Utility
    */
@@ -536,10 +552,50 @@ object TypeUtils extends LazyLogging {
   }
 
   def findCommonBaseClass(scope: TScope, tpe1: TType, tpe2: TType): TType = {
+    def handleGenericModifiers(found1: TType, found2: TType): TType = {
+      def getConcreteType(tpe: TType) = {
+        tpe match {
+          case a: AppliedGenericModifier => a.getConcreteType
+          case _ => tpe
+        }
+      }
+      def findGenericModifiers(gen1: GenericType, gen2: GenericType) = {
+        def getAppliedTypes(tpe: GenericType) = tpe match {
+          case a: AppliedGenericType => a.appliedTypes.map(getConcreteType(_))
+          case g: GenericType => g.genericModifiers
+        }
+        getAppliedTypes(gen1).zip(getAppliedTypes(gen2)).map(pair => findCommonBaseClass(scope, pair._1, pair._2))
+      }
+      val found1Concrete = getConcreteType(found1)
+      val found2Concrete = getConcreteType(found2)
+      found1Concrete match {
+        case g: GenericType =>
+          val genericModifiers: Seq[TType] = findGenericModifiers(g, found2Concrete.asInstanceOf[GenericType])
+          g.genericType.applyTypeSeq(genericModifiers)
+        case _ => throw new RuntimeException()
+      }
+    }
     val unit: TType = unitType(scope)
+    val nullT = nullType(scope)
     if (tpe1 == unit || tpe2 == unit) unit
     else {
-      val seq: Seq[Any] = if (true) Vector(1) else List("asdasd")
+      val foundType: TType = findSimpleCommonBaseClass(tpe1, tpe2)
+      if (isAnyType(scope, foundType)) {
+        var types: (TType, TType) = null
+        tpe1.foreachType(t1 => {
+          tpe2.foreachType(t2 => {
+            if (types == null && t1.baseTypeEquals(t2)) types = (t1, t2)
+          })
+        })
+        handleGenericModifiers(types._1, types._2)
+      } else foundType
+    }
+  }
+
+  private def findSimpleCommonBaseClass(tpe1: TType, tpe2: TType): TType = {
+    if (tpe1 == nullTpe) tpe2
+    else if (tpe2 == nullTpe) tpe1
+    else {
       var foundType: TType = null
       tpe1.foreachType(t => {
         if (foundType == null && tpe2.hasParent(t)) foundType = t
@@ -576,11 +632,32 @@ object TypeUtils extends LazyLogging {
     anyTpe
   }
 
+  def anyRefType(scope: TScope) = {
+    if (anyRefTpe == null) {
+      anyRefTpe = scope.findClass(RootScalaPackage + ".AnyRef").get
+    }
+    anyRefTpe
+  }
+
+  def anyValType(scope: TScope) = {
+    if (anyValTpe == null) {
+      anyValTpe = scope.findClass(RootScalaPackage + ".AnyVal").get
+    }
+    anyValTpe
+  }
+
   def nothingType(scope: TScope) = {
     if (nothingTpe == null) {
       nothingTpe = scope.findClass(RootScalaPackage + ".Nothing").get
     }
     nothingTpe
+  }
+
+  def isAnyType(scope: TScope, tpe: TType) = {
+    if (anyTpes == null) {
+      anyTpes = Set(anyType(scope), anyRefType(scope), anyValType(scope))
+    }
+    anyTpes.contains(tpe)
   }
 
   def getUsedTypes(baseTypes: BaseTypes, tpe: TType): Set[TType] = {
@@ -612,9 +689,5 @@ object TypeUtils extends LazyLogging {
       at.appliedTypes.foreach(addTpe(baseTypes, _, buffer))
     case c: ConcreteType if !baseTypes.isPrimitive(c) => buffer.add(c)
     case _ =>
-  }
-
-  def isFunctionType(tpe: TType) = {
-    tpe.fullClassName.startsWith(TypeUtils.RootScalaPackage + ".Function")
   }
 }

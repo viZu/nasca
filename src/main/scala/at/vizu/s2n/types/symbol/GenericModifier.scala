@@ -146,4 +146,6 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
   def checkSameVariance(other: GenericModifier): Boolean = {
     this.covariance == other.covariance && this.contravariance == other.contravariance
   }
+
+  override def baseTypeEquals(obj: TType): Boolean = typeEquals(obj)
 }

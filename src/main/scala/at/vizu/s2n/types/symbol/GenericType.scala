@@ -8,6 +8,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
                   override private[symbol] val _isObject: Boolean = false)
   extends ConcreteType(_ctx, _simpleName, _pkg, _mods, _isObject) {
 
+  val genericType: GenericType = this
   private var _genericModifiers: Seq[GenericModifier] = Vector()
 
   def genericModifiers: Seq[GenericModifier] = _genericModifiers
@@ -52,10 +53,10 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   protected def mapParam(types: Map[GenericModifier, TType], oldParam: Param, appliedType: TType): Param = {
     //TODO check if method has generic modifier
     oldParam.tpe match {
-      case g: GenericModifier => Param(oldParam.ctx, getNewTpe(types, g, appliedType, applyPartly = false),
+      case g: GenericModifier => Param(oldParam.ctx, getNewTpe(types, g, appliedType, applyPartly = true),
         oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
       case g: GenericType if g.genericModifiers.nonEmpty =>
-        val newTpe: TType = getNewTpe(types, g, appliedType, applyPartly = false)
+        val newTpe: TType = getNewTpe(types, g, appliedType, applyPartly = true)
         Param(oldParam.ctx, newTpe, oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
       case _ => oldParam // Garbage collector?
     }
@@ -131,8 +132,9 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     case _ => false
   }
 
-  def baseTypeEquals(obj: TType): Boolean = {
+  override def baseTypeEquals(obj: TType): Boolean = {
     obj match {
+      case a: AppliedGenericModifier => baseTypeEquals(a.getConcreteType)
       case a: AppliedGenericType => this == a.genericType
       case b: GenericType => this == b
       case _ => false

@@ -3,7 +3,7 @@ package at.vizu.s2n.types.symbol
 /**
   * Phil on 07.12.15.
   */
-trait TType extends Modifiable with Nameable {
+trait TType extends Modifiable with Identifiable {
 
   def ctx: Context
 
@@ -16,6 +16,8 @@ trait TType extends Modifiable with Nameable {
   def isObject: Boolean
 
   def name: String = fullClassName
+
+  def tpe: TType = this
 
   def methods: Seq[Method]
 
@@ -52,6 +54,8 @@ trait TType extends Modifiable with Nameable {
 
   def typeEquals(obj: Any): Boolean = this.equals(obj)
 
+  def baseTypeEquals(obj: TType): Boolean
+
 }
 
 object EmptyType extends TType {
@@ -81,4 +85,5 @@ object EmptyType extends TType {
 
   override def findMethod(execCtx: TType, name: String, args: Seq[TType]): Option[Method] = None
 
+  override def baseTypeEquals(obj: TType): Boolean = obj == this
 }

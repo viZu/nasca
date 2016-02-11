@@ -51,7 +51,7 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     val newGenerics = generics.map(TypeUtils.getNewTpe(types, _, applyPartly = false))
       .collect({ case gt: GenericModifier if !gt.isInstanceOf[AppliedGenericModifier] => gt })
     val newParams = applyTypesOnParams(types)
-    Method(ctx, name, retTpe, mods, newParams, newGenerics, constructor, instanceMethod, operator)
+    Method(ctx, name, retTpe, mods, newParams, newGenerics, instanceMethod, operator)
   }
 
   private def applyTypesOnParams(types: Map[GenericModifier, TType]) = {

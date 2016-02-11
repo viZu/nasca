@@ -36,6 +36,9 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
       val callCtx = executeInvocationHandle()
       val content = varName + callCtx
       GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = content)
+    } else if (isUnaryOperator(m)) {
+      val prettyOperator = prettifyUnaryOperator(m.name)
+      paramsContext.enhance(s"$prettyOperator$varName")
     } else if (isOperator(m)) {
       val prettyOperator = prettifyOperator(m.name)
       paramsContext.enhance(s"$varName $prettyOperator $paramsContent")
@@ -86,6 +89,8 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
   }
 
   private def isOperator(m: Method): Boolean = m.operator
+
+  private def isUnaryOperator(m: Method): Boolean = m.operator && m.name.startsWith("unary_")
 
   private def isNonPointerCall(m: Method): Boolean = m.nonPointer
 

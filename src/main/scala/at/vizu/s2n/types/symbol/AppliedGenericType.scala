@@ -6,7 +6,7 @@ import at.vizu.s2n.id.IdGenerator
   * Phil on 07.12.15.
   */
 class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
-                         val genericType: GenericType) extends GenericType(
+                         override val genericType: GenericType) extends GenericType(
   genericType.ctx, genericType.simpleName, genericType.pkg, genericType.mods, genericType.isObject) {
 
   lazy val serializationId: String = IdGenerator.generateId()
@@ -58,6 +58,7 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   }
 
   override def baseTypeEquals(obj: TType): Boolean = obj match {
+    case a: AppliedGenericModifier => baseTypeEquals(a.getConcreteType)
     case a: AppliedGenericType => a.getBaseType.typeEquals(getBaseType)
     case b: GenericType => getBaseType.typeEquals(b)
     case _ => false
@@ -94,7 +95,7 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   override protected def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
     this.appliedTypes.map({
       case a: AppliedGenericModifier => a.getConcreteType match {
-        case g: GenericModifier => g.applyType(appliedTypes.get(g).get)
+        case g: GenericModifier if appliedTypes.get(g).get != null => g.applyType(appliedTypes.get(g).get)
         case _@t => a
       }
     })
