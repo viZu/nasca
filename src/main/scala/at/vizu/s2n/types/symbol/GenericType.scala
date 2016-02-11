@@ -46,8 +46,12 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   protected def mapMethod(types: Map[GenericModifier, TType], method: Method, appliedType: TType) = {
     val returnType = getNewTpe(types, method.returnType, appliedType, applyPartly = true)
     val params = method.params.map(mapParam(types, _, appliedType))
-    Method(method.ctx, method.name, returnType, method.mods, params, method.generics,
-      method.instanceMethod, method.operator, method.nonPointer)
+    method match {
+      case c: Constructor => Constructor(c.ctx, returnType, c.mods, params, c.primary)
+      case m: Method => Method(method.ctx, method.name, returnType, method.mods, params, method.generics,
+        method.instanceMethod, method.operator, method.nonPointer)
+    }
+
   }
 
   protected def mapParam(types: Map[GenericModifier, TType], oldParam: Param, appliedType: TType): Param = {

@@ -74,4 +74,6 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
   override def gmContravariance: Boolean = genericModifier.contravariance
 
   override def baseTypeEquals(obj: TType): Boolean = getConcreteType.baseTypeEquals(obj)
+
+  override def toString: String = appliedType.toString
 }

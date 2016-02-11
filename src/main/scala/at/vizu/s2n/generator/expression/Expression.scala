@@ -50,10 +50,10 @@ object Expression extends LazyLogging {
       case t: This => LiteralExpression(scope.findThis(), "this")
       case a: Apply =>
         val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
-        ChainedExpression(path)
+        ChainedExpression(handleUnary(path))
       case s: Select =>
         val path: Path = generateSelectExpression(baseTypes, scope, s, opts = opts)
-        ChainedExpression(path)
+        ChainedExpression(handleUnary(path))
       case i: Ident =>
         generateIdentExpression(baseTypes, scope, i, opts = opts)
       case InlineBlock(_) | Block(_, _) =>
@@ -72,6 +72,19 @@ object Expression extends LazyLogging {
         generateFunctionExpression(scope, f)
       case EmptyTree =>
         EmptyExpression(baseTypes.unit)
+    }
+  }
+
+  def handleUnary(path: Path) = {
+    val last: Expression = path.last
+    if (isUnary(last)) last +: path.init
+    else path
+  }
+
+  def isUnary(expr: Expression) = {
+    expr match {
+      case NestedExpression(_, _, _, _, m: Method, _) if m.name.startsWith("unary_") => true
+      case _ => false
     }
   }
 
