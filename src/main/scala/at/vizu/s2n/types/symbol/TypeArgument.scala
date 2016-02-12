@@ -21,7 +21,8 @@ class TypeArgument(private val _ctx: Context, val genericName: String,
 
   override def simpleName: String = genericName
 
-  override def hasParent(tpe: TType): Boolean = this == tpe || upperBound.hasParent(tpe) || hasParentAsLowerType(tpe)
+  override def hasParent(tpe: TType): Boolean = this == tpe || upperBound.hasParent(tpe) || hasParentAsLowerType(tpe) ||
+    hasLowerBoundAsParent(tpe)
 
   private def hasParentAsLowerType(tpe: TType): Boolean = tpe match {
     case a: AppliedTypeArgument => false

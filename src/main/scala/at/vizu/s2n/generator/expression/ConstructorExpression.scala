@@ -33,7 +33,7 @@ abstract class ConstructorExpression extends Expression {
     val definition = GeneratorUtils.generateConstructorDefinition(scope.baseTypes, constructor, withSemicolon = false)
     val ctx: GeneratorContext = generateExpressionChain(bodyContent, "\n")
     val content =
-      s"""$definition $initializer{
+      s"""$definition$initializer{
          |  ${ctx.content}
          |}""".stripMargin
     ctx.enhance(content) ++ definition.handles

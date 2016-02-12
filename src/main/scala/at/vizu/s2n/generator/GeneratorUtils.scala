@@ -170,7 +170,7 @@ object GeneratorUtils {
   def generateConstructorDefinition(baseTypes: BaseTypes, m: Method,
                                     withSemicolon: Boolean = true): GeneratorContext = {
     val typeName = getSimpleName(baseTypes, m.tpe)
-    val paramStrings = generateParamsString(baseTypes, m.params)
+    val paramStrings = generateParamsString(baseTypes, m.params, !withSemicolon)
     if (withSemicolon) paramStrings.enhance(s"$typeName($paramStrings);")
     else paramStrings.enhance(s"$typeName($paramStrings)")
   }
