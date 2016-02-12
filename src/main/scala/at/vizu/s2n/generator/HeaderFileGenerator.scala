@@ -27,39 +27,25 @@ trait HeaderFileGenerator extends LazyLogging {
     val name: String = GeneratorUtils.getHeaderFileName(selfType)
     logger.debug("Generating header file " + name)
     val includeGuard = GeneratorUtils.generateIncludeGuard(packageName, GeneratorUtils.getHeaderFileName(selfType))
-    val usedTypes = TypeUtils.getUsedTypes(baseTypes, selfType)
-    val content: String = includeGuard + GeneratorUtils.generateIncludes(usedTypes) + generateHeaderContent(packageName)
+
+    val content: String = includeGuard + generateIncludes() + generateHeaderContent(packageName)
 
     logger.debug("Writing header file " + name)
     val prettyContent = CodePrettifier.prettify(content)
     ScalaFiles.writeToFile(args.generatedDir, name, prettyContent)
   }
 
+  private def generateIncludes() = {
+    val usedTypes = TypeUtils.getUsedTypes(baseTypes, selfType)
+    (GeneratorUtils.generateIncludes(usedTypes) :+ "").mkString("\n")
+  }
+
   protected def generateHeaderContent(pkg: String): String = {
-    wrapBodyWithNamespace(pkg, generateClassBody()) + generateClassEnding()
+    wrapBodyWithNamespace(pkg, generateClassBody()) + GeneratorUtils.generateClassEnding(selfType)
   }
 
   protected def generateClassBody(): String = {
-    val classTemplate: String = GeneratorUtils.generateClassTemplate(selfType)
-    val extendCtx = GeneratorUtils.generateExtends(baseTypes, selfType)
-    s"""${classTemplate}class ${selfType.simpleName}$extendCtx {
-       |
-        |${generateSections()}
-       |};
-       |""".stripMargin
-  }
-
-  protected def generateClassEnding(): String = {
-    val endif = s"${GeneratorUtils.generateEndIf(packageName, GeneratorUtils.getHeaderFileName(selfType))}"
-    selfType match {
-      case gt: GenericType =>
-        s"""
-           |#include "${GeneratorUtils.getSourceFileName(selfType)}"
-           |$endif"""".stripMargin
-      case _ =>
-        s"""
-           |$endif""".stripMargin
-    }
+    GeneratorUtils.generateClassBody(baseTypes, selfType, generateSections())
   }
 
   protected def generateSections(): String = {
@@ -80,7 +66,7 @@ trait HeaderFileGenerator extends LazyLogging {
   }
 
   protected def generatePublicSection(members: Seq[String]): String = {
-    generateVisibilitySection("public", members) + GeneratorUtils.generateCopyConstructorsHeader(selfType)
+    generateVisibilitySection("public", members)
   }
 
   protected def generateProtectedSection(members: Seq[String]): String = {
@@ -95,7 +81,7 @@ trait HeaderFileGenerator extends LazyLogging {
   }
 
   protected def generateMethodDefinition(m: Method): GeneratorContext = {
-    if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m, selfType.simpleName)
+    if (m.constructor) GeneratorUtils.generateConstructorDefinition(baseTypes, m)
     else if (m.isAbstract) GeneratorUtils.generateVirtualMethod(baseTypes, m)
     else GeneratorUtils.generateMethodDefinition(baseTypes, m)
   }
@@ -104,8 +90,8 @@ trait HeaderFileGenerator extends LazyLogging {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
-    val accesors: String = GeneratorUtils.generateParamAccessor(baseTypes, field)
-    d + (if (accesors.nonEmpty) "\n" + accesors + "\n" else "")
+    val accessors: String = GeneratorUtils.generateParamAccessor(baseTypes, field)
+    d + (if (accessors.nonEmpty) "\n" + accessors + "\n" else "")
   }
 
   protected def wrapBodyWithNamespace(pkg: String, body: String): String = {

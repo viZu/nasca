@@ -70,8 +70,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     } else {
       ""
     }
-    val templateCopyConstructors = GeneratorUtils.generateCopyConstructorsSource(_baseTypes, tpe)
-    memberContext.enhance(preContent + memberContext.content + templateCopyConstructors)
+    memberContext.enhance(preContent + memberContext.content)
   }
 
   private def generateMember(scope: TScope): GeneratorContext = {

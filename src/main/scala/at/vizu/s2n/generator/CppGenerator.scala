@@ -5,7 +5,7 @@ import at.vizu.s2n.file.ScalaFiles
 import at.vizu.s2n.log.Debug
 import at.vizu.s2n.log.ProfilerWithErrors._
 import at.vizu.s2n.types.result._
-import at.vizu.s2n.types.symbol.{BaseTypes, TScope}
+import at.vizu.s2n.types.symbol.{BaseTypes, GenericType, TScope}
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -20,6 +20,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator with LazyLogging {
       createGeneratedDir(args)
       invokeGeneratorTuples(args, scope, fileContents)
       invokeMain(args, scope, fileContents)
+      invokeTemplates(args, scope, fileContents)
     })
   }
 
@@ -33,6 +34,26 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator with LazyLogging {
       val mainGenerator = getMainClassGenerator(args, scope, fileContents)
       mainGenerator.generateMainFile(args)
     }
+  }
+
+  def invokeTemplates(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
+    val generators = getTemplateGenerators(args, scope, fileContents)
+    generators.foreach(_.generateTemplateFile(args))
+  }
+
+  def getTemplateGenerators(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
+    fileContents.flatMap(c => {
+      c.impls.filter(_.tpe.isInstanceOf[GenericType]).map({
+        case ci: ClassImplementation =>
+          val classScope: TScope = scope.enterScope(ci.tpe)
+          c.imports.foreach(i => {
+            classScope.addTypeAlias(i.rename, i.pkg + "." + i.name)
+          })
+          classScope.addTypeAlias(ci.tpe.simpleName, ci.tpe.name)
+          classScope.currentPackage = c.pkg
+          new CppTemplateFileGenerator(baseTypes, classScope, ci)
+      })
+    })
   }
 
   def invokeGeneratorTuples(args: Arguments, scope: TScope, fileContents: Seq[ScalaFileWrapper]) = {
@@ -53,7 +74,7 @@ class CppGenerator(baseTypes: BaseTypes) extends Generator with LazyLogging {
 
   def getGeneratorPairs(scope: TScope, fileContents: Seq[ScalaFileWrapper]): Seq[GeneratorTuple] = {
     fileContents.flatMap(c => {
-      c.impls.map({
+      c.impls.filter(!_.tpe.isInstanceOf[GenericType]).map({
         case oi: ObjectImplementation =>
           (getSourceGenerator(scope, c.pkg, c.imports, oi), getObjectHeaderGenerator(c.pkg, c.imports, oi), oi)
         case ci: ClassImplementation =>

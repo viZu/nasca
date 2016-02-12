@@ -11,20 +11,6 @@ case class PrimaryConstructorExpression(scope: TScope, constructor: Constructor,
 
   override def exprTpe: TType = constructor.returnType
 
-  private def generatePrimary: GeneratorContext = {
-    val typeName = GeneratorUtils.getCppTypeName(scope.baseTypes, exprTpe) //GeneratorUtils.getCppTypeName(exprTpe.pkg, exprTpe.simpleName, "")
-    val paramsString = GeneratorUtils.generateParamsString(scope.baseTypes, constructor.params, withVars = true)
-    val expressions: Seq[Expression] = generateInitMethodExpr()
-    val initializer = generateInitializer()
-    val ctx: GeneratorContext = generateExpressionChain(expressions, "\n")
-    val templateString = GeneratorUtils.generateClassTemplate(exprTpe)
-    val content: String =
-      s"""$templateString$typeName::${exprTpe.simpleName}($paramsString) $initializer{
-         |  ${ctx.content}
-         |}""".stripMargin
-    ctx.enhance(content, paramsString.handles)
-  }
-
   private def generateInitializer(): String = {
     val strings: Seq[String] = constructor.params.map(p => s"${p.name}(${p.name})") :+ generateSuperInit()
     val initializers = strings.filter(_.nonEmpty).mkString(", ")

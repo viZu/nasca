@@ -26,4 +26,6 @@ case class SecondaryConstructorExpression(scope: TScope, constr: Constructor, pr
   override def bodyContent: Seq[Expression] = stats
 
   override def initializer: String = s" : $generatePrimaryCall "
+
+  override def constructor: Constructor = constr
 }

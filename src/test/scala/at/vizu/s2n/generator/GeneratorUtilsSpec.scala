@@ -16,15 +16,15 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
   val tpeWithNestedPkg = ConcreteType(Context("test", 0), "Type", "test.a.b.c")
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with no package" in {
-    GeneratorUtils.getCppTypeName("", "Type", "") should be("Type")
+    GeneratorUtils.getCppTypeName("", "Type", "", false) should be("Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with package" in {
-    GeneratorUtils.getCppTypeName("test", "Type", "") should be("test::Type")
+    GeneratorUtils.getCppTypeName("test", "Type", "", false) should be("test::Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename with nested package" in {
-    GeneratorUtils.getCppTypeName("test.a.b.c", "Type", "") should be("test_a_b_c::Type")
+    GeneratorUtils.getCppTypeName("test.a.b.c", "Type", "", false) should be("test_a_b_c::Type")
   }
 
   "GeneratorUtils.getCppTypeName" should "return correct C++ typename for type with no package" in {

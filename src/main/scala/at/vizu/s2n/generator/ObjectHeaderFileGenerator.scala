@@ -17,7 +17,7 @@ class ObjectHeaderFileGenerator(_baseTypes: BaseTypes, _packageName: String,
   override protected def packageName: String = _packageName
 
   override protected def generateProtectedSection(members: Seq[String]): String = {
-    val tpeName = selfType.simpleName
+    val tpeName = GeneratorUtils.getSimpleName(_baseTypes, selfType)
     val protectedMember =
       s"""
          |$tpeName();                           // Don't implement

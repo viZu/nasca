@@ -40,7 +40,7 @@ class CppMainFileGenerator(scope: TScope, impl: Implementation) extends MainFile
         |      std::string val = std::string(argv[i]);
         |      args->push_back(val);
         |  }
-        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "")}::getInstance()->main(args);
+        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "", true)}::getInstance()->main(args);
         |  return 0;
         |}
      """.stripMargin

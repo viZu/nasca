@@ -15,7 +15,8 @@ object GeneratorUtils {
   }
 
   def getHeaderFileName(tpe: TType): String = {
-    getHeaderFileName(tpe.simpleName)
+    val name = if (tpe.isObject) tpe.simpleName + "__Object" else tpe.simpleName
+    getHeaderFileName(name)
   }
 
   def getHeaderFileName(simpleTypeName: String): String = {
@@ -27,7 +28,8 @@ object GeneratorUtils {
   }
 
   def getSourceFileName(tpe: TType): String = {
-    getSourceFileName(tpe.simpleName)
+    val name = if (tpe.isObject) tpe.simpleName + "__Object" else tpe.simpleName
+    getSourceFileName(name)
   }
 
   def getSourceFileName(simpleTypeName: String): String = {
@@ -66,6 +68,12 @@ object GeneratorUtils {
     guardIdentifier.toUpperCase
   }
 
+  def getSimpleName(baseTypes: BaseTypes, tpe: TType) = {
+    if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
+    else if (tpe.isObject) tpe.simpleName + "__Object"
+    else tpe.simpleName
+  }
+
   def generateCppTypeName(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
     if (baseTypes.isPrimitive(tpe)) getPrimitiveName(tpe)
     else if (GlobalConfig.classConfig.hasRenamingHandle(tpe)) {
@@ -86,13 +94,13 @@ object GeneratorUtils {
     }
     else {
       val typeString = generateTypeArgsFromType(baseTypes, tpe, withTypeName)
-      getCppTypeName(tpe.pkg, tpe.simpleName, typeString) + generateIncludeHandles(tpe)
+      getCppTypeName(tpe.pkg, tpe.simpleName, typeString, tpe.isObject) + generateIncludeHandles(tpe)
     }
   }
 
   def getObjectTypeName(baseTypes: BaseTypes, tpe: TType, withTypeDef: Boolean = false, withTypeName: Boolean = false) = {
     val typeString = generateTypeArgsFromType(baseTypes, tpe, withTypeName)
-    getCppTypeName(tpe.pkg, tpe.simpleName, typeString) + generateIncludeHandles(tpe)
+    getCppTypeName(tpe.pkg, tpe.simpleName, typeString, tpe.isObject) + generateIncludeHandles(tpe)
   }
 
   def generateSmartPtr(baseTypes: BaseTypes, tpe: TType): GeneratorContext = {
@@ -104,9 +112,37 @@ object GeneratorUtils {
     ctx.enhance(s"std::shared_ptr<$ctx>")
   }
 
-  def getCppTypeName(pkg: String, name: String, typeString: GeneratorContext): GeneratorContext = {
-    if (pkg.isEmpty) typeString.enhance(name + typeString.content)
-    else typeString.enhance(pkg.replaceAll("\\.", "_") + "::" + name + typeString.toString)
+  def getCppTypeName(pkg: String, name: String, typeString: GeneratorContext, isObject: Boolean): GeneratorContext = {
+    val typeName = if (isObject) name + "__Object" else name
+    if (pkg.isEmpty) typeString.enhance(typeName + typeString.content)
+    else typeString.enhance(pkg.replaceAll("\\.", "_") + "::" + typeName + typeString.toString)
+  }
+
+  def generateClassBody(baseTypes: BaseTypes, tpe: TType, classContent: String): String = {
+    val classTemplate: String = GeneratorUtils.generateClassTemplate(tpe)
+    val extendCtx = GeneratorUtils.generateExtends(baseTypes, tpe)
+    s"""${classTemplate}class ${getSimpleName(baseTypes, tpe)}$extendCtx {
+       |
+       |$classContent
+       |};
+       |""".stripMargin
+  }
+
+  def generateClassEnding(tpe: TType) = {
+    val packageName = tpe.pkg
+    val endif = s"${GeneratorUtils.generateEndIf(packageName, GeneratorUtils.getHeaderFileName(tpe))}"
+    s"""
+       |$endif""".stripMargin
+  }
+
+  def wrapBodyWithNamespace(pkg: String, body: String): String = {
+    if (Option(pkg).exists(_.trim.nonEmpty)) {
+      s"""
+         |namespace ${GeneratorUtils.getNameSpace(pkg)} {
+         |
+         |$body
+         |}""".stripMargin
+    } else body
   }
 
   def generateClassTemplate(tpe: TType): String = {
@@ -131,21 +167,25 @@ object GeneratorUtils {
     extend.enhance(s"public $extend")
   }
 
-  def generateConstructorDefinition(baseTypes: BaseTypes, m: Method, typeName: String): GeneratorContext = {
+  def generateConstructorDefinition(baseTypes: BaseTypes, m: Method,
+                                    withSemicolon: Boolean = true): GeneratorContext = {
+    val typeName = getSimpleName(baseTypes, m.tpe)
     val paramStrings = generateParamsString(baseTypes, m.params)
-    paramStrings.enhance(s"$typeName($paramStrings);")
+    if (withSemicolon) paramStrings.enhance(s"$typeName($paramStrings);")
+    else paramStrings.enhance(s"$typeName($paramStrings)")
   }
 
-  def generateMethodDefinition(baseTypes: BaseTypes, m: Method): GeneratorContext = {
+  def generateMethodDefinition(baseTypes: BaseTypes, m: Method, withSemicolon: Boolean = true): GeneratorContext = {
     val tpeName = generateCppTypeName(baseTypes, m.returnType)
-    val params = generateParamsString(baseTypes, m.params)
+    val params = generateParamsString(baseTypes, m.params, !withSemicolon)
     val mName = prettifyMethod(m.name)
-    tpeName.enhance(s"${generateMethodTemplate(m)}$tpeName $mName($params);", params.handles)
+    val content: String = s"${generateMethodTemplate(m)}$tpeName $mName($params)"
+    if (withSemicolon) tpeName.enhance(content + ";", params.handles)
+    else tpeName.enhance(content, params.handles)
   }
 
   def generateVirtualMethod(baseTypes: BaseTypes, m: Method): GeneratorContext = {
-    val ctx: GeneratorContext = generateMethodDefinition(baseTypes, m)
-    val definition: GeneratorContext = ctx.enhance(ctx.content.trim.dropRight(1)) // remove semicolon
+    val definition: GeneratorContext = generateMethodDefinition(baseTypes, m, withSemicolon = false)
     definition.enhance(s"${generateMethodTemplate(m)}virtual $definition = 0;")
   }
 
@@ -192,6 +232,7 @@ object GeneratorUtils {
         generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
       case gt: GenericType =>
         GeneratorContext(generateTypeArgs(gt.getGenericModifiers, withTypeName)) + generateIncludeHandles(gt)
+      case agm: AppliedGenericModifier => generateTypeArgsFromType(baseTypes, agm.getConcreteType, withTypeName)
       case _ => generateIncludeHandles(tpe)
     }
   }
@@ -255,8 +296,8 @@ object GeneratorUtils {
     s"get__$nameUpper()"
   }
 
-  def generateIncludes(usedTypes: Iterable[TType]): String = {
-    (Vector("#include <memory>") ++ usedTypes.map(generateInclude) :+ "").mkString("\n")
+  def generateIncludes(usedTypes: Iterable[TType]): Seq[String] = {
+    Vector("#include <memory>") ++ usedTypes.map(generateInclude)
   }
 
   def generateInclude(tpe: TType): String = {
@@ -267,8 +308,33 @@ object GeneratorUtils {
     }
   }
 
-  def generateCopyConstructorsHeader(tpe: TType): String = {
-    generateCopyConstructors(tpe, g => {
+  def generateCopyConstructors(baseTypes: BaseTypes, tpe: TType) = {
+    val g = tpe.asInstanceOf[GenericType]
+    val typeArgs = generateTypeArgs(g.getGenericModifiers)
+    val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
+    val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
+    val typeName = getSimpleName(baseTypes, tpe)
+    val fieldAssignments = generateFieldAssignments(tpe)
+    val fieldInitializers = generateFieldInitializers(tpe)
+    s"""
+       |
+       |$typeName(const $typeName& t)$fieldInitializers {}
+       |$typeName& operator=(const $typeName& t){
+       |  $fieldAssignments
+       |}
+       |
+       |$tmpTemplateArgs
+       |$typeName(const $typeName$tmpTypeArgs& t)$fieldInitializers {}
+       |
+       |$tmpTemplateArgs
+       |$typeName$typeArgs& operator=(const $typeName$tmpTypeArgs& t){
+       |$fieldAssignments
+       |}
+       |""".stripMargin
+  }
+
+  def generateCopyConstructorsHeaderTemp(tpe: TType): String = {
+    generateCopyConstructorsTemp(tpe, g => {
       val typeName: String = g.simpleName
       val typeArgs = generateTypeArgs(g.getGenericModifiers)
       val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
@@ -287,8 +353,8 @@ object GeneratorUtils {
     })
   }
 
-  def generateCopyConstructorsSource(baseTypes: BaseTypes, tpe: TType): String = {
-    generateCopyConstructors(tpe, g => {
+  def generateCopyConstructorsSourceTemp(baseTypes: BaseTypes, tpe: TType): String = {
+    generateCopyConstructorsTemp(tpe, g => {
       val typeName: String = tpe.simpleName
       val typeArgs = generateTemplatesString(g.genericModifiers, withTypeName = true)
       val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
@@ -306,7 +372,7 @@ object GeneratorUtils {
          |$fieldAssignments
          |}
          |
-           |$typeArgs
+         |$typeArgs
          |$tmpTemplateArgs
          |$cppTypename::$typeName(const $typeName$tmpTypeArgs& t)$fieldInitializers {}
          |
@@ -319,7 +385,7 @@ object GeneratorUtils {
     })
   }
 
-  private def generateCopyConstructors(tpe: TType, f: GenericType => String): String = {
+  private def generateCopyConstructorsTemp(tpe: TType, f: GenericType => String): String = {
     tpe match {
       case a: AppliedGenericType => ""
       case g: GenericType => f(g)
