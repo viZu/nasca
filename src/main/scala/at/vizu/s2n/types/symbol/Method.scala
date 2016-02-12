@@ -4,7 +4,7 @@ package at.vizu.s2n.types.symbol
  * Phil on 07.10.15.
  */
 class Method(val ctx: Context, val name: String, val returnType: TType, val mods: Seq[Modifier], val params: Seq[Param] = Vector(),
-             val generics: Seq[GenericModifier] = Vector(), val instanceMethod: Boolean = true,
+             val generics: Seq[TypeArgument] = Vector(), val instanceMethod: Boolean = true,
              val operator: Boolean = false, val nonPointer: Boolean = false)
   extends Member {
 
@@ -32,12 +32,12 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     params.map(_.tpe).zip(args).flatMap(extractAppliedType).toMap
   }
 
-  private def extractAppliedType(paramToArg: (TType, TType)): Seq[(GenericModifier, TType)] = {
+  private def extractAppliedType(paramToArg: (TType, TType)): Seq[(TypeArgument, TType)] = {
     paramToArg match {
       //TODO: check if arg == generic modifier && != generic modifier
       //case (agm: AppliedGenericModifier, _) => Vector()
-      case (gmParam: GenericModifier, atArg: GenericModifier) => Vector(gmParam -> atArg)
-      case (gmParam: GenericModifier, ctArg: ConcreteType) => Vector(gmParam -> ctArg)
+      case (gmParam: TypeArgument, atArg: TypeArgument) => Vector(gmParam -> atArg)
+      case (gmParam: TypeArgument, ctArg: ConcreteType) => Vector(gmParam -> ctArg)
       case (atParam: AppliedGenericType, atArg: AppliedGenericType) =>
         atParam.appliedTypes.zip(atArg.appliedTypes).flatMap(extractAppliedType)
       case (gtParam: GenericType, atArg: AppliedGenericType) =>
@@ -46,15 +46,15 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     }
   }
 
-  def applyTypes(types: Map[GenericModifier, TType]) = {
+  def applyTypes(types: Map[TypeArgument, TType]) = {
     val retTpe = TypeUtils.getNewTpe(types, returnType, applyPartly = false)
     val newGenerics = generics.map(TypeUtils.getNewTpe(types, _, applyPartly = false))
-      .collect({ case gt: GenericModifier if !gt.isInstanceOf[AppliedGenericModifier] => gt })
+      .collect({ case gt: TypeArgument if !gt.isInstanceOf[AppliedTypeArgument] => gt })
     val newParams = applyTypesOnParams(types)
     Method(ctx, name, retTpe, mods, newParams, newGenerics, instanceMethod, operator)
   }
 
-  private def applyTypesOnParams(types: Map[GenericModifier, TType]) = {
+  private def applyTypesOnParams(types: Map[TypeArgument, TType]) = {
     params.map(_.applyTypes(types))
   }
 
@@ -77,7 +77,7 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
 
 object Method {
   def apply(ctx: Context, name: String, returnType: TType, mods: Seq[Modifier], params: Seq[Param] = Vector(),
-            generics: Seq[GenericModifier] = Vector(), instanceMethod: Boolean = true,
+            generics: Seq[TypeArgument] = Vector(), instanceMethod: Boolean = true,
             operator: Boolean = false, nonPointer: Boolean = false) = {
     new Method(ctx, name, returnType, mods, params, generics, instanceMethod, operator, nonPointer)
   }

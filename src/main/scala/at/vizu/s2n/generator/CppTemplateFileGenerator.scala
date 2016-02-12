@@ -188,13 +188,9 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
 
   private def generateInitMethod(scope: TScope, b: Block, initMethodName: String, initCall: String,
                                  varName: String, varTpe: TType): GeneratorContext = {
-    //    val initializerHandle = FieldInitializerHandle(varName, initCall)
     val privateMethodHandle = generateInitMethodHandle(initMethodName, varTpe)
     val method = privateMethodHandle.method
     generateMethod(scope, b, method)
-    //    val generatedMethod = generateMethod(scope, b, method)
-    //    val methodHandle = MethodHandle(generatedMethod.content)
-    //    generatedMethod.enhance(initMethodName, Set(initializerHandle, privateMethodHandle, methodHandle))
   }
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {

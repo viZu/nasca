@@ -171,7 +171,7 @@ object TypeUtils extends LazyLogging {
 
   def createAndAddGenericModifier(scope: TScope, generic: TypeDef) = {
     logger.trace("generics - generate")
-    val genericModifier: GenericModifier = createGenericModifier(scope, generic)
+    val genericModifier: TypeArgument = createGenericModifier(scope, generic)
     val millis: Long = System.currentTimeMillis()
     scope.addClass(genericModifier)
     logger.trace("Add time: " + (System.currentTimeMillis() - millis))
@@ -196,7 +196,7 @@ object TypeUtils extends LazyLogging {
     //val upperBound = TypeUtils.findClass(currentScope, )
     val coVariant: Boolean = generic.mods.hasFlag(Flag.COVARIANT)
     val contraVariant: Boolean = generic.mods.hasFlag(Flag.CONTRAVARIANT)
-    new GenericModifier(ctx, generic.name.toString, upper, lower, coVariant, contraVariant)
+    new TypeArgument(ctx, generic.name.toString, upper, lower, coVariant, contraVariant)
   }
 
   /**
@@ -228,7 +228,7 @@ object TypeUtils extends LazyLogging {
   }
 
   def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null,
-                 genericModifier: Seq[GenericModifier] = Seq()): Method = {
+                 genericModifier: Seq[TypeArgument] = Seq()): Method = {
     val tpe: TType = if (onType == null) scope.findThis() else onType
     tpe.findMethod(scope.findThis(), name, args) getOrElse throwMethodNotFound(scope, name, args, line)
   }
@@ -239,7 +239,7 @@ object TypeUtils extends LazyLogging {
       case at: AppliedGenericType => at
       case gt: GenericType =>
         val method: Method = findConstructor(scope, n.pos.line, args, gt)
-        val appliedTypes: Map[GenericModifier, TType] = method.getAppliedTypes(args)
+        val appliedTypes: Map[TypeArgument, TType] = method.getAppliedTypes(args)
         gt.applyTypes(appliedTypes)
       case _ => onType
     }
@@ -262,7 +262,7 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def checkTypeToApply(scope: TScope, line: Int, genericModifier: GenericModifier, tpeToApply: TType) = {
+  def checkTypeToApply(scope: TScope, line: Int, genericModifier: TypeArgument, tpeToApply: TType) = {
     if (!tpeToApply.hasParent(genericModifier.upperBound) || !tpeToApply.isAssignableFrom(genericModifier.lowerBound)) {
       TypeErrors.addError(scope, line, s"Type $tpeToApply is not applicatple for generic modifier $genericModifier")
     }
@@ -278,7 +278,7 @@ object TypeUtils extends LazyLogging {
   def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true, primaryConstructor: Boolean = false): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
-    val generics: Seq[GenericModifier] = d.tparams.map(createAndAddGenericModifier(scope, _))
+    val generics: Seq[TypeArgument] = d.tparams.map(createAndAddGenericModifier(scope, _))
     val params: Seq[Param] = createParamsForMethod(scope, d.vparamss)
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
@@ -430,9 +430,9 @@ object TypeUtils extends LazyLogging {
     * Generics
     */
 
-  def getNewTpe(types: Map[GenericModifier, TType], oldType: TType, applyPartly: Boolean = false) = {
+  def getNewTpe(types: Map[TypeArgument, TType], oldType: TType, applyPartly: Boolean = false) = {
     oldType match {
-      case g: GenericModifier =>
+      case g: TypeArgument =>
         types.get(g) match {
           case None => g
           case Some(tpe) => g.applyType(tpe)
@@ -444,17 +444,17 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  private def findTypesToApply(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
+  private def findTypesToApply(types: Map[TypeArgument, TType], g: GenericType): Map[TypeArgument, TType] = {
     g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, gm.upperBound))).toMap
   }
 
-  private def findTypesToApplyPartly(types: Map[GenericModifier, TType], g: GenericType): Map[GenericModifier, TType] = {
+  private def findTypesToApplyPartly(types: Map[TypeArgument, TType], g: GenericType): Map[TypeArgument, TType] = {
     g.getGenericModifiers.map(gm => (gm, types.getOrElse(gm, null))).toMap
   }
 
-  def findGenericModifiers(tpe: TType): Seq[GenericModifier] = tpe match {
-    case a: AppliedGenericModifier => Vector(a)
-    case g: GenericModifier => Vector(g)
+  def findGenericModifiers(tpe: TType): Seq[TypeArgument] = tpe match {
+    case a: AppliedTypeArgument => Vector(a)
+    case g: TypeArgument => Vector(g)
     case a: AppliedGenericType => Vector() //a.appliedTypes.flatMap(findGenericModifiers)
     case g: GenericType => Vector() //g.genericModifiers
     case c: ConcreteType => Vector()
@@ -555,7 +555,7 @@ object TypeUtils extends LazyLogging {
     def handleGenericModifiers(found1: TType, found2: TType): TType = {
       def getConcreteType(tpe: TType) = {
         tpe match {
-          case a: AppliedGenericModifier => a.getConcreteType
+          case a: AppliedTypeArgument => a.getConcreteType
           case _ => tpe
         }
       }
@@ -678,12 +678,12 @@ object TypeUtils extends LazyLogging {
   }
 
   private def addTpe(baseTypes: BaseTypes, tpe: TType, buffer: mutable.HashSet[TType]): Unit = tpe match {
-    case a: AppliedGenericModifier => a.getConcreteType match {
-      case g: GenericModifier =>
+    case a: AppliedTypeArgument => a.getConcreteType match {
+      case g: TypeArgument =>
       case _@t if !baseTypes.isPrimitive(t) => buffer.add(t)
       case _ =>
     }
-    case gm: GenericModifier =>
+    case gm: TypeArgument =>
     case at: AppliedGenericType if !baseTypes.isPrimitive(at) =>
       buffer.add(at)
       at.appliedTypes.foreach(addTpe(baseTypes, _, buffer))

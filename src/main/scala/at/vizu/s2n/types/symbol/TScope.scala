@@ -71,7 +71,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
       TypeErrors.addError(tpe.ctx, s"Class with qualifier ${tpe.fullClassName} already exists")
     }
     tpe match {
-      case g: GenericModifier =>
+      case g: TypeArgument =>
         addClassInternal(tpe, findGeneric(_).isEmpty)
       case _ =>
         addClassInternal(tpe, findClassInCurrentScope(_).isEmpty)

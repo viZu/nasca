@@ -26,7 +26,7 @@ trait BaseTypes {
 
   def isPrimitive(tpe: TType) = tpe match {
     case c: ConcreteType => primitives.contains(c)
-    case a: AppliedGenericModifier => primitives.contains(a.getConcreteType)
+    case a: AppliedTypeArgument => primitives.contains(a.getConcreteType)
     case _ => false
   }
 

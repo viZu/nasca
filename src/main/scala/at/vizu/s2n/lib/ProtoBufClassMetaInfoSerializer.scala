@@ -11,7 +11,7 @@ import scala.collection.mutable
   */
 class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
 
-  private val appliedGenericModifiers = mutable.Set[AppliedGenericModifier]()
+  private val appliedGenericModifiers = mutable.Set[AppliedTypeArgument]()
   private val appliedGenericTypes = mutable.Set[AppliedGenericType]()
   private val anyType = RootScalaPackage + ".Any"
   private val nothingType = RootScalaPackage + ".Nothing"
@@ -62,7 +62,7 @@ class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
     MetaAppliedGenericType(id, genTypeId, appliedTypes)
   }
 
-  private def appliedGenericModifierToMeta(agm: AppliedGenericModifier): MetaAppliedGenericModifier = {
+  private def appliedGenericModifierToMeta(agm: AppliedTypeArgument): MetaAppliedGenericModifier = {
     val metaCtx = contextToMeta(agm.ctx)
     val appliedType = handleType(agm.appliedType)
     val genericModifier = agm.genericModifier.serializationId
@@ -94,7 +94,7 @@ class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
     MetaMethod(metaCtx, TypeUtils.ConstructorName, typeName, modifier, params, constructor = Some(true), primary = primary)
   }
 
-  def genericModToMeta(gm: GenericModifier): MetaGenericModifier = {
+  def genericModToMeta(gm: TypeArgument): MetaGenericModifier = {
     val metaCtx = contextToMeta(gm.ctx)
     val ub = if (gm.upperBound.fullClassName == anyType) None else Some(handleType(gm.upperBound))
     val lb = if (gm.lowerBound.fullClassName == nothingType) None else Some(handleType(gm.lowerBound))
@@ -146,10 +146,10 @@ class ProtoBufClassMetaInfoSerializer extends ClassMetaInfoSerializer {
 
   private def handleType(tpe: TType): String = {
     tpe match {
-      case am: AppliedGenericModifier =>
+      case am: AppliedTypeArgument =>
         appliedGenericModifiers += am
         handleType(am.getConcreteType)
-      case gm: GenericModifier =>
+      case gm: TypeArgument =>
         gm.serializationId
       case at: AppliedGenericType =>
         appliedGenericTypes += at

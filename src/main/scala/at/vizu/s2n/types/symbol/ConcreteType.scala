@@ -182,7 +182,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
 
   override def isAssignableAsParam(other: TType): Boolean = other match {
     case c: ConcreteType => this.isAssignableFrom(c)
-    case a: AppliedGenericModifier => this.isAssignableFrom(a.appliedType)
+    case a: AppliedTypeArgument => this.isAssignableFrom(a.appliedType)
     case _ => false
   }
 

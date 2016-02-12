@@ -5,9 +5,9 @@ import at.vizu.s2n.id.IdGenerator
 /**
   * Phil on 07.12.15.
   */
-class GenericModifier(private val _ctx: Context, val genericName: String,
-                      val upperBound: TType, val lowerBound: TType,
-                      val covariance: Boolean, val contravariance: Boolean) extends TType {
+class TypeArgument(private val _ctx: Context, val genericName: String,
+                   val upperBound: TType, val lowerBound: TType,
+                   val covariance: Boolean, val contravariance: Boolean) extends TType {
 
   lazy val serializationId: String = IdGenerator.generateId()
 
@@ -24,14 +24,14 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
   override def hasParent(tpe: TType): Boolean = this == tpe || upperBound.hasParent(tpe) || hasParentAsLowerType(tpe)
 
   private def hasParentAsLowerType(tpe: TType): Boolean = tpe match {
-    case a: AppliedGenericModifier => false
-    case g: GenericModifier => hasParent(g.lowerBound)
+    case a: AppliedTypeArgument => false
+    case g: TypeArgument => hasParent(g.lowerBound)
     case _ => false
   }
 
   private def hasLowerBoundAsParent(tpe: TType) = tpe match {
-    case a: AppliedGenericModifier => false
-    case g: GenericModifier => tpe.hasParent(this.lowerBound)
+    case a: AppliedTypeArgument => false
+    case g: TypeArgument => tpe.hasParent(this.lowerBound)
     case _ => false
   }
 
@@ -56,21 +56,21 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
   def isGenericModifier = true
 
   def applyType(appliedType: TType) = appliedType match {
-    case g: GenericModifier => new AppliedGenericModifier(g, g.genericName, g.upperBound, g.lowerBound, g.covariance, g.contravariance, this)
-    case _@o => new AppliedGenericModifier(o, genericName, upperBound, lowerBound, false, false, this) // we dont need variances in concrete apply
+    case g: TypeArgument => new AppliedTypeArgument(g, g.genericName, g.upperBound, g.lowerBound, g.covariance, g.contravariance, this)
+    case _@o => new AppliedTypeArgument(o, genericName, upperBound, lowerBound, false, false, this) // we dont need variances in concrete apply
   }
 
   def checkBeforeApply(appliedType: TType): Unit = appliedType match {
-    case a: AppliedGenericModifier =>
+    case a: AppliedTypeArgument =>
       a.appliedType match {
-        case g: GenericModifier => checkBeforeApply(g)
+        case g: TypeArgument => checkBeforeApply(g)
         case _ =>
       }
-    case g: GenericModifier => checkBeforeApply(g)
+    case g: TypeArgument => checkBeforeApply(g)
     case _ =>
   }
 
-  def checkBeforeApply(genericModifier: GenericModifier) = {
+  def checkBeforeApply(genericModifier: TypeArgument) = {
     if (!checkSameVariance(genericModifier)) {
       throw new RuntimeException("Variances")
     }
@@ -78,7 +78,7 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
 
   override def equals(that: Any) = {
     that match {
-      case g: GenericModifier =>
+      case g: TypeArgument =>
         g.genericName == genericName &&
           g.upperBound == upperBound &&
           g.lowerBound == lowerBound &&
@@ -90,7 +90,7 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
 
   override def typeEquals(that: Any) = {
     that match {
-      case g: GenericModifier =>
+      case g: TypeArgument =>
         g.upperBound == upperBound &&
           g.lowerBound == lowerBound &&
           g.covariance == covariance &&
@@ -116,16 +116,16 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
   }
 
   override def isAssignableAsParam(other: TType): Boolean = other match {
-    case a: AppliedGenericModifier =>
+    case a: AppliedTypeArgument =>
       a.genericModifier == this &&
         a.appliedType.isAssignableFrom(lowerBound) && upperBound.isAssignableFrom(a.appliedType)
-    case g: GenericModifier => this == g
+    case g: TypeArgument => this == g
     case g: GenericType => lowerBound.hasParent(g) && upperBound.isAssignableFrom(g)
     case c: ConcreteType => c.isAssignableFrom(lowerBound) && upperBound.isAssignableFrom(c)
     case _ => false
   }
 
-  def checkVariances(other: GenericModifier) = {
+  def checkVariances(other: TypeArgument) = {
     if (gmCovariance) {
       checkCovariance(other)
     } else if (gmContravariance) {
@@ -135,15 +135,15 @@ class GenericModifier(private val _ctx: Context, val genericName: String,
     }
   }
 
-  def checkCovariance(other: GenericModifier): Boolean = {
+  def checkCovariance(other: TypeArgument): Boolean = {
     hasParent(other)
   }
 
-  def checkContravariance(other: GenericModifier): Boolean = {
+  def checkContravariance(other: TypeArgument): Boolean = {
     other.hasParent(this)
   }
 
-  def checkSameVariance(other: GenericModifier): Boolean = {
+  def checkSameVariance(other: TypeArgument): Boolean = {
     this.covariance == other.covariance && this.contravariance == other.contravariance
   }
 

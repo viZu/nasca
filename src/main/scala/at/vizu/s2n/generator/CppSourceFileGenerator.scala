@@ -195,7 +195,4 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     methodCtx.enhance("", Set(mHandle, mdHandle))
   }
 
-  // TODO many types of pathelements...
-
-
 }

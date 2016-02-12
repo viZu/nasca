@@ -41,11 +41,11 @@ object GeneratorUtils {
       IncludeHandle(getHeaderFileName(tpe), QuotationWrapper)
     }
     tpe match {
-      case a: AppliedGenericModifier => a.getConcreteType match {
-        case g: GenericModifier => None
+      case a: AppliedTypeArgument => a.getConcreteType match {
+        case g: TypeArgument => None
         case _@t => Some(generateIncludeHandle())
       }
-      case g: GenericModifier => None
+      case g: TypeArgument => None
       case _@t => Some(generateIncludeHandle())
     }
   }
@@ -80,9 +80,9 @@ object GeneratorUtils {
       GlobalConfig.classConfig.getRenamingHandle(tpe).pointerRenamer(baseTypes, tpe)
     }
     else tpe match {
-      case a: AppliedGenericModifier if a.isGenericModifier => a.name
-      case a: AppliedGenericModifier => generateSmartPtr(baseTypes, tpe)
-      case g: GenericModifier => g.name
+      case a: AppliedTypeArgument if a.isGenericModifier => a.name
+      case a: AppliedTypeArgument => generateSmartPtr(baseTypes, tpe)
+      case g: TypeArgument => g.name
       case _ => generateSmartPtr(baseTypes, tpe)
     }
   }
@@ -216,7 +216,7 @@ object GeneratorUtils {
     }
   }
 
-  def generateTemplatesString(generics: Seq[GenericModifier], withTypeName: Boolean = false): String = {
+  def generateTemplatesString(generics: Seq[TypeArgument], withTypeName: Boolean = false): String = {
     val typeArgs = generateTypeArgs(generics, withTypeName)
     s"template$typeArgs"
   }
@@ -232,7 +232,7 @@ object GeneratorUtils {
         generateTypeArgs(baseTypes, agt.appliedTypes) + generateIncludeHandles(agt)
       case gt: GenericType =>
         GeneratorContext(generateTypeArgs(gt.getGenericModifiers, withTypeName)) + generateIncludeHandles(gt)
-      case agm: AppliedGenericModifier => generateTypeArgsFromType(baseTypes, agm.getConcreteType, withTypeName)
+      case agm: AppliedTypeArgument => generateTypeArgsFromType(baseTypes, agm.getConcreteType, withTypeName)
       case _ => generateIncludeHandles(tpe)
     }
   }
@@ -243,7 +243,7 @@ object GeneratorUtils {
     context.enhance(s"<$context>")
   }
 
-  def generateTypeArgs(generics: Seq[GenericModifier], withTypeName: Boolean = false): String = {
+  def generateTypeArgs(generics: Seq[TypeArgument], withTypeName: Boolean = false): String = {
     val templateTypes = generics.map(if (withTypeName) "typename " + _.name else _.name).mkString(", ")
     s"<$templateTypes>"
   }

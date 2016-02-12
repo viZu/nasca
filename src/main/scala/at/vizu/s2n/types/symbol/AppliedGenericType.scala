@@ -5,7 +5,7 @@ import at.vizu.s2n.id.IdGenerator
 /**
   * Phil on 07.12.15.
   */
-class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
+class AppliedGenericType(val appliedTypes: Seq[TypeArgument],
                          override val genericType: GenericType) extends GenericType(
   genericType.ctx, genericType.simpleName, genericType.pkg, genericType.mods, genericType.isObject) {
 
@@ -25,12 +25,12 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
 
   override def parents: Seq[Parent] = _parents
 
-  override def applyTypes(typeMap: Map[GenericModifier, TType]): AppliedGenericType = {
+  override def applyTypes(typeMap: Map[TypeArgument, TType]): AppliedGenericType = {
     if (getGenericModifiers.isEmpty) this
     else super.applyTypes(typeMap)
   }
 
-  override def genericModifiers: Seq[GenericModifier] = genericType.genericModifiers
+  override def genericModifiers: Seq[TypeArgument] = genericType.genericModifiers
 
   override def toString: String = {
     val typeString = appliedTypes.map(_.toString).mkString(", ")
@@ -58,7 +58,7 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
   }
 
   override def baseTypeEquals(obj: TType): Boolean = obj match {
-    case a: AppliedGenericModifier => baseTypeEquals(a.getConcreteType)
+    case a: AppliedTypeArgument => baseTypeEquals(a.getConcreteType)
     case a: AppliedGenericType => a.getBaseType.typeEquals(getBaseType)
     case b: GenericType => getBaseType.typeEquals(b)
     case _ => false
@@ -86,16 +86,16 @@ class AppliedGenericType(val appliedTypes: Seq[GenericModifier],
     }
   }
 
-  override def getGenericModifiers: Seq[GenericModifier] = {
+  override def getGenericModifiers: Seq[TypeArgument] = {
     appliedTypes.map({
-      case a: AppliedGenericModifier => a.getConcreteType
-    }).collect({ case g: GenericModifier => g })
+      case a: AppliedTypeArgument => a.getConcreteType
+    }).collect({ case g: TypeArgument => g })
   }
 
-  override protected def getAppliedTypes(appliedTypes: Map[GenericModifier, TType]): Seq[GenericModifier] = {
+  override protected def getAppliedTypes(appliedTypes: Map[TypeArgument, TType]): Seq[TypeArgument] = {
     this.appliedTypes.map({
-      case a: AppliedGenericModifier => a.getConcreteType match {
-        case g: GenericModifier if appliedTypes.get(g).get != null => g.applyType(appliedTypes.get(g).get)
+      case a: AppliedTypeArgument => a.getConcreteType match {
+        case g: TypeArgument if appliedTypes.get(g).get != null => g.applyType(appliedTypes.get(g).get)
         case _@t => a
       }
     })

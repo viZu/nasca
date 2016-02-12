@@ -66,15 +66,15 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
     val name: String = meta.genericName
     val upperBound = meta.upperBoundTypeId.map(findType).getOrElse(TypeUtils.anyType(scope))
     val lowerBound = meta.lowerBoundTypeId.map(findType).getOrElse(TypeUtils.nothingType(scope))
-    new GenericModifier(ctx, name, upperBound, lowerBound, meta.covariant.isDefined, meta.contravariant.isDefined)
+    new TypeArgument(ctx, name, upperBound, lowerBound, meta.covariant.isDefined, meta.contravariant.isDefined)
   }
 
   private def metaAppliedGenericModifierToReal(meta: MetaAppliedGenericModifier) = {
     val at = findType(getTypeNameMeta(meta.appliedTypeName))
     val gm = getGenericModifier(meta.genericModifier)
     at match {
-      case g: GenericModifier => new AppliedGenericModifier(g, g.genericName, g.upperBound, g.lowerBound, g.covariance, g.contravariance, gm)
-      case _@o => new AppliedGenericModifier(o, gm.genericName, gm.upperBound, gm.lowerBound, false, false, gm)
+      case g: TypeArgument => new AppliedTypeArgument(g, g.genericName, g.upperBound, g.lowerBound, g.covariance, g.contravariance, gm)
+      case _@o => new AppliedTypeArgument(o, gm.genericName, gm.upperBound, gm.lowerBound, false, false, gm)
     }
   }
 
@@ -156,8 +156,8 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
     Param(ctx, tpe, meta.name, meta.hasDefaultVal.isDefined, meta.mutable.isDefined)
   }
 
-  private def getGenericModifier(id: String): GenericModifier = {
-    findType(id).asInstanceOf[GenericModifier]
+  private def getGenericModifier(id: String): TypeArgument = {
+    findType(id).asInstanceOf[TypeArgument]
   }
 
   private def getGenericType(id: String): GenericType = {
@@ -175,7 +175,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
 
   private def getTypeName(tpe: TType) = {
     tpe match {
-      case gm: GenericModifier => gm.serializationId
+      case gm: TypeArgument => gm.serializationId
       case at: AppliedGenericType => at.serializationId
       case _@t => t.fullClassName
     }
@@ -187,7 +187,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
       case g: MetaGenericType => g.pkg.map(_ + ".").getOrElse("") + g.simpleName
       case a: MetaAppliedGenericType => a.serializationId
       case g: MetaGenericModifier => g.serializationId
-      case a: AppliedGenericModifier => a.serializationId
+      case a: AppliedTypeArgument => a.serializationId
     }
   }
 }

@@ -272,7 +272,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   }
 
   private def createGenericModifier(name: String, covariant: Boolean = false, contravariant: Boolean = false) = {
-    new GenericModifier(ctx, name, any, nothing, covariant, contravariant)
+    new TypeArgument(ctx, name, any, nothing, covariant, contravariant)
   }
 
   private def addFunctionTypes(scope: TScope, num: Int) = {
@@ -292,7 +292,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     fType
   }
 
-  private def addApplyMethod(tpe: ConcreteType, paramTypes: Seq[GenericModifier], returnType: GenericModifier) = {
+  private def addApplyMethod(tpe: ConcreteType, paramTypes: Seq[TypeArgument], returnType: TypeArgument) = {
     val params = paramTypes.zipWithIndex.map(p => typeToParam(p._1, p._2))
     val apply: Method = Method(ctx, "apply", returnType, Vector(Abstract), params)
     tpe.addMethod(apply)

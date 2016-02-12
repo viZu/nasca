@@ -3,9 +3,9 @@ package at.vizu.s2n.types.symbol
 /**
   * Phil on 07.12.15.
   */
-class AppliedGenericModifier(val appliedType: TType, genericName: String, upperBound: TType, lowerBound: TType,
-                             covariant: Boolean, contravariant: Boolean, val genericModifier: GenericModifier)
-  extends GenericModifier(genericModifier.ctx, genericName, upperBound, lowerBound,
+class AppliedTypeArgument(val appliedType: TType, genericName: String, upperBound: TType, lowerBound: TType,
+                          covariant: Boolean, contravariant: Boolean, val genericModifier: TypeArgument)
+  extends TypeArgument(genericModifier.ctx, genericName, upperBound, lowerBound,
     covariant, contravariant) {
 
   override def methods: Seq[Method] = appliedType.methods
@@ -19,7 +19,7 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
   override def hasParent(tpe: TType): Boolean = appliedType.hasParent(tpe)
 
   override def isAssignableFrom(other: TType): Boolean = getConcreteType match {
-    case g: GenericModifier => g.isAssignableFrom(other)
+    case g: TypeArgument => g.isAssignableFrom(other)
     case _@t => other.hasParent(t)
   }
 
@@ -29,20 +29,20 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
 
   override def parents = appliedType.parents
 
-  override def applyType(appliedType: TType): AppliedGenericModifier = {
+  override def applyType(appliedType: TType): AppliedTypeArgument = {
     throw new RuntimeException("AHHH")
   }
 
   override def isAssignableAsParam(other: TType): Boolean = other match {
-    case a: AppliedGenericModifier => checkVariances(a)
-    case g: GenericModifier => this == g
+    case a: AppliedTypeArgument => checkVariances(a)
+    case g: TypeArgument => this == g
     case c: ConcreteType => appliedType == c
     case _ => false
   }
 
   override def equals(that: Any): Boolean = that match {
-    case a: AppliedGenericModifier => a.getConcreteType == getConcreteType
-    case g: GenericModifier => appliedType == g
+    case a: AppliedTypeArgument => a.getConcreteType == getConcreteType
+    case g: TypeArgument => appliedType == g
     case c: ConcreteType => getConcreteType == c
     case _ => false
   }
@@ -50,8 +50,8 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
 
   override def typeEquals(that: Any): Boolean = {
     that match {
-      case a: AppliedGenericModifier => getConcreteType == a.getConcreteType
-      case g: GenericModifier => getConcreteType == g
+      case a: AppliedTypeArgument => getConcreteType == a.getConcreteType
+      case g: TypeArgument => getConcreteType == g
       case c: ConcreteType => getConcreteType == c
       case _ => false
     }
@@ -59,13 +59,13 @@ class AppliedGenericModifier(val appliedType: TType, genericName: String, upperB
 
   def getConcreteType: TType = {
     appliedType match {
-      case a: AppliedGenericModifier => a.getConcreteType
+      case a: AppliedTypeArgument => a.getConcreteType
       case _ => appliedType
     }
   }
 
   override def isGenericModifier: Boolean = getConcreteType match {
-    case g: GenericModifier => true
+    case g: TypeArgument => true
     case _ => false
   }
 
