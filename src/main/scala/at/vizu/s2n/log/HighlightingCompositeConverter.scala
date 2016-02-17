@@ -18,4 +18,6 @@ class HighlightingCompositeConverter extends ForegroundCompositeConverterBase[IL
       case _ => DEFAULT_FG
     }
   }
+
+
 }

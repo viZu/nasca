@@ -27,9 +27,10 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     addGenericsToScope(classScope)
     val includeGuard = GeneratorUtils.generateIncludeGuard(packageName, GeneratorUtils.getHeaderFileName(tpe))
 
+    val forwardDeclarations = generateForwardDeclarations(classScope)
     val templateContent: GeneratorContext = generateTemplateContent()
     val includes = generateIncludes(templateContent.handles)
-    val content: String = includeGuard + includes + templateContent.content
+    val content: String = includeGuard + includes + forwardDeclarations + templateContent.content
 
     logger.debug("Writing template file {}", name)
     val prettyContent = CodePrettifier.prettify(content)
@@ -197,6 +198,17 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     val exprCtx: GeneratorContext = expression.generate
     val content: String = if (returnable) "return " + exprCtx.content else exprCtx.content
     exprCtx.enhance(content)
+  }
+
+  private def generateForwardDeclarations(scope: TScope) = {
+    tpe.parents.map(generateForwardDeclaration(scope, _)).mkString("\n\n")
+  }
+
+  private def generateForwardDeclaration(scope: TScope, parent: Parent) = {
+    val parentTpe: TType = parent.tpe
+    val classTemplate = GeneratorUtils.generateClassTemplate(parentTpe)
+    val simpleName = GeneratorUtils.getSimpleName(baseTypes, parentTpe)
+    GeneratorUtils.wrapBodyWithNamespace(parentTpe.pkg, s"${classTemplate}class $simpleName;")
   }
 
 }
