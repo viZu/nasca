@@ -224,7 +224,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         val method: Method = TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe)
         if (method.generics.nonEmpty) {
           val appliedTypes = method.getAppliedTypes(args)
-          method.applyTypes(appliedTypes).returnType
+          method.applyTypes(scope, appliedTypes).returnType
         } else method.returnType
       case i: Ident =>
         val args = checkArgs(scope, apply.args)

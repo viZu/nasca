@@ -17,6 +17,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private var _types: Seq[TType] = Vector()
   private var _objects: Seq[TType] = Vector()
+  private var _appliedTypes: Seq[(Map[TypeArgument, TType], TType, AppliedGenericType)] = Vector()
   private var _identifiers: Seq[Identifier] = Vector()
   private var _typeAliases: Map[String, String] = Map()
   private var _methods: Seq[Method] = Vector()
@@ -128,6 +129,14 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 
   private def findClassInParent(name: String): Option[TType] = {
     parent.flatMap(_.findClass(name))
+  }
+
+  def addAppliedType(appliedTypes: Map[TypeArgument, TType], onType: TType, result: AppliedGenericType): Unit = {
+    _appliedTypes = _appliedTypes :+(appliedTypes, onType, result)
+  }
+
+  def findAppliedType(appliedTypes: Map[TypeArgument, TType], onType: TType): Option[AppliedGenericType] = {
+    _appliedTypes.find(tpl => tpl._1 == appliedTypes && tpl._2 == onType).map(_._3)
   }
 
   /**
@@ -363,6 +372,8 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
 }
 
 object TScope {
+  def apply() = new TScope(scopeType = RootScope)
+
   def apply(baseTypes: BaseTypes) = new TScope(_baseTypes = Option(baseTypes), scopeType = RootScope)
 
   def apply(parent: TScope, scopeType: ScopeType) = new TScope(Option(parent), scopeType = scopeType)

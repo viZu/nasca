@@ -15,19 +15,19 @@ class AppliedGenericType(val appliedTypes: Seq[TypeArgument],
 
   private val appliedTypeMap = genericType.genericModifiers.zip(appliedTypes).toMap
 
-  private def memberAddedInGenericType(member: Member) = {
+  private def memberAddedInGenericType(scope: TScope, member: Member) = {
     member match {
-      case f: Field => addField(mapField(appliedTypeMap, f, this))
-      case m: Method => addMethod(mapMethod(appliedTypeMap, m, this))
+      case f: Field => addField(mapField(scope, appliedTypeMap, f, this))
+      case m: Method => addMethod(mapMethod(scope, appliedTypeMap, m, this))
     }
   }
 
 
   override def parents: Seq[Parent] = _parents
 
-  override def applyTypes(typeMap: Map[TypeArgument, TType]): AppliedGenericType = {
+  override def applyTypes(scope: TScope, typeMap: Map[TypeArgument, TType]): AppliedGenericType = {
     if (getGenericModifiers.isEmpty) this
-    else super.applyTypes(typeMap)
+    else super.applyTypes(scope, typeMap)
   }
 
   override def genericModifiers: Seq[TypeArgument] = genericType.genericModifiers

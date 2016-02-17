@@ -46,16 +46,16 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     }
   }
 
-  def applyTypes(types: Map[TypeArgument, TType]) = {
-    val retTpe = TypeUtils.getNewTpe(types, returnType, applyPartly = false)
-    val newGenerics = generics.map(TypeUtils.getNewTpe(types, _, applyPartly = false))
+  def applyTypes(scope: TScope, types: Map[TypeArgument, TType]) = {
+    val retTpe = TypeUtils.getNewTpe(scope, types, returnType, applyPartly = false)
+    val newGenerics = generics.map(TypeUtils.getNewTpe(scope, types, _, applyPartly = false))
       .collect({ case gt: TypeArgument if !gt.isInstanceOf[AppliedTypeArgument] => gt })
-    val newParams = applyTypesOnParams(types)
+    val newParams = applyTypesOnParams(scope, types)
     Method(ctx, name, retTpe, mods, newParams, newGenerics, instanceMethod, operator)
   }
 
-  private def applyTypesOnParams(types: Map[TypeArgument, TType]) = {
-    params.map(_.applyTypes(types))
+  private def applyTypesOnParams(scope: TScope, types: Map[TypeArgument, TType]) = {
+    params.map(_.applyTypes(scope, types))
   }
 
   override def toString = {

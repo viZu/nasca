@@ -74,7 +74,7 @@ object TypeInference extends LazyLogging {
 
         val method: Method = TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe)
         if (method.generics.nonEmpty) {
-          val newMethod = method.applyTypes(method.getAppliedTypes(args))
+          val newMethod = method.applyTypes(scope, method.getAppliedTypes(args))
           newMethod.returnType
         } else method.returnType
       case i: Ident =>
@@ -86,14 +86,22 @@ object TypeInference extends LazyLogging {
   def getTypeIdent(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: Seq[TType] = Vector()): TType = {
     val iName = ident.name.toString
     profile(logger, "ti: ident - findmethod", scope.findMethod(iName, args), Trace) match {
-      case Some(m) => m.tpe
+      case Some(m) =>
+        if (m.generics.nonEmpty) {
+          val appliedTypes = m.getAppliedTypes(args)
+          m.applyTypes(scope, appliedTypes).returnType
+        } else m.returnType
       case None =>
         profile(logger, "ti: ident - findidentifier", scope.findIdentifier(iName), Trace) match {
           case Some(i) => i.tpe
           case None =>
             val thisTpe: TType = scope.findThis()
             thisTpe.findMethod(scope.findThis(), iName, args) match {
-              case Some(tMethod) => tMethod.returnType
+              case Some(tMethod) =>
+                if (tMethod.generics.nonEmpty) {
+                  val appliedTypes = tMethod.getAppliedTypes(args)
+                  tMethod.applyTypes(scope, appliedTypes).returnType
+                } else tMethod.returnType
               case None =>
                 thisTpe.findField(thisTpe, iName) match {
                   case Some(field) => field.tpe

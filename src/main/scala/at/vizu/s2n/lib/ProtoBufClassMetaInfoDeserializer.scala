@@ -81,7 +81,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
   private def metaAppliedGenericTypeToReal(meta: MetaAppliedGenericType) = {
     val genericType = getGenericType(meta.genericType)
     val appliedTypes = meta.appliedTypes.map(findType)
-    genericType.applyTypeSeq(appliedTypes)
+    genericType.applyTypeSeq(TScope(), appliedTypes)
   }
 
   private def metaContextToReal(metaContext: MetaContext) = {

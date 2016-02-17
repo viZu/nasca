@@ -292,7 +292,7 @@ object Expression extends LazyLogging {
           val method: Method = TypeUtils.findMethod(scope, s.name.toString, s.pos.line, argTypes, tpe)
           val appliedMethod = if (method.generics.nonEmpty) {
             val appliedTypes = method.getAppliedTypes(argTypes)
-            method.applyTypes(appliedTypes)
+            method.applyTypes(scope, appliedTypes)
           } else method
           generateSelectExpression(baseTypes, scope, s, appliedMethod)
         } else {

@@ -112,7 +112,7 @@ object TypeUtils extends LazyLogging {
             if (gt.genericModifiers == appliedTypes) gt
             else {
               val appliedMap = gt.genericModifiers.zip(appliedTypes).toMap
-              gt.applyTypes(appliedMap)
+              gt.applyTypes(scope, appliedMap)
             }
           case _ => TypeErrors.addError(scope, att.pos.line,
             s"Wrong number of type arguments. Expected 0, but was ${appliedTypes.size}")
@@ -240,7 +240,7 @@ object TypeUtils extends LazyLogging {
       case gt: GenericType =>
         val method: Method = findConstructor(scope, n.pos.line, args, gt)
         val appliedTypes: Map[TypeArgument, TType] = method.getAppliedTypes(args)
-        gt.applyTypes(appliedTypes)
+        gt.applyTypes(scope, appliedTypes)
       case _ => onType
     }
   }
@@ -256,7 +256,7 @@ object TypeUtils extends LazyLogging {
             checkTypeToApply(scope, line, pair._1, pair._2)
             pair
           }).toMap
-          gt.applyTypes(map)
+          gt.applyTypes(scope, map)
         }
       case _ => onType
     }
@@ -430,7 +430,7 @@ object TypeUtils extends LazyLogging {
     * Generics
     */
 
-  def getNewTpe(types: Map[TypeArgument, TType], oldType: TType, applyPartly: Boolean = false) = {
+  def getNewTpe(scope: TScope, types: Map[TypeArgument, TType], oldType: TType, applyPartly: Boolean = false) = {
     oldType match {
       case g: TypeArgument =>
         types.get(g) match {
@@ -439,7 +439,7 @@ object TypeUtils extends LazyLogging {
         }
       case g: GenericType =>
         val typesToApply = if (applyPartly) findTypesToApply(types, g) else findTypesToApplyPartly(types, g)
-        g.applyTypes(typesToApply) // TODO apply partly
+        g.applyTypes(scope, typesToApply) // TODO apply partly
       case _ => oldType
     }
   }
@@ -520,7 +520,7 @@ object TypeUtils extends LazyLogging {
     val funcType = findClass(scope, funcName, line).asInstanceOf[GenericType]
     val types = paramTypes :+ retType
     val typeMap = funcType.genericModifiers.zip(types).toMap
-    funcType.applyTypes(typeMap)
+    funcType.applyTypes(scope, typeMap)
   }
 
   def getFunctionReturnType(tpe: TType) = tpe match {
@@ -571,7 +571,7 @@ object TypeUtils extends LazyLogging {
       found1Concrete match {
         case g: GenericType =>
           val genericModifiers: Seq[TType] = findGenericModifiers(g, found2Concrete.asInstanceOf[GenericType])
-          g.genericType.applyTypeSeq(genericModifiers)
+          g.genericType.applyTypeSeq(scope, genericModifiers)
         case _ => throw new RuntimeException()
       }
     }
