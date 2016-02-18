@@ -17,8 +17,8 @@ class AppliedGenericType(val appliedTypes: Seq[TypeArgument],
 
   private def memberAddedInGenericType(scope: TScope, member: Member) = {
     member match {
-      case f: Field => addField(mapField(scope, appliedTypeMap, f, this))
-      case m: Method => addMethod(mapMethod(scope, appliedTypeMap, m, this))
+      case f: Field => addField(mapField(scope, appliedTypeMap, f))
+      case m: Method => addMethod(mapMethod(scope, appliedTypeMap, m))
     }
   }
 

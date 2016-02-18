@@ -28,8 +28,9 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
           case _ =>
             val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
             scope.addAppliedType(typeMap, this, appliedType)
-            val newMethods = mapMethods(scope, typeMap, appliedType)
-            val newFields = mapFields(scope, typeMap, appliedType)
+
+            val newMethods = mapMethods(scope, typeMap)
+            val newFields = mapFields(scope, typeMap)
             val newParents = mapParents(scope, typeMap)
             newMethods.foreach(appliedType.addMethod)
             newFields.foreach(appliedType.addField)
@@ -46,13 +47,13 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     }
   }
 
-  protected def mapMethods(scope: TScope, types: Map[TypeArgument, TType], appliedType: TType): Seq[Method] = {
-    methods.map(mapMethod(scope, types, _, appliedType))
+  protected def mapMethods(scope: TScope, types: Map[TypeArgument, TType]): Seq[Method] = {
+    methods.map(mapMethod(scope, types, _))
   }
 
-  protected def mapMethod(scope: TScope, types: Map[TypeArgument, TType], method: Method, appliedType: TType) = {
-    val returnType = getNewTpe(scope, types, method.returnType, appliedType, applyPartly = true)
-    val params = method.params.map(mapParam(scope, types, _, appliedType))
+  protected def mapMethod(scope: TScope, types: Map[TypeArgument, TType], method: Method) = {
+    val returnType = getNewTpe(scope, types, method.returnType, applyPartly = true)
+    val params = method.params.map(mapParam(scope, types, _))
     method match {
       case c: Constructor => Constructor(c.ctx, returnType, c.mods, params, c.primary)
       case m: Method => Method(method.ctx, method.name, returnType, method.mods, params, method.generics,
@@ -61,33 +62,32 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   }
 
-  protected def mapReturnType(scope: TScope, types: Map[TypeArgument, TType], returnType: TType, appliedType: TType) = {
-    if (this == returnType) appliedType
-    else getNewTpe(scope, types, returnType, appliedType, applyPartly = true)
+  protected def mapReturnType(scope: TScope, types: Map[TypeArgument, TType], returnType: TType) = {
+    getNewTpe(scope, types, returnType, applyPartly = true)
   }
 
-  protected def mapParam(scope: TScope, types: Map[TypeArgument, TType], oldParam: Param, appliedType: TType): Param = {
+  protected def mapParam(scope: TScope, types: Map[TypeArgument, TType], oldParam: Param): Param = {
     //TODO check if method has generic modifier
     oldParam.tpe match {
-      case g: TypeArgument => Param(oldParam.ctx, getNewTpe(scope, types, g, appliedType, applyPartly = true),
+      case g: TypeArgument => Param(oldParam.ctx, getNewTpe(scope, types, g, applyPartly = true),
         oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
       case g: GenericType if g.genericModifiers.nonEmpty =>
-        val newTpe: TType = getNewTpe(scope, types, g, appliedType, applyPartly = true)
+        val newTpe: TType = getNewTpe(scope, types, g, applyPartly = true)
         Param(oldParam.ctx, newTpe, oldParam.name, oldParam.hasDefaultVal, oldParam.mutable)
       case _ => oldParam // Garbage collector?
     }
   }
 
-  protected def mapFields(scope: TScope, types: Map[TypeArgument, TType], appliedType: TType): Seq[Field] = {
-    fields.map(mapField(scope, types, _, appliedType))
+  protected def mapFields(scope: TScope, types: Map[TypeArgument, TType]): Seq[Field] = {
+    fields.map(mapField(scope, types, _))
   }
 
-  protected def mapField(scope: TScope, types: Map[TypeArgument, TType], field: Field, appliedType: TType) = {
+  protected def mapField(scope: TScope, types: Map[TypeArgument, TType], field: Field) = {
     field.tpe match {
       case g: TypeArgument => Field(field.ctx, field.mods, field.name,
-        getNewTpe(scope, types, g, appliedType, applyPartly = false))
+        getNewTpe(scope, types, g, applyPartly = false))
       case g: GenericType =>
-        val newTpe: TType = getNewTpe(scope, types, g, appliedType, applyPartly = false)
+        val newTpe: TType = getNewTpe(scope, types, g, applyPartly = false)
         Field(field.ctx, field.mods, field.name, newTpe)
       case _ => field // Garbage collector?
     }
@@ -101,7 +101,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def getNewTpe(scope: TScope, types: Map[TypeArgument, TType], oldType: TType,
-                        appliedType: TType, applyPartly: Boolean = false) = {
+                        applyPartly: Boolean = false) = {
     oldType match {
       case am: AppliedTypeArgument =>
         am.getConcreteType match {
@@ -116,8 +116,6 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
           case None => g
           case Some(t) => g.applyType(t)
         }
-      case g: GenericType if this == g =>
-        appliedType
       case g: GenericType =>
         val typesToApply = if (applyPartly) findTypesToApplyPartly(types, g) else findTypesToApply(types, g)
         g.applyTypes(scope, typesToApply) // TODO apply partly
