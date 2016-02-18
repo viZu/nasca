@@ -195,7 +195,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
   }
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {
-    val exprCtx: GeneratorContext = expression.generate
+    val exprCtx: GeneratorContext = expression.content
     val content: String = if (returnable) "return " + exprCtx.value else exprCtx.value
     exprCtx.enhance(content)
   }
