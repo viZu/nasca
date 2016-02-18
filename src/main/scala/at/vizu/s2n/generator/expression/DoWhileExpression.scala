@@ -10,8 +10,8 @@ case class DoWhileExpression(baseTypes: BaseTypes, condExpr: Expression, body: E
   override def exprTpe: TType = baseTypes.unit
 
   override def generate: GeneratorContext = {
-    val condCtx = condExpr.generate
-    val bodyCtx = body.generate
+    val condCtx = condExpr.content
+    val bodyCtx = body.content
     val content = s"do ${bodyCtx.content} while (${condCtx.content});"
     GeneratorUtils.mergeGeneratorContexts(Vector(condCtx, bodyCtx), givenContent = content)
   }

@@ -14,8 +14,8 @@ case class ValDefExpression(baseTypes: BaseTypes, varName: String, varTpe: TType
     val typeName: GeneratorContext = GeneratorUtils.generateCppTypeName(baseTypes, tpe)
     val lhs = s"${typeName.content} $varName"
     val rhsCtx = rhs match {
-      case b: BaseBlockExpression => rhs.generateReturn
-      case _ => rhs.generate
+      case b: BaseBlockExpression => rhs.returnContent
+      case _ => rhs.content
     }
     val defString = s"$lhs = ${rhsCtx.content}"
     rhsCtx.enhance(defString, typeName.handles)

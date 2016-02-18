@@ -11,13 +11,13 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
 
   override def generate: GeneratorContext = {
     val rhsCtx = rhs match {
-      case b: BaseBlockExpression => rhs.generateReturn
-      case _ => rhs.generate
+      case b: BaseBlockExpression => rhs.returnContent
+      case _ => rhs.content
     }
     if (isSetterField) {
       generateSetter(rhsCtx)
     } else {
-      generateAssignment(lhs.generate, rhsCtx)
+      generateAssignment(lhs.content, rhsCtx)
     }
   }
 
@@ -46,7 +46,7 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
       }
       case ChainedExpression(init :+ last) => last match {
         case NestedExpression(_, _, _, _, f, _) => f match {
-          case f: Field => (ChainedExpression(init).generate, f)
+          case f: Field => (ChainedExpression(init).content, f)
         }
       }
     }

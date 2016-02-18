@@ -41,14 +41,14 @@ case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart
   }
 
   private def generateIfContent(ifPart: IfPart, withReturn: Boolean, f: (String, String) => String) = {
-    val cond = ifPart.condition.generate
+    val cond = ifPart.condition.content
     val body = generateCtx(ifPart.body, withReturn)
     val content = f(cond.content, body.content)
     GeneratorUtils.mergeGeneratorContexts(Vector(cond, body), givenContent = content)
   }
 
   private def generateCtx(expression: Expression, withReturn: Boolean) = {
-    if (withReturn) expression.generateReturn else expression.generate
+    if (withReturn) expression.returnContent else expression.content
   }
 
   override def skipSemiColon: Boolean = true

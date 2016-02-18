@@ -11,7 +11,7 @@ case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expressio
 
   def generate = {
     val typeName = GeneratorUtils.getCppTypeName(baseTypes, tpe)
-    val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ", ")
+    val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.content), ", ")
     val sharedPtrName = GeneratorUtils.generateCppTypeName(baseTypes, tpe)
     paramsContext.enhance(s"$sharedPtrName(new $typeName(${paramsContext.content}))", typeName.handles)
   }

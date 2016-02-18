@@ -27,7 +27,7 @@ abstract class BaseBlockExpression(stats: List[Expression], expr: Expression, re
   protected def generateContentStr(bodyCtx: GeneratorContext): GeneratorContext
 
   private def generateExpr(returnable: Boolean) = {
-    val exprGenerate: GeneratorContext = if (returnable) expr.generateReturn else expr.generate
+    val exprGenerate: GeneratorContext = if (returnable) expr.returnContent else expr.content
     val exprContent: String = exprGenerate.content
     exprGenerate.enhance(generateExprString(exprContent, expr.skipSemiColon))
   }

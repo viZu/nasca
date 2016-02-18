@@ -17,9 +17,12 @@ import scala.runtime.BoxedUnit
 trait Expression {
   def exprTpe: TType
 
-  def generate: GeneratorContext
+  lazy val content: GeneratorContext = generate
+  lazy val returnContent: GeneratorContext = generateReturn
 
-  def generateReturn: GeneratorContext = {
+  protected def generate: GeneratorContext
+
+  protected def generateReturn: GeneratorContext = {
     val g = generate
     g.enhance("return " + g.content)
   }

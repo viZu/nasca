@@ -107,8 +107,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext,
                                   d: DefDef): GeneratorContext = method match {
     case c: Constructor if c.primary =>
-      if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").generate // no in
-      else PrimaryConstructorExpression(scope, c, classInitMethodName).generate
+      if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").content // no in
+      else PrimaryConstructorExpression(scope, c, classInitMethodName).content
     case c: Constructor =>
       scope.scoped((childScope: TScope) => {
         TypeUtils.addParamsToScope(scope, c.params)
@@ -117,7 +117,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
         val primaryCallArgs = block.stats.head match {
           case Apply(i: Ident, args) if i.name.toString == TypeUtils.ConstructorName => Expression(scope, args)
         }
-        SecondaryConstructorExpression(scope, c, primaryCallArgs, stats).generate
+        SecondaryConstructorExpression(scope, c, primaryCallArgs, stats).content
       }, MethodScope)
   }
 
@@ -159,7 +159,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
     val cppMethodName = getMethodName(methodName)
     val rhsBlock: Block = Expression.wrapInBlock(rhs)
     val methodBody: GeneratorContext = Expression
-      .getBaseBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).generate
+      .getBaseBlockExpression(_baseTypes, scope, rhsBlock, returnType != _baseTypes.unit).content
     val returnTypeString = GeneratorUtils.generateCppTypeName(_baseTypes, returnType)
     val paramsString = GeneratorUtils.generateParamsString(_baseTypes, params, withVars = true)
     val methodString: String = s"""$templateString$returnTypeString $cppMethodName($paramsString) ${methodBody.content}"""
@@ -171,7 +171,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TScope, implemen
   }
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {
-    val exprCtx: GeneratorContext = expression.generate
+    val exprCtx: GeneratorContext = expression.content
     val content: String = if (returnable) "return " + exprCtx.content else exprCtx.content
     exprCtx.enhance(content)
   }

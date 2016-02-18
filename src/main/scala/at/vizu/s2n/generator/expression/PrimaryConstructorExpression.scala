@@ -24,7 +24,7 @@ case class PrimaryConstructorExpression(scope: TScope, constructor: Constructor,
 
   private def generateSuperInitString(parent: Parent): String = {
     val typeName = GeneratorUtils.getCppTypeName(scope.baseTypes, parent.tpe).content
-    val params: String = parent.expr.map(_.generate.content).mkString(", ")
+    val params: String = parent.expr.map(_.content.content).mkString(", ")
     s"$typeName($params)"
   }
 
