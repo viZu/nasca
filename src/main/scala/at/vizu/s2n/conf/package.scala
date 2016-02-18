@@ -7,6 +7,6 @@ import at.vizu.s2n.generator.GeneratorContext
   */
 package object conf {
 
-  implicit def strToHandle(ctx: GeneratorContext): Seq[String] => GeneratorContext = (params) => ctx
+  implicit def strToHandle(ctx: GeneratorContext): (String, Seq[String]) => GeneratorContext = (varName, params) => ctx
 
 }

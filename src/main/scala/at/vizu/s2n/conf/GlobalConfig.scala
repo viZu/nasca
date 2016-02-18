@@ -15,7 +15,7 @@ object GlobalConfig {
   private def initInvocationConfig() = {
     val root = new ClassInvocations("__root__") {
       withInvocation(new MethodInvocationHandle("println") {
-        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (params) =>
+        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (varName, params) =>
           getPrintCtx( s"""std::cout << ${params.head} << std::endl""")
         }
         withParams() handleAs {
@@ -24,7 +24,7 @@ object GlobalConfig {
       })
 
       withInvocation(new MethodInvocationHandle("print") {
-        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (params) =>
+        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (varName, params) =>
           getPrintCtx(s"""std::cout << ${params.head}""")
         }
       })
@@ -37,22 +37,22 @@ object GlobalConfig {
         }
       })
       withInvocation(new MethodInvocationHandle("apply") {
-        withParams(TypeUtils.RootScalaPackage + ".Int") handleAs { params =>
+        withParams(TypeUtils.RootScalaPackage + ".Int") handleAs { (varName, params) =>
           GeneratorContext(s"->at(${params.head})")
         }
       })
       withInvocation(new MethodInvocationHandle("update") {
-        withParams(TypeUtils.RootScalaPackage + ".Int", "T") handleAs { params =>
+        withParams(TypeUtils.RootScalaPackage + ".Int", "T") handleAs { (varName, params) =>
           val first = params.head
           val second = params(1)
-          GeneratorContext(s"->insert(internalArray->begin() + $first, $second)")
+          GeneratorContext(s"->insert($varName->begin() + $first, $second)")
         }
       })
     }
 
     val string = new ClassInvocations(TypeUtils.RootScalaPackage + ".String") {
       withInvocation(new MethodInvocationHandle("contains") {
-        withParams(TypeUtils.RootScalaPackage + ".String") handleAs { params =>
+        withParams(TypeUtils.RootScalaPackage + ".String") handleAs { (varName, params) =>
           GeneratorContext(s".find(${params.head}) != std::string::npos")
         }
       })

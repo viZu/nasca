@@ -31,9 +31,9 @@ class ClassInvocations(val className: String) {
 
 case class MethodInvocationWithParams(methodIncov: MethodInvocationHandle, paramTypes: Seq[String]) {
 
-  private[conf] var invocation: Seq[String] => GeneratorContext = null
+  private[conf] var invocation: (String, Seq[String]) => GeneratorContext = null
 
-  def handleAs(func: Seq[String] => GeneratorContext) = {
+  def handleAs(func: (String, Seq[String]) => GeneratorContext) = {
     invocation = func
     methodIncov.add(this)
   }
@@ -48,7 +48,8 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
 
   private def buildMap() = classInvocations.map(ci => ci.className -> ci.build()).toMap
 
-  def findInvocationHandle(scope: TScope, className: String, methodName: String, params: Seq[TType]): Seq[String] => GeneratorContext = {
+  def findInvocationHandle(scope: TScope, className: String,
+                           methodName: String, params: Seq[TType]): (String, Seq[String]) => GeneratorContext = {
     val cName = if (className.isEmpty) "__root__" else className
     findInvocationHandleOpt(scope, cName, methodName, params).get
   }

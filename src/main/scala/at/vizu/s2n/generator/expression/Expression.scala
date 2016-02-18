@@ -244,10 +244,11 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression], onType: TType = null): GeneratorContext = {
+  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression],
+                                       onType: TType = null): GeneratorContext = {
     val typeName = if (onType == null) "" else onType.fullClassName
     if (hasInvocationHandle(scope, method, typeName)) {
-      executeInvocationHandle(scope, method, params, typeName)
+      executeInvocationHandle(scope, "", method, params, typeName)
     } else {
       val paramsAsString = params.map(_.generate.content).mkString
       val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
@@ -266,12 +267,12 @@ object Expression extends LazyLogging {
     GlobalConfig.invocationConfig.hasInvocationHandle(scope, typeName, method.name, paramTypes)
   }
 
-  private def executeInvocationHandle(scope: TScope, method: Method, params: Seq[Expression],
+  private def executeInvocationHandle(scope: TScope, varName: String, method: Method, params: Seq[Expression],
                                       className: String = ""): GeneratorContext = {
     val paramTypes = method.params.map(_.tpe)
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, className, method.name, paramTypes)
     val paramsAsString = params.map(_.generate.content)
-    handle(paramsAsString)
+    handle(varName, paramsAsString)
   }
 
   private def generateApplyExpression(baseTypes: BaseTypes, scope: TScope, apply: Apply,

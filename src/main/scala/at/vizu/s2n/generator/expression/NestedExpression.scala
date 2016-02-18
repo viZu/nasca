@@ -85,7 +85,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
     }
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
     val paramsAsString = params.map(_.generate.content)
-    handle(paramsAsString)
+    handle(varName, paramsAsString)
   }
 
   private def isOperator(m: Method): Boolean = m.operator
