@@ -26,7 +26,7 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
   override def generateReturn: GeneratorContext = generate
 
   private def generateAssignment(lhsCtx: GeneratorContext, rhsCtx: GeneratorContext) = {
-    val generated = s"${lhsCtx.content} = ${rhsCtx.content}"
+    val generated = s"${lhsCtx.value} = ${rhsCtx.value}"
     GeneratorUtils.mergeGeneratorContexts(Vector(lhsCtx, rhsCtx), givenContent = generated)
   }
 

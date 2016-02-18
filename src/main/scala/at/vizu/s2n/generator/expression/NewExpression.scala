@@ -13,7 +13,7 @@ case class NewExpression(baseTypes: BaseTypes, tpe: TType, params: Seq[Expressio
     val typeName = GeneratorUtils.getCppTypeName(baseTypes, tpe)
     val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.content), ", ")
     val sharedPtrName = GeneratorUtils.generateCppTypeName(baseTypes, tpe)
-    paramsContext.enhance(s"$sharedPtrName(new $typeName(${paramsContext.content}))", typeName.handles)
+    paramsContext.enhance(s"$sharedPtrName(new $typeName(${paramsContext.value}))", typeName.handles)
   }
 
   override def skipSemiColon: Boolean = true

@@ -12,8 +12,8 @@ case class SecondaryConstructorExpression(scope: TScope, constr: Constructor, pr
   override def exprTpe: TType = constr.returnType
 
   private def generatePrimaryCall = {
-    val typeName: String = GeneratorUtils.getCppTypeName(scope.baseTypes, exprTpe).content
-    val params: String = primaryCallArgs.map(_.content.content).mkString(", ")
+    val typeName: String = GeneratorUtils.getCppTypeName(scope.baseTypes, exprTpe).value
+    val params: String = primaryCallArgs.map(_.content.value).mkString(", ")
     s"$typeName($params)"
   }
 

@@ -114,7 +114,7 @@ object GeneratorUtils {
 
   def getCppTypeName(pkg: String, name: String, typeString: GeneratorContext, isObject: Boolean): GeneratorContext = {
     val typeName = if (isObject) name + "__Object" else name
-    if (pkg.isEmpty) typeString.enhance(typeName + typeString.content)
+    if (pkg.isEmpty) typeString.enhance(typeName + typeString.value)
     else typeString.enhance(pkg.replaceAll("\\.", "_") + "::" + typeName + typeString.toString)
   }
 
@@ -359,7 +359,7 @@ object GeneratorUtils {
       val typeArgs = generateTemplatesString(g.genericModifiers, withTypeName = true)
       val tmpTemplateArgs = generateTempTemplateArgs(g.genericModifiers.size)
       val tmpTypeArgs = generateTempTypeArgs(g.genericModifiers.size)
-      val cppTypename = getCppTypeName(baseTypes, tpe, withTypeName = false).content
+      val cppTypename = getCppTypeName(baseTypes, tpe, withTypeName = false).value
       val fieldAssignments = generateFieldAssignments(tpe)
       val fieldInitializers = generateFieldInitializers(tpe)
       s"""
@@ -455,7 +455,7 @@ object GeneratorUtils {
     val content: String = if (givenContent != null) {
       givenContent
     } else {
-      startsWith + seq.filter(_.definedContent).map(expr => expr.content).mkString(seperator) + endsWith // remove empty contents
+      startsWith + seq.filter(_.definedContent).map(expr => expr.value).mkString(seperator) + endsWith // remove empty contents
     }
     val handles: Set[GeneratorHandle] = seq.flatMap(_.handles).toSet
     GeneratorContext(content, handles)

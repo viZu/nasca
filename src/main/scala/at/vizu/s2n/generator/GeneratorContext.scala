@@ -5,13 +5,13 @@ import at.vizu.s2n.generator.handles.GeneratorHandle
 /**
   * Phil on 18.11.15.
   */
-case class GeneratorContext(content: String = "", handles: Set[GeneratorHandle] = Set()) {
+case class GeneratorContext(value: String = "", handles: Set[GeneratorHandle] = Set()) {
 
   def isEmpty = emptyContent && handles.isEmpty
 
   def isNonEmpty = !isEmpty
 
-  def emptyContent = content.trim.isEmpty
+  def emptyContent = value.trim.isEmpty
 
   def definedContent = !emptyContent
 
@@ -21,21 +21,21 @@ case class GeneratorContext(content: String = "", handles: Set[GeneratorHandle] 
 
   def enhance(content: String, handles: Set[GeneratorHandle] = Set()) = GeneratorContext(content, this.handles ++ handles)
 
-  def ++(handles: Set[GeneratorHandle]) = GeneratorContext(content, this.handles ++ handles)
+  def ++(handles: Set[GeneratorHandle]) = GeneratorContext(value, this.handles ++ handles)
 
-  def +(handle: GeneratorHandle): GeneratorContext = GeneratorContext(content, this.handles + handle)
+  def +(handle: GeneratorHandle): GeneratorContext = GeneratorContext(value, this.handles + handle)
 
   def +(optHandle: Option[GeneratorHandle]): GeneratorContext = optHandle match {
     case None => this
     case Some(handle) => this + handle
   }
 
-  def +(content: String) = GeneratorContext(this.content + content, handles)
+  def +(content: String) = GeneratorContext(this.value + content, handles)
 
   def removeHandles[T <: GeneratorHandle](clazz: Class[T]) = {
     val newHandles = this.handles.filter(_.getClass != clazz)
-    GeneratorContext(content, newHandles)
+    GeneratorContext(value, newHandles)
   }
 
-  override def toString: String = content
+  override def toString: String = value
 }

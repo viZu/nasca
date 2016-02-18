@@ -23,7 +23,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
     val paramsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.content), ", ")
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
-      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = callCtx.content)
+      GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = callCtx.value)
     } else {
       throw new RuntimeException("TODO")
     }
@@ -31,7 +31,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
 
   private def generateMethodCallOnType(tpe: TType, varName: String, m: Method): GeneratorContext = {
     val paramsContext = generateParamsContext(m)
-    val paramsContent: String = paramsContext.content
+    val paramsContent: String = paramsContext.value
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
       val content = varName + callCtx
@@ -57,7 +57,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
     val ctxSeq: Seq[GeneratorContext] = m.params.map(_.tpe).zip(params).map({
       case (tpe, expr) if TypeUtils.isFunctionType(tpe) =>
         val ctx = expr.content
-        ctx.enhance(ctx.content.replaceAll("\\(\\)", ""))
+        ctx.enhance(ctx.value.replaceAll("\\(\\)", ""))
       case (tpe, expr) => expr.content
     })
     GeneratorUtils.mergeGeneratorContexts(ctxSeq, ", ")
@@ -84,7 +84,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TScope, prevTpe: TType,
       case f: Field => Vector()
     }
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
-    val paramsAsString = params.map(_.content.content)
+    val paramsAsString = params.map(_.content.value)
     handle(varName, paramsAsString)
   }
 

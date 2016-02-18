@@ -12,7 +12,7 @@ case class InlineDefExpression(baseTypes: BaseTypes, method: Method, body: BaseB
   override def generate: GeneratorContext = {
     val bodyCtx: GeneratorContext = body.generate
     val paramsString = GeneratorUtils.generateParamsString(baseTypes, method.params, withVars = true)
-    val contentStr = s"auto ${method.name} = [&]($paramsString) ${bodyCtx.content}"
+    val contentStr = s"auto ${method.name} = [&]($paramsString) ${bodyCtx.value}"
     bodyCtx.enhance(contentStr)
   }
 

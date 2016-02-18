@@ -24,7 +24,7 @@ abstract class ConstructorExpression extends Expression {
     val simpleName = GeneratorUtils.getSimpleName(scope.baseTypes, constructor.tpe)
     val content: String =
       s"""$templateString$typeName::$simpleName($paramsString) $initializer{
-         |  ${ctx.content}
+         |  ${ctx.value}
          |}""".stripMargin
     ctx.enhance(content) ++ paramsString.handles
   }
@@ -34,7 +34,7 @@ abstract class ConstructorExpression extends Expression {
     val ctx: GeneratorContext = generateExpressionChain(bodyContent, "\n")
     val content =
       s"""$definition$initializer{
-         |  ${ctx.content}
+         |  ${ctx.value}
          |}""".stripMargin
     ctx.enhance(content) ++ definition.handles
   }

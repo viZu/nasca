@@ -80,17 +80,17 @@ class GeneratorUtilsSpec extends FlatSpec with Matchers {
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with no param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Vector())
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<Type> aMethod();")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).value should be(s"${sharedPtr}<Type> aMethod();")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with one param" in {
     val method = Method(ctx, "aMethod", tpeWithOutPkg, Vector(), Seq(Param(ctx, tpeWithPkg, "a")))
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).value should be(s"${sharedPtr}<Type> aMethod(${sharedPtr}<test::Type>);")
   }
 
   "GeneratorUtils.generateMethodDefinition" should "return C++ method for scala method with two param" in {
     val method = Method(ctx, "aMethod", tpeWithPkg, Vector(), Seq(Param(ctx, tpeWithOutPkg, "a"), Param(ctx, tpeWithNestedPkg, "b")))
-    GeneratorUtils.generateMethodDefinition(baseTypes, method).content should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
+    GeneratorUtils.generateMethodDefinition(baseTypes, method).value should be(s"${sharedPtr}<test::Type> aMethod(${sharedPtr}<Type>, ${sharedPtr}<test_a_b_c::Type>);")
   }
 
   "GeneratorUtils.generateIncludes" should "return empty C++ Includes for no scala Imports" in {

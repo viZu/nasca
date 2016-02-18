@@ -24,7 +24,7 @@ trait Expression {
 
   protected def generateReturn: GeneratorContext = {
     val g = generate
-    g.enhance("return " + g.content)
+    g.enhance("return " + g.value)
   }
 
   def skipSemiColon: Boolean
@@ -228,7 +228,7 @@ object Expression extends LazyLogging {
           IdentExpression(m.returnType, tmp)
         } else if (m.instanceMethod && !opts.ignoreThis) {
           val methodInvocation = generateMethodInvocation(scope, m, argExpr)
-          val tmp = methodInvocation.enhance(s"this->${methodInvocation.content}")
+          val tmp = methodInvocation.enhance(s"this->${methodInvocation.value}")
           IdentExpression(m.returnType, tmp)
         } else {
           val methodInvocation = generateMethodInvocation(scope, m, argExpr)
@@ -253,14 +253,14 @@ object Expression extends LazyLogging {
     if (hasInvocationHandle(scope, method, typeName)) {
       executeInvocationHandle(scope, "", method, params, typeName)
     } else {
-      val paramsAsString = params.map(_.generate.content).mkString
+      val paramsAsString = params.map(_.generate.value).mkString
       val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
       paramsAsContext.enhance(s"${method.name}($paramsAsString)")
     }
   }
 
   private def generateMethodInvocation(scope: TScope, ident: Identifier, params: Seq[Expression]): GeneratorContext = {
-    val paramsAsString = params.map(_.generate.content).mkString
+    val paramsAsString = params.map(_.generate.value).mkString
     val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
     paramsAsContext.enhance(s"${ident.name}($paramsAsString)")
   }
@@ -274,7 +274,7 @@ object Expression extends LazyLogging {
                                       className: String = ""): GeneratorContext = {
     val paramTypes = method.params.map(_.tpe)
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, className, method.name, paramTypes)
-    val paramsAsString = params.map(_.generate.content)
+    val paramsAsString = params.map(_.generate.value)
     handle(varName, paramsAsString)
   }
 
@@ -340,13 +340,13 @@ object Expression extends LazyLogging {
       case Select(i: Ident, n) =>
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
         val tpe = TypeUtils.findIdent(scope, i.name.toString).tpe
-        if (method != null) Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, method))
+        if (method != null) Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, method))
         else {
           val member = TypeUtils.findIdent(scope, n.toString, tpe)
           member match {
-            case m: Method => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, m))
-            case i: Identifier => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, TypeUtils.findMember(scope, n.toString, i.tpe)))
-            case f: Field => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.content, f))
+            case m: Method => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, m))
+            case i: Identifier => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, TypeUtils.findMember(scope, n.toString, i.tpe)))
+            case f: Field => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, f))
             case _ => throw new RuntimeException("Todo")
           }
         }

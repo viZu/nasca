@@ -36,14 +36,14 @@ case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart
       case empty: EmptyExpression => GeneratorContext()
       case _ =>
         val els = generateCtx(elseP, withReturn)
-        els.enhance(s"else ${els.content}")
+        els.enhance(s"else ${els.value}")
     }
   }
 
   private def generateIfContent(ifPart: IfPart, withReturn: Boolean, f: (String, String) => String) = {
     val cond = ifPart.condition.content
     val body = generateCtx(ifPart.body, withReturn)
-    val content = f(cond.content, body.content)
+    val content = f(cond.value, body.value)
     GeneratorUtils.mergeGeneratorContexts(Vector(cond, body), givenContent = content)
   }
 

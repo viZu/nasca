@@ -75,7 +75,7 @@ trait HeaderFileGenerator extends LazyLogging {
 
   protected def generateMember(member: Member) = {
     member match {
-      case m: Method => generateMethodDefinition(m).content
+      case m: Method => generateMethodDefinition(m).value
       case f: Field => generateFieldDefinition(baseTypes, f)
     }
   }

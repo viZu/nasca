@@ -10,7 +10,7 @@ case class BlockExpression(stats: List[Expression], expr: Expression, returnable
   protected def generateContentStr(bodyCtx: GeneratorContext) = {
     val contentStr =
       s"""{
-          |  ${bodyCtx.content}
+          |  ${bodyCtx.value}
           |}""".stripMargin
     bodyCtx.enhance(contentStr)
   }

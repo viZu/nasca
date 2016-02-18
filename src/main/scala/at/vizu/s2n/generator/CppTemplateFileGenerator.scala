@@ -30,7 +30,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     val forwardDeclarations = generateForwardDeclarations(classScope)
     val templateContent: GeneratorContext = generateTemplateContent()
     val includes = generateIncludes(templateContent.handles)
-    val content: String = includeGuard + includes + forwardDeclarations + templateContent.content
+    val content: String = includeGuard + includes + forwardDeclarations + templateContent.value
 
     logger.debug("Writing template file {}", name)
     val prettyContent = CodePrettifier.prettify(content)
@@ -59,7 +59,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
 
   private def generateTemplateContent() = {
     val sections = generateSections(classScope)
-    val classBody = GeneratorUtils.generateClassBody(baseTypes, tpe, sections.content)
+    val classBody = GeneratorUtils.generateClassBody(baseTypes, tpe, sections.value)
     val content = GeneratorUtils.wrapBodyWithNamespace(packageName, classBody) + GeneratorUtils.generateClassEnding(tpe)
     sections.enhance(content)
   }
@@ -79,7 +79,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
 
   protected def generateVisibilitySection(visibility: String, members: Seq[GeneratorContext]): GeneratorContext = {
     val contexts: GeneratorContext = GeneratorUtils.mergeGeneratorContexts(members, "\n\n")
-    val memberStr: GeneratorContext = if (members.isEmpty) "" else contexts.enhance("\n" + contexts.content)
+    val memberStr: GeneratorContext = if (members.isEmpty) "" else contexts.enhance("\n" + contexts.value)
     contexts.enhance(s"""$visibility:$memberStr""".stripMargin)
   }
 
@@ -143,7 +143,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     val mdHandle = generateInitMethodHandle(classInitMethodName, baseTypes.unit) // TODO do I need this?
     val method = mdHandle.method
     val methodCtx = generateMethod(scope, body, method)
-    val mHandle = MethodHandle(methodCtx.content)
+    val mHandle = MethodHandle(methodCtx.value)
 
     methodCtx.enhance("", Set(mHandle, mdHandle))
   }
@@ -158,7 +158,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     val methodBody: GeneratorContext = Expression
       .getBaseBlockExpression(baseTypes, scope, rhsBlock, method.tpe != baseTypes.unit).generate
     val methodDef = GeneratorUtils.generateMethodDefinition(baseTypes, method, withSemicolon = false)
-    val methodString: String = s"""$methodDef ${methodBody.content}"""
+    val methodString: String = s"""$methodDef ${methodBody.value}"""
     GeneratorUtils.mergeGeneratorContexts(Seq(methodBody, methodDef), givenContent = methodString)
   }
 
@@ -181,7 +181,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
       case _ =>
         val expr: Expression = Expression(baseTypes, scope, body)
         val expression: GeneratorContext = generateExpression(scope, expr, returnable = false)
-        val handle = FieldInitializerHandle(field.name, expression.content)
+        val handle = FieldInitializerHandle(field.name, expression.value)
         val initializer = GeneratorUtils.generateFieldInitializer(handle)
         Seq((field.visibility, expression.enhance(definition + initializer)))
     }
@@ -196,7 +196,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
 
   private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {
     val exprCtx: GeneratorContext = expression.generate
-    val content: String = if (returnable) "return " + exprCtx.content else exprCtx.content
+    val content: String = if (returnable) "return " + exprCtx.value else exprCtx.value
     exprCtx.enhance(content)
   }
 

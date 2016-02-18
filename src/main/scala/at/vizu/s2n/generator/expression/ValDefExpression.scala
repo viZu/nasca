@@ -12,12 +12,12 @@ case class ValDefExpression(baseTypes: BaseTypes, varName: String, varTpe: TType
   override def generate: GeneratorContext = {
     val tpe = if (varTpe != null) varTpe else rhs.exprTpe
     val typeName: GeneratorContext = GeneratorUtils.generateCppTypeName(baseTypes, tpe)
-    val lhs = s"${typeName.content} $varName"
+    val lhs = s"${typeName.value} $varName"
     val rhsCtx = rhs match {
       case b: BaseBlockExpression => rhs.returnContent
       case _ => rhs.content
     }
-    val defString = s"$lhs = ${rhsCtx.content}"
+    val defString = s"$lhs = ${rhsCtx.value}"
     rhsCtx.enhance(defString, typeName.handles)
   }
 
