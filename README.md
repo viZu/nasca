@@ -1,2 +1,2 @@
 # nasca
-A Scala to native code compiler which uses C++ build tools underneath
+A scala to native code compiler using C++ tooling underneath
