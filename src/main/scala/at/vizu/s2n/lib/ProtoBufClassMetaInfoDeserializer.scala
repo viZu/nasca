@@ -8,7 +8,7 @@ import scala.collection.mutable
 /**
   * Phil on 04.01.16.
   */
-class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDeserializer {
+class ProtoBufClassMetaInfoDeserializer(scope: TSymbolTable) extends ClassMetaInfoDeserializer {
 
   val types = mutable.Map[String, TType]()
   val metaGenericModifier = mutable.ArrayBuffer[MetaGenericModifier]()
@@ -81,7 +81,7 @@ class ProtoBufClassMetaInfoDeserializer(scope: TScope) extends ClassMetaInfoDese
   private def metaAppliedGenericTypeToReal(meta: MetaAppliedGenericType) = {
     val genericType = getGenericType(meta.genericType)
     val appliedTypes = meta.appliedTypes.map(findType)
-    genericType.applyTypeSeq(TScope(), appliedTypes)
+    genericType.applyTypeSeq(TSymbolTable(), appliedTypes)
   }
 
   private def metaContextToReal(metaContext: MetaContext) = {

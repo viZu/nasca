@@ -1,12 +1,12 @@
 package at.vizu.s2n.generator.expression
 
 import at.vizu.s2n.generator.{GeneratorContext, GeneratorUtils}
-import at.vizu.s2n.types.symbol.{Constructor, TScope, TType}
+import at.vizu.s2n.types.symbol.{Constructor, TSymbolTable, TType}
 
 /**
   * Phil on 05.02.16.
   */
-case class SecondaryConstructorExpression(scope: TScope, constr: Constructor, primaryCallArgs: Seq[Expression],
+case class SecondaryConstructorExpression(scope: TSymbolTable, constr: Constructor, primaryCallArgs: Seq[Expression],
                                           stats: Seq[Expression]) extends ConstructorExpression {
 
   override def exprTpe: TType = constr.returnType

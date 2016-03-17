@@ -28,8 +28,8 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
 
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
-  override def initScope: TScope = {
-    val scope: TScope = TScope(this)
+  override def initScope: TSymbolTable = {
+    val scope: TSymbolTable = TSymbolTable(this)
     val a: TType = initAny()
     val ar: TType = initAnyRef()
     val av: TType = initAnyVal()
@@ -275,7 +275,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     new TypeArgument(ctx, name, any, nothing, covariant, contravariant)
   }
 
-  private def addFunctionTypes(scope: TScope, num: Int) = {
+  private def addFunctionTypes(scope: TSymbolTable, num: Int) = {
     val types = (0 until num).map(i => createFunctionType(i))
     types.foreach(c => {
       scope.addClass(c)

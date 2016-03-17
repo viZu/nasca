@@ -1,7 +1,7 @@
 package at.vizu.s2n.conf
 
 import at.vizu.s2n.generator.GeneratorContext
-import at.vizu.s2n.types.symbol.{TScope, TType, TypeUtils}
+import at.vizu.s2n.types.symbol.{TSymbolTable, TType, TypeUtils}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -48,17 +48,17 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
 
   private def buildMap() = classInvocations.map(ci => ci.className -> ci.build()).toMap
 
-  def findInvocationHandle(scope: TScope, className: String,
+  def findInvocationHandle(scope: TSymbolTable, className: String,
                            methodName: String, params: Seq[TType]): (String, Seq[String]) => GeneratorContext = {
     val cName = if (className.isEmpty) "__root__" else className
     findInvocationHandleOpt(scope, cName, methodName, params).get
   }
 
-  def hasInvocationHandle(scope: TScope, className: String, methodName: String, params: Seq[TType]): Boolean = {
+  def hasInvocationHandle(scope: TSymbolTable, className: String, methodName: String, params: Seq[TType]): Boolean = {
     findInvocationHandleOpt(scope, className, methodName, params).isDefined
   }
 
-  private def findInvocationHandleOpt(scope: TScope, className: String, methodName: String, params: Seq[TType]) = {
+  private def findInvocationHandleOpt(scope: TSymbolTable, className: String, methodName: String, params: Seq[TType]) = {
     val cName = if (className.isEmpty) "__root__" else className
     cInvocations.get(cName)
       .flatMap(_.get(methodName))
@@ -66,7 +66,7 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
       .map(_.invocation)
   }
 
-  private def checkIfParamsAreSame(scope: TScope, paramStrings: Seq[String], actualParams: Seq[TType]): Boolean = {
+  private def checkIfParamsAreSame(scope: TSymbolTable, paramStrings: Seq[String], actualParams: Seq[TType]): Boolean = {
     if (paramStrings.size != actualParams.size) false
     else {
       val definedParams = TypeUtils.findClasses(scope, paramStrings)

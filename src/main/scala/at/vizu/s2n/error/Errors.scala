@@ -1,7 +1,7 @@
 package at.vizu.s2n.error
 
 import at.vizu.s2n.exception.CompilerException
-import at.vizu.s2n.types.symbol.{Context, TScope}
+import at.vizu.s2n.types.symbol.{Context, TSymbolTable}
 
 /**
   * Phil on 31.12.15.
@@ -18,7 +18,7 @@ object Errors {
     addError(ctx.fileName, ctx.line, msg)
   }
 
-  def addError(scope: TScope, line: Int, msg: String): Unit = {
+  def addError(scope: TSymbolTable, line: Int, msg: String): Unit = {
     addError(scope.currentFile, line, msg)
   }
 

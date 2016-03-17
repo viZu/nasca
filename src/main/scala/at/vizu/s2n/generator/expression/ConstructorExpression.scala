@@ -1,14 +1,14 @@
 package at.vizu.s2n.generator.expression
 
 import at.vizu.s2n.generator._
-import at.vizu.s2n.types.symbol.{Constructor, TScope}
+import at.vizu.s2n.types.symbol.{Constructor, TSymbolTable}
 
 /**
   * Phil on 05.02.16.
   */
 abstract class ConstructorExpression extends Expression {
 
-  def scope: TScope
+  def scope: TSymbolTable
 
   def constructor: Constructor
 

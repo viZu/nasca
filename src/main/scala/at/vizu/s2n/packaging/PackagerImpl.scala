@@ -5,7 +5,7 @@ import java.nio.file.{Files, Path}
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.lib.LibraryService
 import at.vizu.s2n.log.Profiler
-import at.vizu.s2n.types.symbol.TScope
+import at.vizu.s2n.types.symbol.TSymbolTable
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.LazyLogging
   */
 class PackagerImpl(libraryService: LibraryService) extends Packager with LazyLogging {
 
-  override def packageBinary(args: Arguments, scope: TScope): Unit = {
+  override def packageBinary(args: Arguments, scope: TSymbolTable): Unit = {
     Profiler.profileFunc(logger, "Packaging binary", () => {
       if (args.binType.isLibrary) {
         packageLibrary(args, scope)
@@ -23,7 +23,7 @@ class PackagerImpl(libraryService: LibraryService) extends Packager with LazyLog
     })
   }
 
-  private def packageLibrary(args: Arguments, scope: TScope): Unit = {
+  private def packageLibrary(args: Arguments, scope: TSymbolTable): Unit = {
     logger.debug(s"Packaging library ${args.binName}")
     libraryService.packageLibrary(scope, args)
   }

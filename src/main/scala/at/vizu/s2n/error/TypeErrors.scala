@@ -1,6 +1,6 @@
 package at.vizu.s2n.error
 
-import at.vizu.s2n.types.symbol.{Context, EmptyType, TScope, TType}
+import at.vizu.s2n.types.symbol.{Context, EmptyType, TSymbolTable, TType}
 
 /**
   * Phil on 31.12.15.
@@ -16,7 +16,7 @@ object TypeErrors {
     addError(ctx.fileName, ctx.line, msg)
   }
 
-  def addError(scope: TScope, line: Int, msg: String): TType = {
+  def addError(scope: TSymbolTable, line: Int, msg: String): TType = {
     addError(scope.currentFile, line, msg)
   }
 

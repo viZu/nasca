@@ -1,12 +1,12 @@
 package at.vizu.s2n.generator.expression
 
 import at.vizu.s2n.generator.{GeneratorContext, GeneratorUtils}
-import at.vizu.s2n.types.symbol.{Param, TScope, TType, TypeUtils}
+import at.vizu.s2n.types.symbol.{Param, TSymbolTable, TType, TypeUtils}
 
 /**
   * Phil on 02.01.16.
   */
-case class FunctionExpression(scope: TScope, params: Seq[Param], body: BlockExpression, returnable: Boolean)
+case class FunctionExpression(scope: TSymbolTable, params: Seq[Param], body: BlockExpression, returnable: Boolean)
   extends Expression {
   private val eagerTpe = TypeUtils.createFunctionTypeFromParams(scope, params, body.exprTpe, 0)
   private val eagerBaseTypes = scope.baseTypes

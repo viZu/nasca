@@ -32,15 +32,15 @@ trait Expression {
 
 object Expression extends LazyLogging {
 
-  def apply(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
+  def apply(baseTypes: BaseTypes, scope: TSymbolTable, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
     applyInternal(baseTypes, scope, t, opts)
   }
 
-  def apply(scope: TScope, ts: Seq[Any]): Seq[Expression] = {
+  def apply(scope: TSymbolTable, ts: Seq[Any]): Seq[Expression] = {
     ts.map(apply(scope.baseTypes, scope, _, ExpressionOptions()))
   }
 
-  private def applyInternal(baseTypes: BaseTypes, scope: TScope, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
+  private def applyInternal(baseTypes: BaseTypes, scope: TSymbolTable, t: Any, opts: ExpressionOptions = ExpressionOptions()): Expression = {
     t match {
       case l: Literal =>
         val tpe = TypeUtils.findType(scope, l)
@@ -113,7 +113,7 @@ object Expression extends LazyLogging {
     }
   }
 
-  def generateLabelDefExpression(baseTypes: BaseTypes, scope: TScope, l: LabelDef) = l match {
+  def generateLabelDefExpression(baseTypes: BaseTypes, scope: TSymbolTable, l: LabelDef) = l match {
     case LabelDef(n, _, If(cond, Block((body: Block) :: Nil, _), _)) =>
       val block: Block = wrapInBlock(body)
       generateWhileExpression(baseTypes, scope, block, cond)
@@ -127,19 +127,19 @@ object Expression extends LazyLogging {
       generateDoWhileExpression(baseTypes, scope, block, cond)
   }
 
-  def generateWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
+  def generateWhileExpression(baseTypes: BaseTypes, scope: TSymbolTable, block: Block, cond: Tree) = {
     val blockExpr = getBaseBlockExpression(baseTypes, scope, block) // we are only taking stats since the expr is the recursive while method call
     val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     WhileExpression(baseTypes, condExpr, blockExpr)
   }
 
-  def generateDoWhileExpression(baseTypes: BaseTypes, scope: TScope, block: Block, cond: Tree) = {
+  def generateDoWhileExpression(baseTypes: BaseTypes, scope: TSymbolTable, block: Block, cond: Tree) = {
     val blockExpr = getBaseBlockExpression(baseTypes, scope, block)
     val condExpr = Expression.applyInternal(baseTypes, scope, cond)
     DoWhileExpression(baseTypes, condExpr, blockExpr)
   }
 
-  def generateValDefExpression(baseTypes: BaseTypes, scope: TScope, v: ValDef) = {
+  def generateValDefExpression(baseTypes: BaseTypes, scope: TSymbolTable, v: ValDef) = {
     val varTpe = findVarType(baseTypes, scope, v.tpt, v.rhs)
     val varName = v.name.toString
     TypeUtils.createIdentifier(scope, v, varTpe)
@@ -148,7 +148,7 @@ object Expression extends LazyLogging {
     ValDefExpression(baseTypes, varName, varTpe, rhsExpr)
   }
 
-  def generateAssignExpression(baseTypes: BaseTypes, scope: TScope, a: Assign) = {
+  def generateAssignExpression(baseTypes: BaseTypes, scope: TSymbolTable, a: Assign) = {
     val lhsExpr = Expression.applyInternal(baseTypes, scope, a.lhs)
     val rhs: Any = wrapInlineBlockIfBlock(a.rhs)
     val rhsExpr = Expression.applyInternal(baseTypes, scope, rhs)
@@ -156,13 +156,13 @@ object Expression extends LazyLogging {
     AssignExpression(lhsExpr, rhsExpr)
   }
 
-  private def findVarType(baseTypes: BaseTypes, scope: TScope, tpt: Tree, rhs: Tree) = {
+  private def findVarType(baseTypes: BaseTypes, scope: TSymbolTable, tpt: Tree, rhs: Tree) = {
     val varTpe = TypeUtils.findType(scope, tpt)
     if (varTpe == null) TypeInference.getType(baseTypes, scope, rhs) else varTpe
   }
 
-  def generateInlineDefExpression(baseTypes: BaseTypes, scope: TScope, d: DefDef) = {
-    scope.scoped((childScope: TScope) => {
+  def generateInlineDefExpression(baseTypes: BaseTypes, scope: TSymbolTable, d: DefDef) = {
+    scope.scoped((childScope: TSymbolTable) => {
       val nestedMethod: Method = TypeUtils.createMethod(scope, d, instanceMethod = false)
       TypeUtils.addParamsToScope(childScope, nestedMethod.params)
       scope.addMethod(nestedMethod)
@@ -172,12 +172,12 @@ object Expression extends LazyLogging {
     }, MethodScope)
   }
 
-  def generateIfExpression(baseTypes: BaseTypes, scope: TScope, i: If) = {
+  def generateIfExpression(baseTypes: BaseTypes, scope: TSymbolTable, i: If) = {
     val (parts, elseExp) = generateIfParts(baseTypes, scope, i, Vector())
     IfExpression(baseTypes, scope, parts, elseExp)
   }
 
-  def generateIfParts(baseTypes: BaseTypes, scope: TScope, i: If, parts: Vector[IfPart]): (Vector[IfPart], Expression) = {
+  def generateIfParts(baseTypes: BaseTypes, scope: TSymbolTable, i: If, parts: Vector[IfPart]): (Vector[IfPart], Expression) = {
     val condExp = Expression.applyInternal(baseTypes, scope, i.cond)
     val thenBlock = wrapInBlock(i.thenp)
     val thenExp = Expression.applyInternal(baseTypes, scope, thenBlock)
@@ -191,30 +191,30 @@ object Expression extends LazyLogging {
     }
   }
 
-  def getBaseBlockExpression(baseTypes: BaseTypes, scope: TScope, t: Any, returnable: Boolean = false) = {
+  def getBaseBlockExpression(baseTypes: BaseTypes, scope: TSymbolTable, t: Any, returnable: Boolean = false) = {
     t match {
       case ib: InlineBlock => getInlineBlockExpression(scope, ib, returnable)
       case b: Block => getBlockExpression(scope, b, returnable)
     }
   }
 
-  def getInlineBlockExpression(scope: TScope, ib: InlineBlock, returnable: Boolean = false) = {
+  def getInlineBlockExpression(scope: TSymbolTable, ib: InlineBlock, returnable: Boolean = false) = {
     val (stats, expr) = getBlockContent(scope.baseTypes, scope, ib.stats, ib.expr)
     InlineBlockExpression(stats, expr, returnable)
   }
 
-  def getBlockExpression(scope: TScope, b: Block, returnable: Boolean = false) = {
+  def getBlockExpression(scope: TSymbolTable, b: Block, returnable: Boolean = false) = {
     val (stats, expr) = getBlockContent(scope.baseTypes, scope, b.stats, b.expr)
     BlockExpression(stats, expr, returnable)
   }
 
-  def getBlockContent(baseTypes: BaseTypes, scope: TScope, statsT: List[Tree], exprT: Tree): (List[Expression], Expression) = {
+  def getBlockContent(baseTypes: BaseTypes, scope: TSymbolTable, statsT: List[Tree], exprT: Tree): (List[Expression], Expression) = {
     val stats: List[Expression] = statsT.map(Expression.applyInternal(baseTypes, scope, _))
     val expr = Expression.applyInternal(baseTypes, scope, exprT)
     (stats, expr)
   }
 
-  private def generateIdentExpression(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: List[Tree] = List(),
+  private def generateIdentExpression(baseTypes: BaseTypes, scope: TSymbolTable, ident: Ident, args: List[Tree] = List(),
                                       opts: ExpressionOptions = ExpressionOptions()): Expression = {
     val iName: String = ident.name.toString
     val argTypes = TypeInference.getTypes(baseTypes, scope, args)
@@ -247,7 +247,7 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateMethodInvocation(scope: TScope, method: Method, params: Seq[Expression],
+  private def generateMethodInvocation(scope: TSymbolTable, method: Method, params: Seq[Expression],
                                        onType: TType = null): GeneratorContext = {
     val typeName = if (onType == null) "" else onType.fullClassName
     if (hasInvocationHandle(scope, method, typeName)) {
@@ -259,18 +259,18 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateMethodInvocation(scope: TScope, ident: Identifier, params: Seq[Expression]): GeneratorContext = {
+  private def generateMethodInvocation(scope: TSymbolTable, ident: Identifier, params: Seq[Expression]): GeneratorContext = {
     val paramsAsString = params.map(_.generate.value).mkString
     val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
     paramsAsContext.enhance(s"${ident.name}($paramsAsString)")
   }
 
-  private def hasInvocationHandle(scope: TScope, method: Method, typeName: String = ""): Boolean = {
+  private def hasInvocationHandle(scope: TSymbolTable, method: Method, typeName: String = ""): Boolean = {
     val paramTypes = method.params.map(_.tpe)
     GlobalConfig.invocationConfig.hasInvocationHandle(scope, typeName, method.name, paramTypes)
   }
 
-  private def executeInvocationHandle(scope: TScope, varName: String, method: Method, params: Seq[Expression],
+  private def executeInvocationHandle(scope: TSymbolTable, varName: String, method: Method, params: Seq[Expression],
                                       className: String = ""): GeneratorContext = {
     val paramTypes = method.params.map(_.tpe)
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, className, method.name, paramTypes)
@@ -278,7 +278,7 @@ object Expression extends LazyLogging {
     handle(varName, paramsAsString)
   }
 
-  private def generateApplyExpression(baseTypes: BaseTypes, scope: TScope, apply: Apply,
+  private def generateApplyExpression(baseTypes: BaseTypes, scope: TSymbolTable, apply: Apply,
                                       opts: ExpressionOptions): Path = {
     apply match {
       case a@Apply(Select(ne: New, n), pList) =>
@@ -318,7 +318,7 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateSelectExpression(baseTypes: BaseTypes, scope: TScope, select: Select, method: Method = null,
+  private def generateSelectExpression(baseTypes: BaseTypes, scope: TSymbolTable, select: Select, method: Method = null,
                                        opts: ExpressionOptions = ExpressionOptions()): Path = {
     select match {
       case Select(s: Select, n) =>
@@ -355,8 +355,8 @@ object Expression extends LazyLogging {
     }
   }
 
-  private def generateFunctionExpression(scope: TScope, function: Function): Expression = {
-    scope.scoped((s: TScope) => {
+  private def generateFunctionExpression(scope: TSymbolTable, function: Function): Expression = {
+    scope.scoped((s: TSymbolTable) => {
       val params = TypeUtils.createParams(s, function.vparams)
       TypeUtils.addParamsToScope(s, params)
       val body = getBlockExpression(s, wrapInBlock(function.body))

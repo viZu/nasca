@@ -19,11 +19,11 @@ import scala.reflect.runtime.universe._
 class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryService: LibraryService)
   extends TypeSystemInitializer with LazyLogging {
 
-  private val rootScope: TScope = scopeInitializer.initScope
+  private val rootScope: TSymbolTable = scopeInitializer.initScope
   private var currentScope = rootScope
   private var trees: Seq[AST] = Vector()
 
-  override def initTypeSystem(args: Arguments, trees: Seq[AST]): TScope = {
+  override def initTypeSystem(args: Arguments, trees: Seq[AST]): TSymbolTable = {
     this.trees = trees
     loadClassesFromLibraries(args)
     initScopePhase1()
@@ -156,7 +156,7 @@ class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryServi
     private def packageName = pkgBuilder.mkString(".")
   }
 
-  private def addConstructorToTpe(scope: TScope, member: List[Tree], tpe: ConcreteType) = {
+  private def addConstructorToTpe(scope: TSymbolTable, member: List[Tree], tpe: ConcreteType) = {
     var primary = true
     member.collect({ case d: DefDef => d }).filter(d => TypeUtils.isConstructor(d.name.toString)).foreach(d => {
       val constructor = TypeUtils.createMethod(scope, d, primaryConstructor = primary)

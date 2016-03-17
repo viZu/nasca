@@ -15,11 +15,11 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   def addGenericModifier(genericModifier: TypeArgument) = _genericModifiers = _genericModifiers :+ genericModifier
 
-  def applyTypeSeq(scope: TScope, types: Seq[TType]): AppliedGenericType = {
+  def applyTypeSeq(scope: TSymbolTable, types: Seq[TType]): AppliedGenericType = {
     applyTypes(scope, _genericModifiers.zip(types).toMap)
   }
 
-  def applyTypes(scope: TScope, typeMap: Map[TypeArgument, TType]): AppliedGenericType = {
+  def applyTypes(scope: TSymbolTable, typeMap: Map[TypeArgument, TType]): AppliedGenericType = {
     scope.findAppliedType(typeMap, this) match {
       case Some(found) => found
       case None =>
@@ -40,18 +40,18 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     }
   }
 
-  protected def mapParents(scope: TScope, types: Map[TypeArgument, TType]): Seq[Parent] = {
+  protected def mapParents(scope: TSymbolTable, types: Map[TypeArgument, TType]): Seq[Parent] = {
     parentTypes.map {
       case g: GenericType => Parent(g.applyTypes(scope, types))
       case _@p => Parent(p)
     }
   }
 
-  protected def mapMethods(scope: TScope, types: Map[TypeArgument, TType]): Seq[Method] = {
+  protected def mapMethods(scope: TSymbolTable, types: Map[TypeArgument, TType]): Seq[Method] = {
     methods.map(mapMethod(scope, types, _))
   }
 
-  protected def mapMethod(scope: TScope, types: Map[TypeArgument, TType], method: Method) = {
+  protected def mapMethod(scope: TSymbolTable, types: Map[TypeArgument, TType], method: Method) = {
     val returnType = getNewTpe(scope, types, method.returnType, applyPartly = true)
     val params = method.params.map(mapParam(scope, types, _))
     method match {
@@ -62,11 +62,11 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
 
   }
 
-  protected def mapReturnType(scope: TScope, types: Map[TypeArgument, TType], returnType: TType) = {
+  protected def mapReturnType(scope: TSymbolTable, types: Map[TypeArgument, TType], returnType: TType) = {
     getNewTpe(scope, types, returnType, applyPartly = true)
   }
 
-  protected def mapParam(scope: TScope, types: Map[TypeArgument, TType], oldParam: Param): Param = {
+  protected def mapParam(scope: TSymbolTable, types: Map[TypeArgument, TType], oldParam: Param): Param = {
     //TODO check if method has generic modifier
     oldParam.tpe match {
       case g: TypeArgument => Param(oldParam.ctx, getNewTpe(scope, types, g, applyPartly = true),
@@ -78,11 +78,11 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     }
   }
 
-  protected def mapFields(scope: TScope, types: Map[TypeArgument, TType]): Seq[Field] = {
+  protected def mapFields(scope: TSymbolTable, types: Map[TypeArgument, TType]): Seq[Field] = {
     fields.map(mapField(scope, types, _))
   }
 
-  protected def mapField(scope: TScope, types: Map[TypeArgument, TType], field: Field) = {
+  protected def mapField(scope: TSymbolTable, types: Map[TypeArgument, TType], field: Field) = {
     field.tpe match {
       case g: TypeArgument => Field(field.ctx, field.mods, field.name,
         getNewTpe(scope, types, g, applyPartly = false))
@@ -100,7 +100,7 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
     })
   }
 
-  private def getNewTpe(scope: TScope, types: Map[TypeArgument, TType], oldType: TType,
+  private def getNewTpe(scope: TSymbolTable, types: Map[TypeArgument, TType], oldType: TType,
                         applyPartly: Boolean = false) = {
     oldType match {
       case am: AppliedTypeArgument =>

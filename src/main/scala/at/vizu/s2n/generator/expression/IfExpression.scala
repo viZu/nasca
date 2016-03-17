@@ -1,12 +1,12 @@
 package at.vizu.s2n.generator
 package expression
 
-import at.vizu.s2n.types.symbol.{BaseTypes, TScope, TType, TypeUtils}
+import at.vizu.s2n.types.symbol.{BaseTypes, TSymbolTable, TType, TypeUtils}
 
 /**
   * Phil on 29.11.15.
   */
-case class IfExpression(baseTypes: BaseTypes, scope: TScope, ifParts: Seq[IfPart], elseP: Expression) extends Expression {
+case class IfExpression(baseTypes: BaseTypes, scope: TSymbolTable, ifParts: Seq[IfPart], elseP: Expression) extends Expression {
   override def exprTpe: TType = {
     TypeUtils.findCommonBaseClass(scope, ifParts.head.body.exprTpe, elseP.exprTpe)
   }

@@ -87,7 +87,7 @@ object TypeUtils extends LazyLogging {
     * Types
     */
 
-  def findType(scope: TScope, typeTree: Tree, searchObject: Boolean = false): TType = {
+  def findType(scope: TSymbolTable, typeTree: Tree, searchObject: Boolean = false): TType = {
     def throwTypeNotFound(typeName: String) = {
       val msg = s"value $typeName not found"
       TypeErrors.addError(scope, typeTree.pos.line, msg)
@@ -122,11 +122,11 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def findClasses(scope: TScope, types: Seq[String]): Seq[TType] = {
+  def findClasses(scope: TSymbolTable, types: Seq[String]): Seq[TType] = {
     types.map(findClass(scope, _))
   }
 
-  def findClass(scope: TScope, className: String, pos: Int = 0): TType = {
+  def findClass(scope: TSymbolTable, className: String, pos: Int = 0): TType = {
     def throwTypeNotFound() = {
       val msg = s"value $className not found"
       TypeErrors.addError(scope, pos, msg)
@@ -134,7 +134,7 @@ object TypeUtils extends LazyLogging {
     scope.findClass(className).getOrElse(throwTypeNotFound())
   }
 
-  private def findTypeForLiteral(scope: TScope, literal: Literal): Option[TType] = {
+  private def findTypeForLiteral(scope: TSymbolTable, literal: Literal): Option[TType] = {
     val tpeString = literal.value.value match {
       case i: Integer => findTypeForInteger(i)
       case l: java.lang.Long => RootScalaPackage + ".Long"
@@ -161,15 +161,15 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def addClass(scope: TScope, tpe: TType) = {
+  def addClass(scope: TSymbolTable, tpe: TType) = {
     scope.addClass(tpe)
   }
 
-  def createAndAddGenericModifiers(scope: TScope, generics: Seq[TypeDef]) = {
+  def createAndAddGenericModifiers(scope: TSymbolTable, generics: Seq[TypeDef]) = {
     generics.map(createAndAddGenericModifier(scope, _))
   }
 
-  def createAndAddGenericModifier(scope: TScope, generic: TypeDef) = {
+  def createAndAddGenericModifier(scope: TSymbolTable, generic: TypeDef) = {
     logger.trace("generics - generate")
     val genericModifier: TypeArgument = createGenericModifier(scope, generic)
     val millis: Long = System.currentTimeMillis()
@@ -178,7 +178,7 @@ object TypeUtils extends LazyLogging {
     genericModifier
   }
 
-  def createGenericModifier(scope: TScope, generic: TypeDef) = {
+  def createGenericModifier(scope: TSymbolTable, generic: TypeDef) = {
     val ctx = Context(scope.currentFile, generic.pos.line)
     val (lower, upper) = generic.rhs match {
       case tbt: TypeBoundsTree =>
@@ -203,13 +203,13 @@ object TypeUtils extends LazyLogging {
     * Methods
     */
 
-  def findMethodForDef(scope: TScope, defdef: DefDef, onType: TType = null): Method = {
+  def findMethodForDef(scope: TSymbolTable, defdef: DefDef, onType: TType = null): Method = {
     val args: Seq[TType] = findParamTypes(scope, defdef.vparamss)
     val defName: String = defdef.name.toString
     findMethod(scope, defName, defdef.pos.line, args, onType)
   }
 
-  private def findParamTypes(scope: TScope, params: Seq[Seq[Tree]]) = {
+  private def findParamTypes(scope: TSymbolTable, params: Seq[Seq[Tree]]) = {
     if (params.isEmpty) Vector()
     else {
       params.head.map {
@@ -218,22 +218,22 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def findMethodForIdent(scope: TScope, ident: Ident, onType: TType = null): Method = {
+  def findMethodForIdent(scope: TSymbolTable, ident: Ident, onType: TType = null): Method = {
     val defName: String = ident.name.toString
     findMethod(scope, defName, ident.pos.line, Vector(), onType)
   }
 
-  def findConstructor(scope: TScope, line: Int, args: Seq[TType], onType: TType = null) = {
+  def findConstructor(scope: TSymbolTable, line: Int, args: Seq[TType], onType: TType = null) = {
     findMethod(scope, ConstructorName, line, args, onType)
   }
 
-  def findMethod(scope: TScope, name: String, line: Int, args: Seq[TType], onType: TType = null,
+  def findMethod(scope: TSymbolTable, name: String, line: Int, args: Seq[TType], onType: TType = null,
                  genericModifier: Seq[TypeArgument] = Seq()): Method = {
     val tpe: TType = if (onType == null) scope.findThis() else onType
     tpe.findMethod(scope.findThis(), name, args) getOrElse throwMethodNotFound(scope, name, args, line)
   }
 
-  def applyConstructor(scope: TScope, args: Seq[TType], n: New): TType = {
+  def applyConstructor(scope: TSymbolTable, args: Seq[TType], n: New): TType = {
     val onType: TType = findType(scope, n)
     onType match {
       case at: AppliedGenericType => at
@@ -245,7 +245,7 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def applyTypesOnType(scope: TScope, onType: TType, appliedTypes: Seq[TType], line: Int): TType = {
+  def applyTypesOnType(scope: TSymbolTable, onType: TType, appliedTypes: Seq[TType], line: Int): TType = {
     onType match {
       case gt: GenericType =>
         if (gt.genericModifiers.size != appliedTypes.size)
@@ -262,20 +262,20 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def checkTypeToApply(scope: TScope, line: Int, genericModifier: TypeArgument, tpeToApply: TType) = {
+  def checkTypeToApply(scope: TSymbolTable, line: Int, genericModifier: TypeArgument, tpeToApply: TType) = {
     if (!tpeToApply.hasParent(genericModifier.upperBound) || !tpeToApply.isAssignableFrom(genericModifier.lowerBound)) {
       TypeErrors.addError(scope, line, s"Type $tpeToApply is not applicatple for generic modifier $genericModifier")
     }
   }
 
-  private def throwMethodNotFound(scope: TScope, methodName: String, args: Seq[TType], line: Int) = {
+  private def throwMethodNotFound(scope: TSymbolTable, methodName: String, args: Seq[TType], line: Int) = {
     Errors.validate(s => "")
     val argList = TypeUtils.toString(args)
     val msg = s"No method $methodName($argList) found"
     throw new TypeException(scope.currentFile, line, msg)
   }
 
-  def createMethod(scope: TScope, d: DefDef, instanceMethod: Boolean = true, primaryConstructor: Boolean = false): Method = {
+  def createMethod(scope: TSymbolTable, d: DefDef, instanceMethod: Boolean = true, primaryConstructor: Boolean = false): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
     val generics: Seq[TypeArgument] = d.tparams.map(createAndAddGenericModifier(scope, _))
@@ -290,7 +290,7 @@ object TypeUtils extends LazyLogging {
     else Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, instanceMethod)
   }
 
-  def createParamsForMethod(scope: TScope, params: Seq[Seq[Tree]]): Seq[Param] = {
+  def createParamsForMethod(scope: TSymbolTable, params: Seq[Seq[Tree]]): Seq[Param] = {
     if (params.isEmpty) Vector()
     else createParams(scope, params.head)
   }
@@ -299,22 +299,22 @@ object TypeUtils extends LazyLogging {
     * Params
     */
 
-  def createParams(scope: TScope, params: Seq[Tree]) = {
+  def createParams(scope: TSymbolTable, params: Seq[Tree]) = {
     params.map(createParam(scope, _))
   }
 
-  def createParam(scope: TScope, param: Tree) = param match {
+  def createParam(scope: TSymbolTable, param: Tree) = param match {
     case v: ValDef =>
       val ctx = Context(scope.currentFile, v.pos.line)
       val tpe: TType = TypeUtils.findType(scope, v.tpt)
       Param(ctx, tpe, v.name.toString, v.rhs != EmptyTree, v.mods.hasFlag(Flag.MUTABLE))
   }
 
-  def addReflectParamsToScope(scope: TScope, params: Seq[ValDef]) = {
+  def addReflectParamsToScope(scope: TSymbolTable, params: Seq[ValDef]) = {
     params.foreach(createIdentifier(scope, _))
   }
 
-  def addParamsToScope(scope: TScope, params: Seq[Param]) = {
+  def addParamsToScope(scope: TSymbolTable, params: Seq[Param]) = {
     params.foreach(p => scope.add(Identifier(p.ctx, p.name, p.tpe, p.mutable)))
   }
 
@@ -330,12 +330,12 @@ object TypeUtils extends LazyLogging {
     * Fields
     */
 
-  def findField(scope: TScope, v: ValDef, onType: TType = null): Field = {
+  def findField(scope: TSymbolTable, v: ValDef, onType: TType = null): Field = {
     val fieldName: String = v.name.toString
     findField(scope, fieldName, v.pos.line, onType)
   }
 
-  def findField(scope: TScope, fieldName: String, line: Int, onType: TType): Field = {
+  def findField(scope: TSymbolTable, fieldName: String, line: Int, onType: TType): Field = {
     def throwFieldNotFound(fieldName: String, tpe: TType) = {
       val msg = s"value $fieldName is not a member of type ${tpe.name}"
       throw new TypeException(scope.currentFile, line, msg)
@@ -349,7 +349,7 @@ object TypeUtils extends LazyLogging {
     methodName == "<init>"
   }
 
-  def findMethodOrFieldType(scope: TScope, name: String, line: Int, onType: TType = null) = {
+  def findMethodOrFieldType(scope: TSymbolTable, name: String, line: Int, onType: TType = null) = {
     def throwMethodNotFound(selectName: String) = {
       val msg = s"No value $selectName found"
       TypeErrors.addError(scope, line, msg)
@@ -363,7 +363,7 @@ object TypeUtils extends LazyLogging {
     * Identifier
     */
 
-  def findIdentifier(scope: TScope, i: Ident): Identifier = {
+  def findIdentifier(scope: TSymbolTable, i: Ident): Identifier = {
     def throwIdentifierNotFound(identName: String) = {
       val msg = s"value $identName not found"
       throw new TypeException(scope.currentFile, i.pos.line, msg)
@@ -374,7 +374,7 @@ object TypeUtils extends LazyLogging {
       .map(_.asIdentifier) getOrElse throwIdentifierNotFound(name)
   }
 
-  def createIdentifier(scope: TScope, v: ValDef, givenTpe: TType = null) = {
+  def createIdentifier(scope: TSymbolTable, v: ValDef, givenTpe: TType = null) = {
     val tpe: TType = if (givenTpe != null) givenTpe else TypeUtils.findType(scope, v.tpt)
     val name: String = v.name.toString
     if (scope.findIdentifierInCurrentScope(name).isEmpty) {
@@ -388,7 +388,7 @@ object TypeUtils extends LazyLogging {
     * Member
     */
 
-  def findIdent(scope: TScope, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): Identifiable = {
+  def findIdent(scope: TSymbolTable, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): Identifiable = {
     scope.findIdentifier(name) match {
       case Some(ident) => ident
       case None =>
@@ -413,7 +413,7 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def findMember(scope: TScope, name: String, onType: TType = null): Member = {
+  def findMember(scope: TSymbolTable, name: String, onType: TType = null): Member = {
     val thisTpe: TType = scope.findThis()
     val tpe = if (onType == null) thisTpe else onType
     tpe.findMethod(thisTpe, name, Vector()) match {
@@ -430,7 +430,7 @@ object TypeUtils extends LazyLogging {
     * Generics
     */
 
-  def getNewTpe(scope: TScope, types: Map[TypeArgument, TType], oldType: TType, applyPartly: Boolean = false) = {
+  def getNewTpe(scope: TSymbolTable, types: Map[TypeArgument, TType], oldType: TType, applyPartly: Boolean = false) = {
     oldType match {
       case g: TypeArgument =>
         types.get(g) match {
@@ -489,13 +489,13 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def addGenericModifiersToScope(scope: TScope, generics: Seq[TypeDef]): Unit = {
+  def addGenericModifiersToScope(scope: TSymbolTable, generics: Seq[TypeDef]): Unit = {
     generics.map(createGenericModifier(scope, _)).foreach(gm => {
       scope.addClass(gm)
     })
   }
 
-  def addGenericModifiersToScope(scope: TScope, t: TType): Unit = {
+  def addGenericModifiersToScope(scope: TSymbolTable, t: TType): Unit = {
     t match {
       case a: AppliedGenericType =>
       case g: GenericType => scope.addAllClasses(g.genericModifiers)
@@ -507,15 +507,15 @@ object TypeUtils extends LazyLogging {
     * Functions
     */
 
-  def methodAsFunctionType(scope: TScope, method: Method, line: Int) = {
+  def methodAsFunctionType(scope: TSymbolTable, method: Method, line: Int) = {
     createFunctionTypeFromParams(scope, method.params, method.tpe, line)
   }
 
-  def createFunctionTypeFromParams(scope: TScope, params: Seq[Param], retType: TType, line: Int) = {
+  def createFunctionTypeFromParams(scope: TSymbolTable, params: Seq[Param], retType: TType, line: Int) = {
     createFunctionType(scope, params.map(_.tpe), retType, line)
   }
 
-  def createFunctionType(scope: TScope, paramTypes: Seq[TType], retType: TType, line: Int) = {
+  def createFunctionType(scope: TSymbolTable, paramTypes: Seq[TType], retType: TType, line: Int) = {
     val funcName = "Function" + paramTypes.size
     val funcType = findClass(scope, funcName, line).asInstanceOf[GenericType]
     val types = paramTypes :+ retType
@@ -538,7 +538,7 @@ object TypeUtils extends LazyLogging {
 
   def toString(nameables: Seq[Nameable]) = nameables.map(_.name).mkString(", ")
 
-  def findCommonBaseClass(scope: TScope, tpes: Seq[TType]): TType = {
+  def findCommonBaseClass(scope: TSymbolTable, tpes: Seq[TType]): TType = {
     def findCommonBaseClassAcc(tpe: TType, nextTypes: Seq[TType]): TType = {
       nextTypes match {
         case Seq() => tpe
@@ -551,7 +551,7 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def findCommonBaseClass(scope: TScope, tpe1: TType, tpe2: TType): TType = {
+  def findCommonBaseClass(scope: TSymbolTable, tpe1: TType, tpe2: TType): TType = {
     def handleGenericModifiers(found1: TType, found2: TType): TType = {
       def getConcreteType(tpe: TType) = {
         tpe match {
@@ -604,56 +604,56 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def findCommonBaseClass(scope: TScope, tpe1: Option[TType], tpe2: Option[TType]): TType = {
+  def findCommonBaseClass(scope: TSymbolTable, tpe1: Option[TType], tpe2: Option[TType]): TType = {
     if (tpe1.isEmpty || tpe2.isEmpty) unitType(scope)
     else {
       findCommonBaseClass(scope, tpe1.get, tpe2.get)
     }
   }
 
-  def unitType(scope: TScope) = {
+  def unitType(scope: TSymbolTable) = {
     if (unitTpe == null) {
       unitTpe = scope.findClass(RootScalaPackage + ".Unit").get
     }
     unitTpe
   }
 
-  def nullType(scope: TScope) = {
+  def nullType(scope: TSymbolTable) = {
     if (nullTpe == null) {
       nullTpe = scope.findClass(RootScalaPackage + ".Null").get
     }
     nullTpe
   }
 
-  def anyType(scope: TScope) = {
+  def anyType(scope: TSymbolTable) = {
     if (anyTpe == null) {
       anyTpe = scope.findClass(RootScalaPackage + ".Any").get
     }
     anyTpe
   }
 
-  def anyRefType(scope: TScope) = {
+  def anyRefType(scope: TSymbolTable) = {
     if (anyRefTpe == null) {
       anyRefTpe = scope.findClass(RootScalaPackage + ".AnyRef").get
     }
     anyRefTpe
   }
 
-  def anyValType(scope: TScope) = {
+  def anyValType(scope: TSymbolTable) = {
     if (anyValTpe == null) {
       anyValTpe = scope.findClass(RootScalaPackage + ".AnyVal").get
     }
     anyValTpe
   }
 
-  def nothingType(scope: TScope) = {
+  def nothingType(scope: TSymbolTable) = {
     if (nothingTpe == null) {
       nothingTpe = scope.findClass(RootScalaPackage + ".Nothing").get
     }
     nothingTpe
   }
 
-  def isAnyType(scope: TScope, tpe: TType) = {
+  def isAnyType(scope: TSymbolTable, tpe: TType) = {
     if (anyTpes == null) {
       anyTpes = Set(anyType(scope), anyRefType(scope), anyValType(scope))
     }

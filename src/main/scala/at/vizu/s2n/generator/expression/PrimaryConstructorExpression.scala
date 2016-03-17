@@ -6,7 +6,7 @@ import at.vizu.s2n.types.symbol._
 /**
   * Phil on 29.11.15.
   */
-case class PrimaryConstructorExpression(scope: TScope, constructor: Constructor, initMethodName: String)
+case class PrimaryConstructorExpression(scope: TSymbolTable, constructor: Constructor, initMethodName: String)
   extends ConstructorExpression {
 
   override def exprTpe: TType = constructor.returnType

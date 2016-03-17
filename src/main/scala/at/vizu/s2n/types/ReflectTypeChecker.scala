@@ -13,11 +13,11 @@ import scala.reflect.runtime.universe._
 import scala.runtime.BoxedUnit
 
 /**
- * Phil on 23.10.15.
- */
+  * Phil on 23.10.15.
+  */
 class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogging {
 
-  def checkTypes(rootScope: TScope, tree: AST): ScalaFileWrapper = {
+  def checkTypes(rootScope: TSymbolTable, tree: AST): ScalaFileWrapper = {
     require(tree != null)
     profileFunc(logger, s"Type checker ${tree.fileName}", () => {
       val traverser: ClassTraverser = new ClassTraverser(rootScope, tree)
@@ -26,7 +26,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }, Debug)
   }
 
-  private class ClassTraverser(var currentScope: TScope, ast: AST) extends Traverser {
+  private class ClassTraverser(var currentScope: TSymbolTable, ast: AST) extends Traverser {
     val pkgBuilder = new ArrayBuffer[String]
     val impls = new ArrayBuffer[Implementation]
     val imports = new ArrayBuffer[ImportStmt]
@@ -93,12 +93,12 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkImplementation(scope: TScope, c: ImplDef) = {
+  private def checkImplementation(scope: TSymbolTable, c: ImplDef) = {
     checkGenerics(scope)
     checkMembers(scope, c.impl)
   }
 
-  private def checkGenerics(scope: TScope) = {
+  private def checkGenerics(scope: TSymbolTable) = {
     scope.findThis() match {
       case gt: GenericType =>
         // TODO check generic for unique identifier
@@ -107,11 +107,11 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkMembers(scope: TScope, t: Template) = {
+  private def checkMembers(scope: TSymbolTable, t: Template) = {
     t.body.foreach(m => checkMember(scope, m))
   }
 
-  private def checkMember(scope: TScope, member: Tree): Unit = {
+  private def checkMember(scope: TSymbolTable, member: Tree): Unit = {
     member match {
       case v: ValDef => checkValMember(scope, v)
       case d: DefDef => checkDefMember(scope, d)
@@ -122,10 +122,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkValMember(scope: TScope, v: ValDef) = {
+  private def checkValMember(scope: TSymbolTable, v: ValDef) = {
     val field: Field = TypeUtils.findField(scope, v)
     if (!field.isAbstract) {
-      scope.scoped((s: TScope) => {
+      scope.scoped((s: TSymbolTable) => {
         val returnType: Option[TType] = checkValOrDefBody(s, v.rhs, field.tpe)
         returnType match {
           case Some(tpe) => if (field.tpe == null) field.tpe = tpe
@@ -136,8 +136,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkDefMember(scope: TScope, d: DefDef) = {
-    scope.scoped((s: TScope) => {
+  private def checkDefMember(scope: TSymbolTable, d: DefDef) = {
+    scope.scoped((s: TSymbolTable) => {
       TypeUtils.createAndAddGenericModifiers(s, d.tparams)
       val method: Method = TypeUtils.findMethodForDef(s, d)
       if (!method.constructor && !method.isAbstract) {
@@ -148,7 +148,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }, MethodScope)
   }
 
-  private def checkReturnExpected(returned: Option[TType], expected: TType, line: Int, scope: TScope): Unit = {
+  private def checkReturnExpected(returned: Option[TType], expected: TType, line: Int, scope: TSymbolTable): Unit = {
     if (returned.isDefined && returned.get != null && returned.get != expected && !returned.get.hasParent(expected)) {
       val msg =
         s"""type mismatch;
@@ -159,7 +159,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkValOrDefBody(scope: TScope, body: Tree, expectedType: TType): Option[TType] = {
+  private def checkValOrDefBody(scope: TSymbolTable, body: Tree, expectedType: TType): Option[TType] = {
     var expected = expectedType
     val returnType = checkBodyOptional(scope, body)
     if (expectedType == null && returnType.isDefined) expected = returnType.get // For type inference
@@ -167,28 +167,28 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     returnType
   }
 
-  private def checkBody(scope: TScope, body: Tree): TType = {
+  private def checkBody(scope: TSymbolTable, body: Tree): TType = {
     body match {
       case EmptyTree => EmptyType
       case _ => checkStatement(scope, body)
     }
   }
 
-  private def checkBodyOptional(scope: TScope, body: Tree): Option[TType] = {
+  private def checkBodyOptional(scope: TSymbolTable, body: Tree): Option[TType] = {
     checkBody(scope, body) match {
       case EmptyType => None
       case _@t => Option(t)
     }
   }
 
-  private def checkBlock(scope: TScope, block: Block): TType = {
+  private def checkBlock(scope: TSymbolTable, block: Block): TType = {
     //TODO new Scope?
     block.stats.foreach(checkStatement(scope, _))
 
     checkStatement(scope, block.expr)
   }
 
-  private def checkStatement(scope: TScope, tree: Tree) = tree match {
+  private def checkStatement(scope: TSymbolTable, tree: Tree) = tree match {
     case b: Block => checkBlock(scope, b)
     case v: ValDef => checkVal(scope, v)
     case a: Assign => checkAssign(scope, a)
@@ -205,7 +205,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case t: This => scope.findThis()
   }
 
-  private def checkApply(scope: TScope, apply: Apply): TType = {
+  private def checkApply(scope: TSymbolTable, apply: Apply): TType = {
     apply.fun match {
       case s@Select(New(a: AppliedTypeTree), name) =>
         val onType: TType = TypeUtils.findType(scope, a.tpt)
@@ -232,14 +232,14 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkSelect(scope: TScope, select: Select): TType = {
+  private def checkSelect(scope: TSymbolTable, select: Select): TType = {
     val tpe: TType = checkQualifier(scope, select.qualifier)
     val selectName: String = select.name.toString
 
     TypeUtils.findMethodOrFieldType(scope, selectName, select.pos.line, tpe)
   }
 
-  private def checkQualifier(scope: TScope, qualifier: Tree): TType = qualifier match {
+  private def checkQualifier(scope: TSymbolTable, qualifier: Tree): TType = qualifier match {
     case l: Literal => TypeUtils.findType(scope, l)
     case i: Ident => TypeUtils.findIdent(scope, i.name.toString).tpe
     case a: Apply => checkApply(scope, a)
@@ -247,7 +247,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case s: Select => checkSelect(scope, s)
   }
 
-  private def checkArgs(scope: TScope, args: List[Tree]) = {
+  private def checkArgs(scope: TSymbolTable, args: List[Tree]) = {
     args.map({
       case i: Ident => checkIdent(scope, i)
       case l: Literal => checkLiteral(scope, l)
@@ -259,7 +259,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     })
   }
 
-  private def checkIdent(scope: TScope, ident: Ident, params: Seq[TType] = Vector()): TType = {
+  private def checkIdent(scope: TSymbolTable, ident: Ident, params: Seq[TType] = Vector()): TType = {
     val iName: String = ident.name.toString
     //TODO: check if field?
     scope.findMethod(iName, params) match {
@@ -281,13 +281,13 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkLiteral(scope: TScope, literal: Literal): TType = {
+  private def checkLiteral(scope: TSymbolTable, literal: Literal): TType = {
     TypeUtils.findType(scope, literal)
   }
 
-  private def checkVal(scope: TScope, v: ValDef): TType = {
+  private def checkVal(scope: TSymbolTable, v: ValDef): TType = {
     val expected: TType = TypeUtils.findType(scope, v.tpt)
-    val returnTpe: Option[TType] = scope.scoped(checkValOrDefBody(_: TScope, v.rhs, expected), BlockScope)
+    val returnTpe: Option[TType] = scope.scoped(checkValOrDefBody(_: TSymbolTable, v.rhs, expected), BlockScope)
     returnTpe match {
       case Some(tpe) =>
         val typeToAdd = if (expected != null) expected else tpe
@@ -298,11 +298,11 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     TypeUtils.unitType(scope)
   }
 
-  private def checkDef(scope: TScope, d: DefDef): TType = {
+  private def checkDef(scope: TSymbolTable, d: DefDef): TType = {
     val expected: TType = TypeUtils.findType(scope, d.tpt)
 
     val m: Method = TypeUtils.createMethod(scope, d)
-    scope.scoped((s: TScope) => {
+    scope.scoped((s: TSymbolTable) => {
       TypeUtils.addParamsToScope(s, m.params)
       checkValOrDefBody(s, d.rhs, expected)
     }, MethodScope)
@@ -312,16 +312,16 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   }
 
   /**
-   * Check while / do while
+    * Check while / do while
     *
     * @param scope the current scope
-   * @param l
-   * @return
-   */
-  private def checkLabel(scope: TScope, l: LabelDef): TType = {
+    * @param l
+    * @return
+    */
+  private def checkLabel(scope: TSymbolTable, l: LabelDef): TType = {
     l match {
       case LabelDef(n, _, t) =>
-        scope.scoped((s: TScope) => {
+        scope.scoped((s: TSymbolTable) => {
           s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Vector()))
           t match {
             case i: If => checkIf(s, i) // while
@@ -331,7 +331,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkIf(scope: TScope, i: If): TType = {
+  private def checkIf(scope: TSymbolTable, i: If): TType = {
     checkCond(scope, i.cond)
     val thenTpe: Option[TType] = checkBodyOptional(scope, i.thenp)
     val elseTpe: Option[TType] = checkElse(scope, i.elsep)
@@ -339,12 +339,12 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     TypeUtils.findCommonBaseClass(scope, thenTpe, elseTpe)
   }
 
-  private def checkCond(scope: TScope, t: Tree): Unit = {
+  private def checkCond(scope: TSymbolTable, t: Tree): Unit = {
     checkBodyOptional(scope, t).map(_ == baseTypes.boolean).
       getOrElse(TypeErrors.addError(scope, t.pos.line, "If condition must be a boolean expression"))
   }
 
-  private def checkElse(scope: TScope, t: Tree): Option[TType] = {
+  private def checkElse(scope: TSymbolTable, t: Tree): Option[TType] = {
     t match {
       case l: Literal => l.value.value match {
         case bu: BoxedUnit => None
@@ -354,31 +354,31 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
-  private def checkAssign(scope: TScope, a: Assign): TType = {
+  private def checkAssign(scope: TSymbolTable, a: Assign): TType = {
     // TODO a.lhs might be select or apply
     val tpe = a.lhs match {
       case i: Ident => handleIdentAssign(scope, i)
       case _ => handleFieldAssign(scope, a.lhs)
     }
 
-    scope.scoped(checkValOrDefBody(_: TScope, a.rhs, tpe), BlockScope)
+    scope.scoped(checkValOrDefBody(_: TSymbolTable, a.rhs, tpe), BlockScope)
 
     TypeUtils.unitType(scope)
   }
 
-  private def handleIdentAssign(scope: TScope, i: Ident): TType = {
+  private def handleIdentAssign(scope: TSymbolTable, i: Ident): TType = {
     val identifier = TypeUtils.findIdentifier(scope, i)
     if (!identifier.mutable) TypeErrors.addError(scope, i.pos.line, "Reassignment to val")
     identifier.tpe
   }
 
-  private def handleFieldAssign(scope: TScope, t: Tree): TType = {
+  private def handleFieldAssign(scope: TSymbolTable, t: Tree): TType = {
     t match {
       case s: Select => handleSelectFieldAssign(scope, s)
     }
   }
 
-  private def handleSelectFieldAssign(scope: TScope, s: Select): TType = {
+  private def handleSelectFieldAssign(scope: TSymbolTable, s: Select): TType = {
     def handleSelectFieldAssignAcc(subSelect: Select): Field = {
       subSelect.qualifier match {
         case t: This =>
@@ -395,34 +395,34 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     checkFieldAssign(scope, s, field)
   }
 
-  private def checkFieldAssign(scope: TScope, t: Tree, f: Field): TType = {
+  private def checkFieldAssign(scope: TSymbolTable, t: Tree, f: Field): TType = {
     if (!f.isMutable) TypeErrors.addError(scope, t.pos.line, "Reassignment to val")
     f.tpe
   }
 
-  private def checkFunction(scope: TScope, f: Function) = {
+  private def checkFunction(scope: TSymbolTable, f: Function) = {
     val params: Seq[Param] = TypeUtils.createParams(scope, f.vparams)
-    val retType = scope.scoped((s: TScope) => {
+    val retType = scope.scoped((s: TSymbolTable) => {
       TypeUtils.addParamsToScope(scope, params)
       checkBody(s, f.body)
     }, MethodScope)
     TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
   }
 
-  private def checkMatch(scope: TScope, m: Match): TType = {
+  private def checkMatch(scope: TSymbolTable, m: Match): TType = {
     val selector = checkStatement(scope, m.selector)
     val checkedCases = m.cases.map(checkCase(scope, selector, _))
     TypeUtils.findCommonBaseClass(scope, checkedCases)
   }
 
-  private def checkCase(scope: TScope, selectorType: TType, c: CaseDef) = {
-    scope.scoped((s: TScope) => {
+  private def checkCase(scope: TSymbolTable, selectorType: TType, c: CaseDef) = {
+    scope.scoped((s: TSymbolTable) => {
       checkPattern(s, selectorType, c.pat)
       checkStatement(s, c.body)
     }, BlockScope)
   }
 
-  private def checkPattern(scope: TScope, selectorType: TType, pat: Tree) = {
+  private def checkPattern(scope: TSymbolTable, selectorType: TType, pat: Tree) = {
     pat match {
       case l: Literal => checkLiteral(scope, l)
       case ident: Ident => TypeUtils.findIdent(scope, ident.name.toString) match {

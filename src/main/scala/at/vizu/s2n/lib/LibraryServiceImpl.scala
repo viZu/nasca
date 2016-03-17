@@ -4,7 +4,7 @@ import java.nio.file.{Files, Path}
 
 import at.vizu.s2n.args.Arguments
 import at.vizu.s2n.generator.GeneratorUtils
-import at.vizu.s2n.types.symbol.{GenericType, TScope, TType}
+import at.vizu.s2n.types.symbol.{GenericType, TSymbolTable, TType}
 import com.typesafe.scalalogging.LazyLogging
 
 import scalax.file.PathMatcher
@@ -14,13 +14,13 @@ import scalax.file.PathMatcher
   */
 class LibraryServiceImpl(classMetaInfoService: ClassMetaInfoService) extends LibraryService with LazyLogging {
 
-  override def readLibraryToScope(scope: TScope, libraryPath: Path): Unit = {
+  override def readLibraryToScope(scope: TSymbolTable, libraryPath: Path): Unit = {
     logger.debug(s"Reading library ${libraryPath.toString}")
     val types: Seq[TType] = classMetaInfoService.loadClassMetaInfo(scope, libraryPath)
     scope.addAllClasses(types)
   }
 
-  override def packageLibrary(scope: TScope, args: Arguments): Unit = {
+  override def packageLibrary(scope: TSymbolTable, args: Arguments): Unit = {
     val libraryDirectory: Path = createLibraryDirectory(args)
     val typesToPersist = getTypesToPersist(scope)
     classMetaInfoService.persistClassMetaInfo(typesToPersist, libraryDirectory)
@@ -28,7 +28,7 @@ class LibraryServiceImpl(classMetaInfoService: ClassMetaInfoService) extends Lib
     copyNeededFiles(args.generatedDir, libraryDirectory, typesToPersist)
   }
 
-  private def getTypesToPersist(scope: TScope) = {
+  private def getTypesToPersist(scope: TSymbolTable) = {
     val rootScope = scope.getRootScope
     rootScope.getNonBaseTypes ++ rootScope.getNonBaseObjects
   }

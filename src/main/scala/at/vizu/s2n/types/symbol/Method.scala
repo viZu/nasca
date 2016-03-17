@@ -46,7 +46,7 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     }
   }
 
-  def applyTypes(scope: TScope, types: Map[TypeArgument, TType]) = {
+  def applyTypes(scope: TSymbolTable, types: Map[TypeArgument, TType]) = {
     val retTpe = TypeUtils.getNewTpe(scope, types, returnType, applyPartly = false)
     val newGenerics = generics.map(TypeUtils.getNewTpe(scope, types, _, applyPartly = false))
       .collect({ case gt: TypeArgument if !gt.isInstanceOf[AppliedTypeArgument] => gt })
@@ -54,7 +54,7 @@ class Method(val ctx: Context, val name: String, val returnType: TType, val mods
     Method(ctx, name, retTpe, mods, newParams, newGenerics, instanceMethod, operator)
   }
 
-  private def applyTypesOnParams(scope: TScope, types: Map[TypeArgument, TType]) = {
+  private def applyTypesOnParams(scope: TSymbolTable, types: Map[TypeArgument, TType]) = {
     params.map(_.applyTypes(scope, types))
   }
 

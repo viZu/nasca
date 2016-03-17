@@ -13,19 +13,19 @@ import scala.reflect.runtime.universe._
   */
 object TypeInference extends LazyLogging {
 
-  def getTypes(baseTypes: BaseTypes, scope: TScope, trees: List[Tree]) = {
+  def getTypes(baseTypes: BaseTypes, scope: TSymbolTable, trees: List[Tree]) = {
     profile(logger, "TypeInference.getTypes", getTypesInternal(baseTypes, scope, trees), Trace)
   }
 
-  private def getTypesInternal(baseTypes: BaseTypes, scope: TScope, trees: List[Tree]) = {
+  private def getTypesInternal(baseTypes: BaseTypes, scope: TSymbolTable, trees: List[Tree]) = {
     trees.map(getTypeInternal(baseTypes, scope, _))
   }
 
-  def getType(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()) = {
+  def getType(baseTypes: BaseTypes, scope: TSymbolTable, tree: Tree, params: Seq[TType] = Vector()) = {
     profile(logger, "TypeInference.getType", getTypeInternal(baseTypes, scope, tree, params), Trace)
   }
 
-  def getTypeInternal(baseTypes: BaseTypes, scope: TScope, tree: Tree, params: Seq[TType] = Vector()): TType = {
+  def getTypeInternal(baseTypes: BaseTypes, scope: TSymbolTable, tree: Tree, params: Seq[TType] = Vector()): TType = {
     tree match {
       case b: Block => getTypeBlock(baseTypes, scope, b)
       case v: ValDef => baseTypes.unit
@@ -43,11 +43,11 @@ object TypeInference extends LazyLogging {
     }
   }
 
-  def getTypeBlock(baseTypes: BaseTypes, scope: TScope, block: Block): TType = {
+  def getTypeBlock(baseTypes: BaseTypes, scope: TSymbolTable, block: Block): TType = {
     getTypeInternal(baseTypes, scope, block.expr)
   }
 
-  def getTypeSelect(baseTypes: BaseTypes, scope: TScope, select: Select, params: Seq[TType] = Vector()): TType = {
+  def getTypeSelect(baseTypes: BaseTypes, scope: TSymbolTable, select: Select, params: Seq[TType] = Vector()): TType = {
     val tpe: TType = getTypeInternal(baseTypes, scope, select.qualifier)
     val selectName: String = select.name.toString
 
@@ -55,7 +55,7 @@ object TypeInference extends LazyLogging {
     else TypeUtils.findMethod(scope, selectName, select.pos.line, params, tpe).returnType
   }
 
-  def getTypeApply(baseTypes: BaseTypes, scope: TScope, apply: Apply): TType = {
+  def getTypeApply(baseTypes: BaseTypes, scope: TSymbolTable, apply: Apply): TType = {
     apply.fun match {
       case s@Select(New(a: AppliedTypeTree), name) =>
         val onType: TType = TypeUtils.findType(scope, a.tpt)
@@ -83,7 +83,7 @@ object TypeInference extends LazyLogging {
     }
   }
 
-  def getTypeIdent(baseTypes: BaseTypes, scope: TScope, ident: Ident, args: Seq[TType] = Vector()): TType = {
+  def getTypeIdent(baseTypes: BaseTypes, scope: TSymbolTable, ident: Ident, args: Seq[TType] = Vector()): TType = {
     val iName = ident.name.toString
     profile(logger, "ti: ident - findmethod", scope.findMethod(iName, args), Trace) match {
       case Some(m) =>
@@ -112,11 +112,11 @@ object TypeInference extends LazyLogging {
     }
   }
 
-  def getTypeLiteral(baseTypes: BaseTypes, scope: TScope, literal: Literal): TType = {
+  def getTypeLiteral(baseTypes: BaseTypes, scope: TSymbolTable, literal: Literal): TType = {
     TypeUtils.findType(scope, literal)
   }
 
-  def getTypeIf(baseTypes: BaseTypes, scope: TScope, i: If): TType = {
+  def getTypeIf(baseTypes: BaseTypes, scope: TSymbolTable, i: If): TType = {
     val elseType = i.elsep match {
       case l: Literal => getTypeLiteral(baseTypes, scope, l)
       case _ => getTypeInternal(baseTypes, scope, i.elsep)
@@ -125,8 +125,8 @@ object TypeInference extends LazyLogging {
     TypeUtils.findCommonBaseClass(scope, thenType, elseType)
   }
 
-  def getTypeFunction(scope: TScope, f: Function): TType = {
-    scope.scoped((childScope: TScope) => {
+  def getTypeFunction(scope: TSymbolTable, f: Function): TType = {
+    scope.scoped((childScope: TSymbolTable) => {
       val params: Seq[Param] = TypeUtils.createParams(childScope, f.vparams)
       TypeUtils.addParamsToScope(childScope, params)
       val retType = getTypeInternal(childScope.baseTypes, childScope, f.body)
@@ -134,7 +134,7 @@ object TypeInference extends LazyLogging {
     }, MethodScope)
   }
 
-  def getTypeNew(baseTypes: BaseTypes, scope: TScope, n: New): TType = {
+  def getTypeNew(baseTypes: BaseTypes, scope: TSymbolTable, n: New): TType = {
     TypeUtils.findType(scope, n)
   }
 }

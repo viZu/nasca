@@ -11,9 +11,9 @@ import com.typesafe.scalalogging.LazyLogging
 /**
  * Phil on 07.10.15.
  */
-class TScope(private var parent: Option[TScope] = None, private val _this: Option[TType] = None,
-             private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None,
-             private val _baseTypes: Option[BaseTypes] = None, private val scopeType: ScopeType = BlockScope) extends LazyLogging {
+class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val _this: Option[TType] = None,
+                   private var _currentPackage: Option[String] = None, private var _currentFile: Option[String] = None,
+                   private val _baseTypes: Option[BaseTypes] = None, private val scopeType: ScopeType = BlockScope) extends LazyLogging {
 
   private var _types: Seq[TType] = Vector()
   private var _objects: Seq[TType] = Vector()
@@ -45,11 +45,11 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
   // TODO: Optimize?
   def isEmptyScope: Boolean = (_types ++ _objects ++ _identifiers ++ _methods).isEmpty
 
-  def enterScope(scopeType: ScopeType): TScope = TScope(this, scopeType)
+  def enterScope(scopeType: ScopeType): TSymbolTable = TSymbolTable(this, scopeType)
 
-  def enterScope(_this: TType): TScope = TScope(this, _this)
+  def enterScope(_this: TType): TSymbolTable = TSymbolTable(this, _this)
 
-  def exitScope(): TScope = {
+  def exitScope(): TSymbolTable = {
     val parent = this.parent
 
     // cleanup for garbage collector ?
@@ -311,7 +311,7 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     }
   }
 
-  def getRootScope: TScope = {
+  def getRootScope: TSymbolTable = {
     parent match {
       case None => this
       case Some(s) => s.getRootScope
@@ -335,50 +335,50 @@ class TScope(private var parent: Option[TScope] = None, private val _this: Optio
     * Scoped functions, for entering new scopes
     */
 
-  def scoped(f: TScope => Option[TType], scopeType: ScopeType): Option[TType] = {
-    val childScope: TScope = enterScope(scopeType)
+  def scoped(f: TSymbolTable => Option[TType], scopeType: ScopeType): Option[TType] = {
+    val childScope: TSymbolTable = enterScope(scopeType)
     val tpe = f(childScope)
     childScope.exitScope()
     tpe
   }
 
-  def scoped(f: TScope => TType, scopeType: ScopeType): TType = {
-    val childScope: TScope = enterScope(scopeType)
+  def scoped(f: TSymbolTable => TType, scopeType: ScopeType): TType = {
+    val childScope: TSymbolTable = enterScope(scopeType)
     val tpe = f(childScope)
     childScope.exitScope()
     tpe
   }
 
-  def scoped[U](f: TScope => U, scopeType: ScopeType): U = {
-    val childScope: TScope = enterScope(scopeType)
+  def scoped[U](f: TSymbolTable => U, scopeType: ScopeType): U = {
+    val childScope: TSymbolTable = enterScope(scopeType)
     val ret = f(childScope)
     childScope.exitScope()
     ret
   }
 
-  def scoped(f: TScope => Expression, scopeType: ScopeType): Expression = {
-    val childScope: TScope = enterScope(scopeType)
+  def scoped(f: TSymbolTable => Expression, scopeType: ScopeType): Expression = {
+    val childScope: TSymbolTable = enterScope(scopeType)
     val expr = f(childScope)
     childScope.exitScope()
     expr
   }
 
-  def scoped(f: TScope => GeneratorContext, scopeType: ScopeType): GeneratorContext = {
-    val childScope: TScope = enterScope(scopeType)
+  def scoped(f: TSymbolTable => GeneratorContext, scopeType: ScopeType): GeneratorContext = {
+    val childScope: TSymbolTable = enterScope(scopeType)
     val generated = f(childScope)
     childScope.exitScope()
     generated
   }
 }
 
-object TScope {
-  def apply() = new TScope(scopeType = RootScope)
+object TSymbolTable {
+  def apply() = new TSymbolTable(scopeType = RootScope)
 
-  def apply(baseTypes: BaseTypes) = new TScope(_baseTypes = Option(baseTypes), scopeType = RootScope)
+  def apply(baseTypes: BaseTypes) = new TSymbolTable(_baseTypes = Option(baseTypes), scopeType = RootScope)
 
-  def apply(parent: TScope, scopeType: ScopeType) = new TScope(Option(parent), scopeType = scopeType)
+  def apply(parent: TSymbolTable, scopeType: ScopeType) = new TSymbolTable(Option(parent), scopeType = scopeType)
 
-  def apply(parent: TScope, _this: TType) = new TScope(Option(parent), Option(_this), scopeType = ClassScope)
+  def apply(parent: TSymbolTable, _this: TType) = new TSymbolTable(Option(parent), Option(_this), scopeType = ClassScope)
 }
 
 trait ScopeType

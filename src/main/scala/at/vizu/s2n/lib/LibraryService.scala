@@ -3,7 +3,7 @@ package at.vizu.s2n.lib
 import java.nio.file.Path
 
 import at.vizu.s2n.args.Arguments
-import at.vizu.s2n.types.symbol.TScope
+import at.vizu.s2n.types.symbol.TSymbolTable
 
 
 /**
@@ -11,8 +11,8 @@ import at.vizu.s2n.types.symbol.TScope
   */
 trait LibraryService {
 
-  def readLibraryToScope(scope: TScope, libraryPath: Path): Unit
+  def readLibraryToScope(scope: TSymbolTable, libraryPath: Path): Unit
 
-  def packageLibrary(scope: TScope, args: Arguments): Unit
+  def packageLibrary(scope: TSymbolTable, args: Arguments): Unit
 
 }

@@ -14,7 +14,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   protected var _methods: Seq[Method] = Vector()
   protected var _fields: Seq[Field] = Vector()
   private[symbol] var _parents: Seq[Parent] = Vector()
-  private[symbol] var memberAddedListener: ArrayBuffer[(TScope, Member) => Any] = ArrayBuffer()
+  private[symbol] var memberAddedListener: ArrayBuffer[(TSymbolTable, Member) => Any] = ArrayBuffer()
 
   def parents = _parents
   def methods = _methods
@@ -146,7 +146,7 @@ class ConcreteType(_ctx: Context = Context("", 0), _simpleName: String,
   }
 
   private def notifyMemberAddedListener(member: Member) = {
-    memberAddedListener.foreach(_.apply(TScope(), member))
+    memberAddedListener.foreach(_.apply(TSymbolTable(), member))
   }
 
   def addParent(parent: Parent) = {

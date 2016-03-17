@@ -10,7 +10,7 @@ case class Param(ctx: Context, tpe: TType, name: String, hasDefaultVal: Boolean 
     s"$v $name: ${tpe.toString}"
   }
 
-  def applyTypes(scope: TScope, types: Map[TypeArgument, TType]) = {
+  def applyTypes(scope: TSymbolTable, types: Map[TypeArgument, TType]) = {
     tpe match {
       case g: GenericType =>
         val newTpe = g.applyTypes(scope, types)

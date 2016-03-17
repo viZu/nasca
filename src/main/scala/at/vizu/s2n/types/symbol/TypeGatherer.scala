@@ -10,16 +10,16 @@ import scala.reflect.runtime.universe._
  */
 object TypeGatherer {
 
-  def gatherTypes(trees: Seq[AST], scope: TScope) = {
+  def gatherTypes(trees: Seq[AST], scope: TSymbolTable) = {
     trees.foreach(tree => gatherTypesFromTree(tree, scope))
   }
 
-  def gatherTypesFromTree(tree: AST, scope: TScope): Unit = {
+  def gatherTypesFromTree(tree: AST, scope: TSymbolTable): Unit = {
     val traverser: ClassTraverser = new ClassTraverser(tree, scope)
     traverser.traverse(tree.internalTree)
   }
 
-  private class ClassTraverser(ast: AST, scope: TScope) extends Traverser {
+  private class ClassTraverser(ast: AST, scope: TSymbolTable) extends Traverser {
     val pkgBuilder = new ArrayBuffer[String]
 
     override def traverse(tree: Tree): Unit = {

@@ -13,7 +13,7 @@ import scala.reflect.runtime.universe._
 /**
   * Phil on 12.02.16.
   */
-class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, implementation: Implementation)
+class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TSymbolTable, implementation: Implementation)
   extends TemplateFileGenerator with LazyLogging {
 
   def tpe = implementation.tpe
@@ -37,7 +37,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     ScalaFiles.writeToFile(args.generatedDir, name, prettyContent)
   }
 
-  private def addGenericsToScope(scope: TScope) = {
+  private def addGenericsToScope(scope: TSymbolTable) = {
     implementation.tpe match {
       case g: GenericType => g.genericModifiers.foreach(scope.addClass)
       case _ =>
@@ -64,7 +64,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     sections.enhance(content)
   }
 
-  protected def generateSections(scope: TScope): GeneratorContext = {
+  protected def generateSections(scope: TSymbolTable): GeneratorContext = {
     GeneratorUtils.mergeGeneratorContexts(groupMember(scope).map(p => generateSection(p._1, p._2)).toSeq, "\n\n")
   }
 
@@ -83,7 +83,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     contexts.enhance(s"""$visibility:$memberStr""".stripMargin)
   }
 
-  private def groupMember(scope: TScope): Map[String, Seq[GeneratorContext]] = {
+  private def groupMember(scope: TSymbolTable): Map[String, Seq[GeneratorContext]] = {
     val (memberTrees, constructorContent) = implementation.tree.impl.body.partition({
       case v: ValOrDefDef => true
       case _ => false
@@ -97,8 +97,8 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     members.groupBy(_._1).mapValues(sq => sq.map(_._2))
   }
 
-  private def generateMethod(scope: TScope, d: DefDef, initCtx: GeneratorContext): (String, GeneratorContext) = {
-    scope.scoped((s: TScope) => {
+  private def generateMethod(scope: TSymbolTable, d: DefDef, initCtx: GeneratorContext): (String, GeneratorContext) = {
+    scope.scoped((s: TSymbolTable) => {
       TypeUtils.createAndAddGenericModifiers(s, d.tparams)
       val method: Method = TypeUtils.findMethodForDef(s, d)
       val ctx: GeneratorContext = if (method.isAbstract || tpe.isTrait && method.constructor) {
@@ -112,13 +112,13 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     }, MethodScope)
   }
 
-  private def generateConstructor(scope: TScope, method: Method, initCtx: GeneratorContext,
+  private def generateConstructor(scope: TSymbolTable, method: Method, initCtx: GeneratorContext,
                                   d: DefDef): GeneratorContext = method match {
     case c: Constructor if c.primary =>
       if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").generateForHeader // no in
       else PrimaryConstructorExpression(scope, c, classInitMethodName).generateForHeader
     case c: Constructor =>
-      scope.scoped((childScope: TScope) => {
+      scope.scoped((childScope: TSymbolTable) => {
         TypeUtils.addParamsToScope(scope, c.params)
         val block = Expression.wrapInBlock(d.rhs)
         val stats: List[Expression] = block.stats.tail.map(Expression(scope.baseTypes, scope, _))
@@ -129,7 +129,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
       }, MethodScope)
   }
 
-  private def generateContructorInit(scope: TScope, constructorContent: List[Tree]): GeneratorContext = {
+  private def generateContructorInit(scope: TSymbolTable, constructorContent: List[Tree]): GeneratorContext = {
     if (tpe.isTrait) GeneratorContext()
     else constructorContent match {
       case Nil => GeneratorContext() // no intitialization is done
@@ -139,7 +139,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     }
   }
 
-  private def generateConstructorInitBlock(scope: TScope, body: Block) = {
+  private def generateConstructorInitBlock(scope: TSymbolTable, body: Block) = {
     val mdHandle = generateInitMethodHandle(classInitMethodName, baseTypes.unit) // TODO do I need this?
     val method = mdHandle.method
     val methodCtx = generateMethod(scope, body, method)
@@ -153,7 +153,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     MethodDefinitionHandle(m)
   }
 
-  private def generateMethod(scope: TScope, rhs: Tree, method: Method): GeneratorContext = {
+  private def generateMethod(scope: TSymbolTable, rhs: Tree, method: Method): GeneratorContext = {
     val rhsBlock: Block = Expression.wrapInBlock(rhs)
     val methodBody: GeneratorContext = Expression
       .getBaseBlockExpression(baseTypes, scope, rhsBlock, method.tpe != baseTypes.unit).generate
@@ -162,12 +162,12 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     GeneratorUtils.mergeGeneratorContexts(Seq(methodBody, methodDef), givenContent = methodString)
   }
 
-  private def generateField(scope: TScope, v: ValDef): Seq[(String, GeneratorContext)] = {
+  private def generateField(scope: TSymbolTable, v: ValDef): Seq[(String, GeneratorContext)] = {
     val field: Field = TypeUtils.findField(scope, v, tpe)
     generateFieldBody(scope, v.rhs, field)
   }
 
-  private def generateFieldBody(scope: TScope, body: Tree, field: Field): Seq[(String, GeneratorContext)] = {
+  private def generateFieldBody(scope: TSymbolTable, body: Tree, field: Field): Seq[(String, GeneratorContext)] = {
     val definition = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     body match {
       case b: Block =>
@@ -187,24 +187,24 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TScope, impleme
     }
   }
 
-  private def generateInitMethod(scope: TScope, b: Block, initMethodName: String, initCall: String,
+  private def generateInitMethod(scope: TSymbolTable, b: Block, initMethodName: String, initCall: String,
                                  varName: String, varTpe: TType): GeneratorContext = {
     val privateMethodHandle = generateInitMethodHandle(initMethodName, varTpe)
     val method = privateMethodHandle.method
     generateMethod(scope, b, method)
   }
 
-  private def generateExpression(scope: TScope, expression: Expression, returnable: Boolean): GeneratorContext = {
+  private def generateExpression(scope: TSymbolTable, expression: Expression, returnable: Boolean): GeneratorContext = {
     val exprCtx: GeneratorContext = expression.content
     val content: String = if (returnable) "return " + exprCtx.value else exprCtx.value
     exprCtx.enhance(content)
   }
 
-  private def generateForwardDeclarations(scope: TScope) = {
+  private def generateForwardDeclarations(scope: TSymbolTable) = {
     tpe.parents.map(generateForwardDeclaration(scope, _)).mkString("\n\n")
   }
 
-  private def generateForwardDeclaration(scope: TScope, parent: Parent) = {
+  private def generateForwardDeclaration(scope: TSymbolTable, parent: Parent) = {
     val parentTpe: TType = parent.tpe
     val classTemplate = GeneratorUtils.generateClassTemplate(parentTpe)
     val simpleName = GeneratorUtils.getSimpleName(baseTypes, parentTpe)
