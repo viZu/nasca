@@ -1,7 +1,7 @@
 package at.vizu.s2n.types
 
 import at.vizu.s2n.lib.CppLibraryComponent
-import at.vizu.s2n.types.symbol.ScalaScopeInitializer
+import at.vizu.s2n.types.symbol.ScalaSymbolTableInitializer
 import com.softwaremill.macwire._
 
 /**
@@ -9,6 +9,6 @@ import com.softwaremill.macwire._
   */
 trait TypeComponent extends CppLibraryComponent {
 
-  lazy val scopeInitializer = wire[ScalaScopeInitializer]
+  lazy val scopeInitializer = wire[ScalaSymbolTableInitializer]
 
 }

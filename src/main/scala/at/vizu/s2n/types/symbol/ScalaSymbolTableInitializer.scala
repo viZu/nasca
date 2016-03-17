@@ -5,7 +5,7 @@ import at.vizu.s2n.types.symbol.TypeUtils._
 /**
  * Phil on 16.10.15.
  */
-class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
+class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes {
 
   lazy val ctx: Context = Context("", 0)
   lazy val any = new ConcreteType(_simpleName = "Any", _pkg = RootScalaPackage)
@@ -29,7 +29,7 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
   override def initScope: TSymbolTable = {
-    val scope: TSymbolTable = TSymbolTable(this)
+    val symbolTable: TSymbolTable = TSymbolTable(this)
     val a: TType = initAny()
     val ar: TType = initAnyRef()
     val av: TType = initAnyVal()
@@ -43,16 +43,16 @@ class ScalaScopeInitializer extends ScopeInitializer with BaseTypes {
     val array = initArray()
     val allTypes = anys ++ pris ++ Vector(numericPrimitive, str, nullT, nothing, array)
 
-    scope.addAllClasses(allTypes)
+    symbolTable.addAllClasses(allTypes)
 
     allTypes foreach (t => {
-      scope.addTypeAlias(t.simpleName, t.name)
+      symbolTable.addTypeAlias(t.simpleName, t.name)
     })
 
-    initRootMethods.foreach(scope.addMethod)
-    addFunctionTypes(scope, 6)
+    initRootMethods.foreach(symbolTable.addMethod)
+    addFunctionTypes(symbolTable, 6)
 
-    scope
+    symbolTable
   }
 
   private def initRootMethods = {

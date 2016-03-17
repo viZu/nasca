@@ -21,6 +21,7 @@ trait BaseTypes {
   val double: TType
   val nullTpe: TType
   val nothing: TType
+  val array: TType
 
   val primitives: Set[TType]
 

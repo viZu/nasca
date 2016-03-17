@@ -16,7 +16,7 @@ import scala.reflect.runtime.universe._
 /**
  * Phil on 06.11.15.
  */
-class TypeSystemInitializerImpl(scopeInitializer: ScopeInitializer, libraryService: LibraryService)
+class TypeSystemInitializerImpl(scopeInitializer: SymbolTableInitializer, libraryService: LibraryService)
   extends TypeSystemInitializer with LazyLogging {
 
   private val rootScope: TSymbolTable = scopeInitializer.initScope

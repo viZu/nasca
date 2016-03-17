@@ -8,7 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
   */
 class GeneratorUtilsSpec extends FlatSpec with Matchers {
 
-  val baseTypes = new ScalaScopeInitializer
+  val baseTypes = new ScalaSymbolTableInitializer
   val sharedPtr = "std::shared_ptr"
   val ctx = Context("", 0)
   val tpeWithOutPkg = ConcreteType(Context("test", 0), "Type")
