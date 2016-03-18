@@ -36,7 +36,7 @@ object ScalaFiles {
     }
   }
 
-  val pkgRegex = """^(package) +(.*) *;""".r
+  val pkgRegex = """^(package) +([^; ]*) *;?""".r
 
   def manipulateFileContent(source: Source): String = {
     val lines: List[String] = source.getLines().toList
@@ -56,6 +56,7 @@ object ScalaFiles {
       append.append('}')
     })
     val newList = prepend.toString() :: lines ::: List(append.toString())
+    //val newList = s"package $pkgString { " :: lines ::: List("}")
     val s: String = newList.mkString("\n")
     s
   }

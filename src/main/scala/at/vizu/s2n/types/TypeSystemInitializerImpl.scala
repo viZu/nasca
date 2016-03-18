@@ -301,7 +301,7 @@ class TypeSystemInitializerImpl(scopeInitializer: SymbolTableInitializer, librar
           case Apply(subTree: Tree, p: List[Tree]) =>
             val tpe: TType = TypeUtils.findType(currentScope, subTree)
             val bt: BaseTypes = currentScope.baseTypes
-            val args = profile(logger, "Type inference", TypeInference.getTypes(bt, currentScope, p))
+            val args = profile(logger, "Type inference", TypeInference.getTypes(bt, currentScope, p), Debug)
             TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
             val expressions = profile(logger, "Expression",
               p.map(Expression(bt, currentScope, _, ExpressionOptions(true))), Debug)

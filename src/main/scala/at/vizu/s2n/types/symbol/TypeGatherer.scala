@@ -31,6 +31,9 @@ object TypeGatherer {
         case PackageDef(Ident(name), subtree) =>
           pkgBuilder.append(name.toString)
           super.traverse(tree)
+        case PackageDef(name, subtree) =>
+          pkgBuilder.append(name.toString())
+          super.traverse(tree)
         case _ => super.traverse(tree)
       }
     }
