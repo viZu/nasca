@@ -19,7 +19,7 @@ import scala.reflect.runtime.universe._
 class TypeSystemInitializerImpl(scopeInitializer: SymbolTableInitializer, libraryService: LibraryService)
   extends TypeSystemInitializer with LazyLogging {
 
-  private val rootScope: TSymbolTable = scopeInitializer.initScope
+  private val rootScope: TSymbolTable = scopeInitializer.initSymbolTable
   private var currentScope = rootScope
   private var trees: Seq[AST] = Vector()
 

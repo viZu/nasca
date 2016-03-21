@@ -28,7 +28,7 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
 
   lazy val primitives = Set[TType](boolean, byte, short, char, int, long, float, double, unit, string) // String is primitive
 
-  override def initScope: TSymbolTable = {
+  override def initSymbolTable: TSymbolTable = {
     val symbolTable: TSymbolTable = TSymbolTable(this)
     val a: TType = initAny()
     val ar: TType = initAnyRef()
@@ -297,12 +297,6 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     val apply: Method = Method(ctx, "apply", returnType, Vector(Abstract), params)
     tpe.addMethod(apply)
   }
-
-  override def unitType: TType = unit
-
-  override def booleanType: TType = boolean
-
-  override def nullType: TType = nullTpe
 
   private implicit def typeToParam(tpe: TType): Param = Param(ctx, tpe, "arg0")
 
