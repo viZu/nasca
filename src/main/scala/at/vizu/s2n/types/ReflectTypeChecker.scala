@@ -201,7 +201,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     case i: If => checkIf(scope, i)
     case l: LabelDef => checkLabel(scope, l)
     case f: Function => checkFunction(scope, f)
-    case m: Match => checkMatch(scope, m)
+    //    case m: Match => checkMatch(scope, m)
     case t: This => scope.findThis()
   }
 
@@ -409,30 +409,30 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)
   }
 
-  private def checkMatch(scope: TSymbolTable, m: Match): TType = {
-    val selector = checkStatement(scope, m.selector)
-    val checkedCases = m.cases.map(checkCase(scope, selector, _))
-    TypeUtils.findCommonBaseClass(scope, checkedCases)
-  }
-
-  private def checkCase(scope: TSymbolTable, selectorType: TType, c: CaseDef) = {
-    scope.scoped((s: TSymbolTable) => {
-      checkPattern(s, selectorType, c.pat)
-      checkStatement(s, c.body)
-    }, BlockScope)
-  }
-
-  private def checkPattern(scope: TSymbolTable, selectorType: TType, pat: Tree) = {
-    pat match {
-      case l: Literal => checkLiteral(scope, l)
-      case ident: Ident => TypeUtils.findIdent(scope, ident.name.toString) match {
-        case i: Identifier if i.mutable => throw new RuntimeException
-        case m: Method => throw new RuntimeException
-        case f: Field if f.isMutable => throw new RuntimeException
-        case _@s => s.tpe
-      }
-      case a: Apply => TypeUtils.unitType(scope)
-      case b: Bind => TypeUtils.unitType(scope)
-    }
-  }
+  //  private def checkMatch(scope: TSymbolTable, m: Match): TType = {
+  //    val selector = checkStatement(scope, m.selector)
+  //    val checkedCases = m.cases.map(checkCase(scope, selector, _))
+  //    TypeUtils.findCommonBaseClass(scope, checkedCases)
+  //  }
+  //
+  //  private def checkCase(scope: TSymbolTable, selectorType: TType, c: CaseDef) = {
+  //    scope.scoped((s: TSymbolTable) => {
+  //      checkPattern(s, selectorType, c.pat)
+  //      checkStatement(s, c.body)
+  //    }, BlockScope)
+  //  }
+  //
+  //  private def checkPattern(scope: TSymbolTable, selectorType: TType, pat: Tree) = {
+  //    pat match {
+  //      case l: Literal => checkLiteral(scope, l)
+  //      case ident: Ident => TypeUtils.findIdent(scope, ident.name.toString) match {
+  //        case i: Identifier if i.mutable => throw new RuntimeException
+  //        case m: Method => throw new RuntimeException
+  //        case f: Field if f.isMutable => throw new RuntimeException
+  //        case _@s => s.tpe
+  //      }
+  //      case a: Apply => TypeUtils.unitType(scope)
+  //      case b: Bind => TypeUtils.unitType(scope)
+  //    }
+  //  }
 }
