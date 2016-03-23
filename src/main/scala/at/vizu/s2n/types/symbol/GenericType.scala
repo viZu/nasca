@@ -24,20 +24,23 @@ class GenericType(_ctx: Context = Context("", 0), _simpleName: String,
       case Some(found) => found
       case None =>
         this match {
-          case a: AppliedGenericType if !typeMap.values.exists(_ != null) => a
-          case _ =>
-            val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
-            scope.addAppliedType(typeMap, this, appliedType)
-
-            val newMethods = mapMethods(scope, typeMap)
-            val newFields = mapFields(scope, typeMap)
-            val newParents = mapParents(scope, typeMap)
-            newMethods.foreach(appliedType.addMethod)
-            newFields.foreach(appliedType.addField)
-            newParents.foreach(appliedType.addParent)
-            appliedType
+          case a: AppliedGenericType if typeMap.values.exists(_ == null) => a
+          case _ => applyTypesInternal(scope, typeMap)
         }
     }
+  }
+
+  private def applyTypesInternal(scope: TSymbolTable, typeMap: Map[TypeArgument, TType]) = {
+    val appliedType = new AppliedGenericType(getAppliedTypes(typeMap), this)
+    scope.addAppliedType(typeMap, this, appliedType)
+
+    val newMethods = mapMethods(scope, typeMap)
+    val newFields = mapFields(scope, typeMap)
+    val newParents = mapParents(scope, typeMap)
+    newMethods.foreach(appliedType.addMethod)
+    newFields.foreach(appliedType.addField)
+    newParents.foreach(appliedType.addParent)
+    appliedType
   }
 
   protected def mapParents(scope: TSymbolTable, types: Map[TypeArgument, TType]): Seq[Parent] = {

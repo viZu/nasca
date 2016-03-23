@@ -1,8 +1,6 @@
 package at.vizu.s2n.types.symbol
 
 import at.vizu.s2n.error.TypeErrors
-import at.vizu.s2n.generator.GeneratorContext
-import at.vizu.s2n.generator.expression.Expression
 import at.vizu.s2n.log.Profiler._
 import at.vizu.s2n.log.Trace
 import at.vizu.s2n.types.symbol.TypeUtils._
@@ -68,15 +66,11 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
    */
 
   def addClass(tpe: TType) = {
-    def throwExists() = {
-      TypeErrors.addError(tpe.ctx, s"Class with qualifier ${tpe.fullClassName} already exists")
-    }
-    tpe match {
-      case g: TypeArgument =>
-        addClassInternal(tpe, findGeneric(_).isEmpty)
-      case _ =>
-        addClassInternal(tpe, findClassInCurrentScope(_).isEmpty)
-    }
+    addClassInternal(tpe, findClassInCurrentScope(_).isEmpty)
+  }
+
+  def addTypeArgument(tpe: TypeArgument) = {
+    addClassInternal(tpe, findTypeArgument(_).isEmpty)
   }
 
   private def addClassInternal(tpe: TType, checkType: String => Boolean) = {
@@ -97,19 +91,15 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
     _types ++ parent.map(_.findAllClasses()).getOrElse(Vector())
   }
 
-  def findGeneric(name: String): Option[TType] = {
+  def findTypeArgument(name: String): Option[TType] = {
     if (scopeType == ClassScope) _types.find(_.fullClassName == name)
-    else _types.find(_.fullClassName == name) orElse parent.flatMap(_.findGeneric(name))
-  }
-
-  def findClass(name: String): Option[TType] = {
-    findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
+    else _types.find(_.fullClassName == name) orElse parent.flatMap(_.findTypeArgument(name))
   }
 
   def findClassInCurrentScope(name: String) = _types.find(_.fullClassName == name)
 
-  private def findClassWithName(name: String): Option[TType] = {
-    _types.find(_.fullClassName == name) orElse parent.flatMap(_.findClassWithName(name)) //findClassInParent(name)
+  def findClass(name: String): Option[TType] = {
+    findClassWithAlias(name) orElse findClassWithCurrentPackage(name)
   }
 
   private def findClassWithAlias(name: String): Option[TType] = {
@@ -119,12 +109,13 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
 
   private def findClassWithCurrentPackage(name: String): Option[TType] = {
     findCurrentPackage match {
-      case Some(pkg) =>
-        val withPackage = pkg + "." + name
-        findClassWithName(withPackage)
-      //_types.find(_.fullClassName == withPackage) orElse parent.flatMap(_.findClassWithCurrentPackage())findClassInParent(withPackage)
+      case Some(pkg) => findClassWithName(pkg + "." + name)
       case None => None
     }
+  }
+
+  private def findClassWithName(name: String): Option[TType] = {
+    _types.find(_.fullClassName == name) orElse parent.flatMap(_.findClassWithName(name)) //findClassInParent(name)
   }
 
   private def findClassInParent(name: String): Option[TType] = {
@@ -335,39 +326,11 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
     * Scoped functions, for entering new scopes
     */
 
-  def scoped(f: TSymbolTable => Option[TType], scopeType: ScopeType): Option[TType] = {
-    val childScope: TSymbolTable = enterScope(scopeType)
-    val tpe = f(childScope)
-    childScope.exitScope()
-    tpe
-  }
-
-  def scoped(f: TSymbolTable => TType, scopeType: ScopeType): TType = {
-    val childScope: TSymbolTable = enterScope(scopeType)
-    val tpe = f(childScope)
-    childScope.exitScope()
-    tpe
-  }
-
   def scoped[U](f: TSymbolTable => U, scopeType: ScopeType): U = {
     val childScope: TSymbolTable = enterScope(scopeType)
     val ret = f(childScope)
     childScope.exitScope()
     ret
-  }
-
-  def scoped(f: TSymbolTable => Expression, scopeType: ScopeType): Expression = {
-    val childScope: TSymbolTable = enterScope(scopeType)
-    val expr = f(childScope)
-    childScope.exitScope()
-    expr
-  }
-
-  def scoped(f: TSymbolTable => GeneratorContext, scopeType: ScopeType): GeneratorContext = {
-    val childScope: TSymbolTable = enterScope(scopeType)
-    val generated = f(childScope)
-    childScope.exitScope()
-    generated
   }
 }
 
@@ -384,6 +347,8 @@ object TSymbolTable {
 trait ScopeType
 
 object RootScope extends ScopeType
+
+object FileScope extends ScopeType
 
 object ClassScope extends ScopeType
 

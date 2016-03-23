@@ -271,7 +271,7 @@ class TypeSystemInitializerImpl(scopeInitializer: SymbolTableInitializer, librar
 
   private def enhanceType(pkgName: String, template: Template, tpe: ConcreteType): TType = {
     val traverser = new ClassMemberTraverser(template, tpe)
-    traverser.buildMembers()
+    traverser.populateType()
     traverser.parents.foreach(tpe.addParent)
     traverser.fields.foreach(tpe.addField)
     traverser.methods.foreach(tpe.addMethod)
@@ -284,30 +284,34 @@ class TypeSystemInitializerImpl(scopeInitializer: SymbolTableInitializer, librar
     val fields = new ArrayBuffer[Field]
     val parents = new ArrayBuffer[Parent]
 
-    def buildMembers() = {
+    def populateType() = {
       t.body.foreach {
         case d: DefDef => if (!TypeUtils.isConstructor(d.name.toString)) methods += createMethod(d)
         case v: ValDef => fields += createField(v)
         case _@rest => logger.trace("TemplateTraverser: " + rest.getClass.getName)
       }
       // Todo self type
+      buildParents()
+    }
+
+    private def buildParents() = {
       profileFunc(logger, "Build Parents: " + concreteType, () => {
-        parents ++= t.parents.map {
-          case s@Select(i, tn) => Parent(TypeUtils.findType(currentScope, s))
-          case a: AppliedTypeTree =>
-            val tpe = TypeUtils.findType(currentScope, a)
-            Parent(tpe)
-          case i: Ident => Parent(TypeUtils.findType(currentScope, i))
-          case Apply(subTree: Tree, p: List[Tree]) =>
-            val tpe: TType = TypeUtils.findType(currentScope, subTree)
-            val bt: BaseTypes = currentScope.baseTypes
-            val args = profile(logger, "Type inference", TypeInference.getTypes(bt, currentScope, p), Debug)
-            TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
-            val expressions = profile(logger, "Expression",
-              p.map(Expression(bt, currentScope, _, ExpressionOptions(true))), Debug)
-            Parent(tpe, expressions)
-        }
+        parents ++= t.parents.map(buildParent)
       }, Trace)
+    }
+
+    private def buildParent(tree: Tree) = tree match {
+      case i: Ident => Parent(TypeUtils.findType(currentScope, i))
+      case s@Select(i, tn) => Parent(TypeUtils.findType(currentScope, s))
+      case a: AppliedTypeTree => Parent(TypeUtils.findType(currentScope, a))
+      case Apply(subTree: Tree, p: List[Tree]) =>
+        val tpe: TType = TypeUtils.findType(currentScope, subTree)
+        val bt: BaseTypes = currentScope.baseTypes
+        val args = profile(logger, "Type inference", TypeInference.getTypes(bt, currentScope, p), Debug)
+        TypeUtils.findConstructor(currentScope, subTree.pos.line, args, tpe)
+        val expressions = profile(logger, "Expression",
+          p.map(Expression(bt, currentScope, _, ExpressionOptions(true))), Debug)
+        Parent(tpe, expressions)
     }
   }
 

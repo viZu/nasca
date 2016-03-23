@@ -61,17 +61,14 @@ object Log {
 
   private def createFileAppender(tag: String, file: String, filter: Filter[ILoggingEvent]) = {
     var appender = rootLogger.getAppender(tag).asInstanceOf[FileAppender[ILoggingEvent]]
-    if (appender != null) configureFileAppender(appender, file, filter)
-    else {
+    if (appender == null) {
       appender = new FileAppender[ILoggingEvent]
       appender.setName(tag)
-      configureFileAppender(appender, file, filter)
     }
-
+    configureFileAppender(appender, file, filter)
   }
 
   private def configureFileAppender(appender: FileAppender[ILoggingEvent], file: String, filter: Filter[ILoggingEvent]) = {
-
     val ple: PatternLayoutEncoder = new PatternLayoutEncoder
     ple.setPattern(Pattern)
     ple.setContext(context)

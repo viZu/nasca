@@ -103,19 +103,19 @@ object TypeUtils extends LazyLogging {
       case t: This => scope.findThis()
       case n: New => findType(scope, n.tpt)
       case att: AppliedTypeTree =>
-        val appliedTypes = att.args.map(findType(scope, _))
         findType(scope, att.tpt) match {
           case gt: GenericType =>
-            if (gt.genericModifiers.size != appliedTypes.size)
+            if (gt.genericModifiers.size != att.args.size)
               TypeErrors.addError(scope, att.pos.line,
-                s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${appliedTypes.size}")
+                s"Wrong number of type arguments. Expected ${gt.genericModifiers.size}, but was ${att.args.size}")
+            val appliedTypes = att.args.map(findType(scope, _))
             if (gt.genericModifiers == appliedTypes) gt
             else {
               val appliedMap = gt.genericModifiers.zip(appliedTypes).toMap
               gt.applyTypes(scope, appliedMap)
             }
           case _ => TypeErrors.addError(scope, att.pos.line,
-            s"Wrong number of type arguments. Expected 0, but was ${appliedTypes.size}")
+            s"Wrong number of type arguments. Expected 0, but was ${att.args.size}")
         }
       case tt: TypeTree => null
       case _@other => throw new RuntimeException(s"Unknown Typetree: ${showRaw(other)}")
@@ -173,14 +173,21 @@ object TypeUtils extends LazyLogging {
     logger.trace("generics - generate")
     val genericModifier: TypeArgument = createGenericModifier(scope, generic)
     val millis: Long = System.currentTimeMillis()
-    scope.addClass(genericModifier)
+    scope.addTypeArgument(genericModifier)
     logger.trace("Add time: " + (System.currentTimeMillis() - millis))
     genericModifier
   }
 
   def createGenericModifier(scope: TSymbolTable, generic: TypeDef) = {
+    val (lower, upper) = getTypeBounds(scope, generic)
+    val coVariant: Boolean = generic.mods.hasFlag(Flag.COVARIANT)
+    val contraVariant: Boolean = generic.mods.hasFlag(Flag.CONTRAVARIANT)
     val ctx = Context(scope.currentFile, generic.pos.line)
-    val (lower, upper) = generic.rhs match {
+    new TypeArgument(ctx, generic.name.toString, upper, lower, coVariant, contraVariant)
+  }
+
+  def getTypeBounds(scope: TSymbolTable, generic: TypeDef) = {
+    generic.rhs match {
       case tbt: TypeBoundsTree =>
         val lo = tbt.lo match {
           case EmptyTree => nothingType(scope)
@@ -192,11 +199,6 @@ object TypeUtils extends LazyLogging {
         }
         (lo, hi)
     }
-
-    //val upperBound = TypeUtils.findClass(currentScope, )
-    val coVariant: Boolean = generic.mods.hasFlag(Flag.COVARIANT)
-    val contraVariant: Boolean = generic.mods.hasFlag(Flag.CONTRAVARIANT)
-    new TypeArgument(ctx, generic.name.toString, upper, lower, coVariant, contraVariant)
   }
 
   /**
@@ -278,7 +280,7 @@ object TypeUtils extends LazyLogging {
   def createMethod(scope: TSymbolTable, d: DefDef, instanceMethod: Boolean = true, primaryConstructor: Boolean = false): Method = {
     val ctx = Context(scope.currentFile, d.pos.line)
     val methodName: String = d.name.toString
-    val generics: Seq[TypeArgument] = d.tparams.map(createAndAddGenericModifier(scope, _))
+    val typeArguments: Seq[TypeArgument] = d.tparams.map(createAndAddGenericModifier(scope, _))
     val params: Seq[Param] = createParamsForMethod(scope, d.vparamss)
     val constructor: Boolean = isConstructor(methodName)
     val retType = if (constructor && !instanceMethod) scope.findThis() else TypeUtils.findType(scope, d.tpt)
@@ -287,7 +289,7 @@ object TypeUtils extends LazyLogging {
     }
     //TODO check if Method exists in current scope
     if (constructor) Constructor(ctx, retType, TypeUtils.getModifiers(d.mods), params, primaryConstructor)
-    else Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, generics, instanceMethod)
+    else Method(ctx, methodName, retType, TypeUtils.getModifiers(d.mods), params, typeArguments, instanceMethod)
   }
 
   def createParamsForMethod(scope: TSymbolTable, params: Seq[Seq[Tree]]): Seq[Param] = {
@@ -489,16 +491,16 @@ object TypeUtils extends LazyLogging {
     }
   }
 
-  def addGenericModifiersToScope(scope: TSymbolTable, generics: Seq[TypeDef]): Unit = {
+  def addTypeArgumentsToScope(scope: TSymbolTable, generics: Seq[TypeDef]): Unit = {
     generics.map(createGenericModifier(scope, _)).foreach(gm => {
-      scope.addClass(gm)
+      scope.addTypeArgument(gm)
     })
   }
 
   def addGenericModifiersToScope(scope: TSymbolTable, t: TType): Unit = {
     t match {
       case a: AppliedGenericType =>
-      case g: GenericType => scope.addAllClasses(g.genericModifiers)
+      case g: GenericType => g.genericModifiers.foreach(scope.addTypeArgument)
       case _ =>
     }
   }

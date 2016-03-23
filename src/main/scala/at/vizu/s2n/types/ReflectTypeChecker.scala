@@ -74,7 +74,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
 
     private def handleEnterChildScope() = {
       if (!scoped) {
-        currentScope = currentScope.enterScope(BlockScope)
+        currentScope = currentScope.enterScope(FileScope)
         currentScope.currentFile = ast.fileName
         currentScope.currentPackage = packageName
         scoped = true
@@ -102,7 +102,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     scope.findThis() match {
       case gt: GenericType =>
         // TODO check generic for unique identifier
-        gt.genericModifiers.foreach(scope.addClass)
+        gt.genericModifiers.foreach(scope.addTypeArgument)
       case _ =>
     }
   }
