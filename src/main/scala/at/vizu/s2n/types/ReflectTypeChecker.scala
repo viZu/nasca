@@ -126,12 +126,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     val field: Field = TypeUtils.findField(scope, v)
     if (!field.isAbstract) {
       scope.scoped((s: TSymbolTable) => {
-        val returnType: Option[TType] = checkValOrDefBody(s, v.rhs, field.tpe)
-        returnType match {
-          case Some(tpe) => if (field.tpe == null) field.tpe = tpe
-          case None => if (field.tpe == null) TypeErrors.addError(scope, v.pos.line,
-            s"Value definition ${v.name} requires a valid return type")
-        }
+        checkValOrDefBody(s, v.rhs, field.tpe)
       }, BlockScope)
     }
   }
@@ -182,10 +177,10 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   }
 
   private def checkBlock(scope: TSymbolTable, block: Block): TType = {
-    //TODO new Scope?
-    block.stats.foreach(checkStatement(scope, _))
-
-    checkStatement(scope, block.expr)
+    scope.scoped(childScope => {
+      block.stats.foreach(checkStatement(scope, _))
+      checkStatement(scope, block.expr)
+    }, BlockScope)
   }
 
   private def checkStatement(scope: TSymbolTable, tree: Tree) = tree match {
@@ -218,9 +213,9 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         val args = checkArgs(scope, apply.args)
         TypeUtils.applyConstructor(scope, args, n)
       case s@Select(qualifier, name) =>
-        val args: Seq[TType] = checkArgs(scope, apply.args)
         val tpe: TType = checkQualifier(scope, qualifier)
         val selectName: String = name.toString
+        val args: Seq[TType] = checkArgs(scope, apply.args)
         val method: Method = TypeUtils.findMethod(scope, selectName, s.pos.line, args, tpe)
         if (method.generics.nonEmpty) {
           val appliedTypes = method.getAppliedTypes(args)
@@ -228,7 +223,8 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         } else method.returnType
       case i: Ident =>
         val args = checkArgs(scope, apply.args)
-        checkIdent(scope, i, args)
+        if (args.isEmpty) checkIdent(scope, i)
+        else checkIdentApply(scope, i, args)
     }
   }
 
@@ -248,21 +244,12 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   }
 
   private def checkArgs(scope: TSymbolTable, args: List[Tree]) = {
-    args.map({
-      case i: Ident => checkIdent(scope, i)
-      case l: Literal => checkLiteral(scope, l)
-      case b: Block => checkBlock(scope, b)
-      case a: Apply => checkApply(scope, a)
-      case s: Select => checkSelect(scope, s)
-      case t: This => scope.findThis()
-      case f: Function => checkFunction(scope, f)
-    })
+    args.map(checkStatement(scope, _))
   }
 
-  private def checkIdent(scope: TSymbolTable, ident: Ident, params: Seq[TType] = Vector()): TType = {
+  private def checkIdent(scope: TSymbolTable, ident: Ident): TType = {
     val iName: String = ident.name.toString
-    //TODO: check if field?
-    scope.findMethod(iName, params) match {
+    scope.findMethod(iName, Vector()) match {
       case Some(m) => m.returnType
       case None =>
         scope.findIdentifier(iName) match {
@@ -281,6 +268,14 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     }
   }
 
+  private def checkIdentApply(scope: TSymbolTable, ident: Ident, params: Seq[TType] = Vector()): TType = {
+    val iName: String = ident.name.toString
+    scope.findMethod(iName, params) match {
+      case Some(m) => m.returnType
+      case None => TypeErrors.addError(scope, ident.pos.line, s"Value $iName not found")
+    }
+  }
+
   private def checkLiteral(scope: TSymbolTable, literal: Literal): TType = {
     TypeUtils.findType(scope, literal)
   }
@@ -294,20 +289,17 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
         TypeUtils.createIdentifier(scope, v, typeToAdd)
       case None => TypeErrors.addError(scope, v.pos.line, s"Value definition ${v.name} requires a valid return type")
     }
-
     TypeUtils.unitType(scope)
   }
 
   private def checkDef(scope: TSymbolTable, d: DefDef): TType = {
     val expected: TType = TypeUtils.findType(scope, d.tpt)
-
     val m: Method = TypeUtils.createMethod(scope, d)
     scope.scoped((s: TSymbolTable) => {
       TypeUtils.addParamsToScope(s, m.params)
       checkValOrDefBody(s, d.rhs, expected)
     }, MethodScope)
     scope.addMethod(m)
-
     TypeUtils.unitType(scope)
   }
 
@@ -318,17 +310,15 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
     * @param l
     * @return
     */
-  private def checkLabel(scope: TSymbolTable, l: LabelDef): TType = {
-    l match {
-      case LabelDef(n, _, t) =>
-        scope.scoped((s: TSymbolTable) => {
-          s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Vector()))
-          t match {
-            case i: If => checkIf(s, i) // while
-            case b: Block => checkBlock(s, b) // do while
-          }
-        }, BlockScope)
-    }
+  private def checkLabel(scope: TSymbolTable, l: LabelDef): TType = l match {
+    case LabelDef(n, _, t) =>
+      scope.scoped((s: TSymbolTable) => {
+        s.addMethod(Method(Context(scope.currentFile, l.pos.line), n.toString, TypeUtils.unitType(scope), Vector()))
+        t match {
+          case i: If => checkIf(s, i) // while
+          case b: Block => checkBlock(s, b) // do while
+        }
+      }, BlockScope)
   }
 
   private def checkIf(scope: TSymbolTable, i: If): TType = {
@@ -360,9 +350,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
       case i: Ident => handleIdentAssign(scope, i)
       case _ => handleFieldAssign(scope, a.lhs)
     }
-
     scope.scoped(checkValOrDefBody(_: TSymbolTable, a.rhs, tpe), BlockScope)
-
     TypeUtils.unitType(scope)
   }
 

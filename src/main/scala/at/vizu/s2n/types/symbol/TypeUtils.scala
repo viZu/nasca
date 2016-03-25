@@ -520,8 +520,7 @@ object TypeUtils extends LazyLogging {
   def createFunctionType(scope: TSymbolTable, paramTypes: Seq[TType], retType: TType, line: Int) = {
     val funcName = "Function" + paramTypes.size
     val funcType = findClass(scope, funcName, line).asInstanceOf[GenericType]
-    val types = paramTypes :+ retType
-    val typeMap = funcType.genericModifiers.zip(types).toMap
+    val typeMap = funcType.genericModifiers.zip(paramTypes :+ retType).toMap
     funcType.applyTypes(scope, typeMap)
   }
 

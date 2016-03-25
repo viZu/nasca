@@ -251,6 +251,8 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
   }
 
   def findMethod(name: String, args: Seq[TType]): Option[Method] = {
+    // TODO whats with anonymous functions?
+    // TODO apply not always desired
     findMethodInScopeMethods(name, args) orElse findMethodInThis(name, args) orElse findApply(name, args)
   }
 
