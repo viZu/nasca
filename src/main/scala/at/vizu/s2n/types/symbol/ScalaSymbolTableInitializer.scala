@@ -51,6 +51,7 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
 
     initRootMethods.foreach(symbolTable.addMethod)
     addFunctionTypes(symbolTable, 6)
+    createMath(symbolTable)
 
     symbolTable
   }
@@ -92,6 +93,7 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     string.addMethod(Method(ctx, "$plus", string, Vector(Abstract), Vector(Param(ctx, string, "x")), operator = true))
     string.addMethod(Method(ctx, "length", int, Vector(Abstract), nonPointer = true))
     string.addMethod(Method(ctx, "contains", boolean, Vector(Abstract), Vector(Param(ctx, string, "x")), nonPointer = true))
+    string.addMethod(Method(ctx, "toInt", int, Vector(Abstract), nonPointer = true))
     string
   }
 
@@ -296,6 +298,13 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     val params = paramTypes.zipWithIndex.map(p => typeToParam(p._1, p._2))
     val apply: Method = Method(ctx, "apply", returnType, Vector(Abstract), params)
     tpe.addMethod(apply)
+  }
+
+  private def createMath(scope: TSymbolTable) = {
+    val math = ConcreteType(ctx, "Math", RootScalaPackage, Vector(Trait, Sealed), isObject = true)
+    math.addMethod(Method(ctx, "sqrt", double, Vector(Abstract), Vector(double)))
+    scope.addTypeAlias(math.simpleName, math.fullClassName)
+    scope.addObject(math)
   }
 
   private implicit def typeToParam(tpe: TType): Param = Param(ctx, tpe, "arg0")

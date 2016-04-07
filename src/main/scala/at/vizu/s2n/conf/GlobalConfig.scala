@@ -9,14 +9,16 @@ import at.vizu.s2n.types.symbol._
   */
 object GlobalConfig {
 
+  val Any = TypeUtils.RootScalaPackage + ".Any"
+
   lazy val invocationConfig: MethodInvocationHandleConfig = initInvocationConfig()
   lazy val classConfig: ClassHandlesConfig = initClassHandlesConfig()
 
   private def initInvocationConfig() = {
     val root = new ClassInvocations("__root__") {
       withInvocation(new MethodInvocationHandle("println") {
-        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (varName, params) =>
-          getPrintCtx( s"""std::cout << ${params.head} << std::endl""")
+        withParams(Any) handleAs { (varName, params) =>
+          getPrintCtx(s"std::cout << ${params.head} << std::endl")
         }
         withParams() handleAs {
           getPrintCtx("std::cout << std::endl")
@@ -24,7 +26,7 @@ object GlobalConfig {
       })
 
       withInvocation(new MethodInvocationHandle("print") {
-        withParams(TypeUtils.RootScalaPackage + ".Any") handleAs { (varName, params) =>
+        withParams(Any) handleAs { (varName, params) =>
           getPrintCtx(s"""std::cout << ${params.head}""")
         }
       })
@@ -42,10 +44,11 @@ object GlobalConfig {
         }
       })
       withInvocation(new MethodInvocationHandle("update") {
-        withParams(TypeUtils.RootScalaPackage + ".Int", "T") handleAs { (varName, params) =>
+        //TODO remove Any
+        withParams(TypeUtils.RootScalaPackage + ".Int", Any) handleAs { (varName, params) =>
           val first = params.head
           val second = params(1)
-          GeneratorContext(s"->insert($varName->begin() + $first, $second)")
+          GeneratorContext(s"->at($first) = $second")
         }
       })
     }
@@ -56,8 +59,23 @@ object GlobalConfig {
           GeneratorContext(s".find(${params.head}) != std::string::npos")
         }
       })
+
+      withInvocation(new MethodInvocationHandle("toInt") {
+        withParams() handleAs { (varName, params) =>
+          GeneratorContext(s"std::stoi($varName)")
+        } ignoreVariableUse
+      })
     }
-    MethodInvocationHandleConfig(Vector(root, array, string))
+
+    val math = new ClassInvocations(TypeUtils.RootScalaPackage + ".Math") {
+      withInvocation(new MethodInvocationHandle("sqrt") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"sqrt(${params.head})", Set(IncludeHandle("math.h", AngleWrapper)))
+        }
+      })
+    }
+
+    MethodInvocationHandleConfig(Vector(root, array, string, math))
   }
 
   private def getParams(classes: String*): Seq[String] = {
@@ -98,6 +116,11 @@ object GlobalConfig {
           typeArgs.enhance(s"std::shared_ptr<std::vector$typeArgs>", Set(this.includeHandle))
         }))
         withIncludeHandle(IncludeHandle("vector", AngleWrapper))
+      })
+      addClassRenamingHandle(new ClassRenamingHandle {
+        withMatcher(t => t.fullClassName == TypeUtils.RootScalaPackage + ".Math")
+        withRename(new Renamer((b, t) => ""))
+        withIncludeHandle(IncludeHandle("math.h", AngleWrapper))
       })
     }
   }

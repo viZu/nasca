@@ -34,7 +34,8 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     val paramsContent: String = paramsContext.value
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
-      val content = varName + callCtx
+      val ignore: Boolean = ignoreVariable
+      val content = if (ignore) callCtx.value else varName + callCtx
       GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = content)
     } else if (isUnaryOperator(m)) {
       val prettyOperator = prettifyUnaryOperator(m.name)
@@ -86,6 +87,15 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
     val paramsAsString = params.map(_.content.value)
     handle(varName, paramsAsString)
+  }
+
+  private def ignoreVariable: Boolean = {
+    val paramTypes = member match {
+      case m: Method => m.params.map(_.tpe)
+      case f: Field => Vector()
+    }
+    val tpeName = if (prevTpe != null) prevTpe.name else ""
+    GlobalConfig.invocationConfig.hasIgnoreVariable(scope, tpeName, member.name, paramTypes)
   }
 
   private def isOperator(m: Method): Boolean = m.operator

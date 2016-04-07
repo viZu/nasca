@@ -32,12 +32,17 @@ class ClassInvocations(val className: String) {
 case class MethodInvocationWithParams(methodIncov: MethodInvocationHandle, paramTypes: Seq[String]) {
 
   private[conf] var invocation: (String, Seq[String]) => GeneratorContext = null
+  private[conf] var ignoreVariable = false
 
   def handleAs(func: (String, Seq[String]) => GeneratorContext) = {
     invocation = func
     methodIncov.add(this)
+    this
   }
 
+  def ignoreVariableUse = {
+    ignoreVariable = true
+  }
 }
 
 case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations]) {
@@ -52,6 +57,13 @@ case class MethodInvocationHandleConfig(classInvocations: Seq[ClassInvocations])
                            methodName: String, params: Seq[TType]): (String, Seq[String]) => GeneratorContext = {
     val cName = if (className.isEmpty) "__root__" else className
     findInvocationHandleOpt(scope, cName, methodName, params).get
+  }
+
+  def hasIgnoreVariable(scope: TSymbolTable, className: String, methodName: String, params: Seq[TType]): Boolean = {
+    val cName = if (className.isEmpty) "__root__" else className
+    cInvocations.get(cName)
+      .flatMap(_.get(methodName))
+      .flatMap(_.find(mi => checkIfParamsAreSame(scope, mi.paramTypes, params))).exists(_.ignoreVariable)
   }
 
   def hasInvocationHandle(scope: TSymbolTable, className: String, methodName: String, params: Seq[TType]): Boolean = {

@@ -52,12 +52,10 @@ trait HeaderFileGenerator extends LazyLogging {
     groupMember().map(p => generateSection(p._1, p._2)).mkString("\n\n")
   }
 
-  protected def generateSection(visibility: String, members: Seq[String]): String = {
-    visibility match {
+  protected def generateSection(visibility: String, members: Seq[String]) = visibility match {
       case "public" => generatePublicSection(members)
       case "protected" => generateProtectedSection(members)
       case _ => generateVisibilitySection(visibility, members)
-    }
   }
 
   protected def generateVisibilitySection(visibility: String, members: Seq[String]): String = {
@@ -123,9 +121,9 @@ trait HeaderFileGenerator extends LazyLogging {
     val definition: String = GeneratorUtils.generateFieldDefinition(baseTypes, field)
     val d = getHandlesMap(classOf[FieldInitializerHandle]).get(field.name)
       .map(h => definition + GeneratorUtils.generateFieldInitializer(h)).getOrElse(definition + ";")
-    val accesors = ("public", GeneratorUtils.generateParamAccessor(baseTypes, field))
-    val fieldDefinition = ("private", d) //if(field.isProperty) ("private", d) else (field.visibility, d)
-    Vector(accesors, fieldDefinition)
+    val accessors = ("public", GeneratorUtils.generateParamAccessor(baseTypes, field))
+    val fieldDefinition = ("private", d)
+    Vector(accessors, fieldDefinition)
   }
 
   protected def getHandlesSeq[T <: GeneratorHandle](clazz: Class[T]): Iterable[T] = {

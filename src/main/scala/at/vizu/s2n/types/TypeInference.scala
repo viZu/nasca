@@ -105,7 +105,11 @@ object TypeInference extends LazyLogging {
               case None =>
                 thisTpe.findField(thisTpe, iName) match {
                   case Some(field) => field.tpe
-                  case None => throw new RuntimeException("TODO")
+                  case None =>
+                    scope.findObject(iName) match {
+                      case Some(obj) => obj
+                      case None => throw new RuntimeException("TODO")
+                    }
                 }
             }
         }

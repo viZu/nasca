@@ -236,13 +236,26 @@ object Expression extends LazyLogging {
         }
       case f: Field => IdentExpression(f.tpe, s"this->$iName")
       case i: Identifier =>
+        val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
         if (TypeUtils.isFunctionType(i.tpe)) {
-          val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
           val methodInvocation = generateMethodInvocation(scope, i, argExpr)
           IdentExpression(TypeUtils.getFunctionReturnType(i.tpe), methodInvocation)
-        } else IdentExpression(i.tpe, s"$iName")
+        } else {
+          scope.findMethod(i.name, argTypes) match {
+            case Some(m) if m.name == "apply" =>
+              val methodInvocation = generateMethodInvocation(scope, m, argExpr, i.tpe)
+              val tmp = methodInvocation.enhance(s"$iName$methodInvocation")
+              IdentExpression(m.returnType, tmp)
+            case None => IdentExpression(i.tpe, s"$iName")
+          }
+        }
       case t: TType if t.isObject =>
-        IdentExpression(t, s"${GeneratorUtils.getCppTypeName(baseTypes, t)}::getInstance()")
+        if (GlobalConfig.classConfig.hasRenamingHandle(t)) {
+          val name: GeneratorContext = GlobalConfig.classConfig.getRenamingHandle(t).typeRenamer(baseTypes, t)
+          IdentExpression(t, name)
+        } else {
+          IdentExpression(t, s"${GeneratorUtils.getCppTypeName(baseTypes, t)}::getInstance()")
+        }
       case _ => throw new RuntimeException("TODO")
     }
   }
@@ -253,7 +266,7 @@ object Expression extends LazyLogging {
     if (hasInvocationHandle(scope, method, typeName)) {
       executeInvocationHandle(scope, "", method, params, typeName)
     } else {
-      val paramsAsString = params.map(_.generate.value).mkString
+      val paramsAsString = params.map(_.generate.value).mkString(", ")
       val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
       paramsAsContext.enhance(s"${method.name}($paramsAsString)")
     }

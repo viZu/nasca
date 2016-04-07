@@ -28,20 +28,12 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
 
   override def generateSourceFile(args: Arguments): Set[GeneratorHandle] = {
     logger.debug("Generating source file " + fileName)
-    addGenericsToScope(classScope)
     val context = generateContent(classScope)
 
     logger.debug("Writing source file " + fileName)
     val prettyContent = CodePrettifier.prettify(context.value)
     ScalaFiles.writeToFile(args.generatedDir, fileName, prettyContent)
     context.handles
-  }
-
-  private def addGenericsToScope(scope: TSymbolTable) = {
-    implementation.tpe match {
-      case g: GenericType => g.genericModifiers.foreach(scope.addClass)
-      case _ =>
-    }
   }
 
   private def generateContent(scope: TSymbolTable): GeneratorContext = {
@@ -64,7 +56,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
   }
 
   private def generateContentAcc(scope: TSymbolTable): GeneratorContext = {
-    val memberContext: GeneratorContext = generateMember(scope)
+    val memberContext: GeneratorContext = generateTypeBody(scope)
     val preContent = if (memberContext.handles.nonEmpty) {
       memberContext.handles.filter(_.isInstanceOf[MethodHandle]).map(_.content).mkString("\n\n") + "\n\n"
     } else {
@@ -73,19 +65,25 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
     memberContext.enhance(preContent + memberContext.value)
   }
 
-  private def generateMember(scope: TSymbolTable): GeneratorContext = {
-    val (memberTrees, constructorContent) = implementation.tree.impl.body.partition({
-      case v: ValOrDefDef => true
-      case _ => false
-    })
+  private def generateTypeBody(scope: TSymbolTable): GeneratorContext = {
+    val (memberTrees, constructorContent) = partitionTypeBody
 
     val initCtx = generateContructorInit(scope, constructorContent)
 
-    val members = (memberTrees.map({
+    val members = generateMembers(scope, initCtx, memberTrees)
+    GeneratorUtils.mergeGeneratorContexts(members, "\n\n") // remove unhandled member and contexts
+  }
+
+  private def partitionTypeBody = implementation.tree.impl.body.partition({
+    case v: ValOrDefDef => true
+    case _ => false
+  })
+
+  private def generateMembers(scope: TSymbolTable, initCtx: GeneratorContext, memberTrees: Seq[Tree]) = {
+    (memberTrees.map({
       case d: DefDef => generateMethod(scope, d, initCtx)
       case v: ValDef => generateField(scope, v)
     }) :+ initCtx).filter(_.isNonEmpty)
-    GeneratorUtils.mergeGeneratorContexts(members, "\n\n") // remove unhandled member and contexts
   }
 
   private def generateMethod(scope: TSymbolTable, d: DefDef, initCtx: GeneratorContext): GeneratorContext = {
@@ -107,7 +105,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
   private def generateConstructor(scope: TSymbolTable, method: Method, initCtx: GeneratorContext,
                                   d: DefDef): GeneratorContext = method match {
     case c: Constructor if c.primary =>
-      if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").content // no in
+      if (initCtx.isEmpty) PrimaryConstructorExpression(scope, c, "").content
       else PrimaryConstructorExpression(scope, c, classInitMethodName).content
     case c: Constructor =>
       scope.scoped((childScope: TSymbolTable) => {
@@ -143,8 +141,7 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
     val initCall = initMethodName + "()"
     val initializerHandle = FieldInitializerHandle(varName, initCall)
     val privateMethodHandle = generateInitMethodHandle(initMethodName, varTpe)
-    val templateString = GeneratorUtils.generateClassTemplate(tpe)
-    val generatedMethod = generateMethod(scope, b, varTpe, initMethodName, templateString = templateString)
+    val generatedMethod = generateMethod(scope, b, varTpe, initMethodName)
     val methodHandle = MethodHandle(generatedMethod.value)
     generatedMethod.enhance(initMethodName, Set(initializerHandle, privateMethodHandle, methodHandle))
   }
@@ -190,9 +187,8 @@ class CppSourceFileGenerator(_baseTypes: BaseTypes, classScope: TSymbolTable, im
     val mdHandle = generateInitMethodHandle(classInitMethodName, _baseTypes.unit)
     val templateString = GeneratorUtils.generateClassTemplate(tpe)
     val methodCtx = generateMethod(scope, body, _baseTypes.unit, classInitMethodName, templateString = templateString)
-    val mHandle = MethodHandle(methodCtx.value)
 
-    methodCtx.enhance("", Set(mHandle, mdHandle))
+    methodCtx + mdHandle
   }
 
 }

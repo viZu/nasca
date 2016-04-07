@@ -266,7 +266,7 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
     thisTpe.findMethod(thisTpe, name, args)
   }
 
-  private def findApply(name: String, args: Seq[TType]): Option[Method] = {
+  def findApply(name: String, args: Seq[TType]): Option[Method] = {
     val thisTpe = findThis()
     profile(logger, "findApply-findObjectWithAlias", findObjectWithAlias(name), Trace) match {
       case Some(tpe) => tpe.findApply(thisTpe, args)
