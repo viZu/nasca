@@ -58,7 +58,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     val ctxSeq: Seq[GeneratorContext] = m.params.map(_.tpe).zip(params).map({
       case (tpe, expr) if TypeUtils.isFunctionType(tpe) =>
         val ctx = expr.content
-        ctx.enhance(ctx.value.replaceAll("\\(\\)", ""))
+        if (ctx.value.endsWith("()")) ctx.enhance(ctx.value.replaceAll("\\(\\)", "")) else ctx
       case (tpe, expr) => expr.content
     })
     GeneratorUtils.mergeGeneratorContexts(ctxSeq, ", ")

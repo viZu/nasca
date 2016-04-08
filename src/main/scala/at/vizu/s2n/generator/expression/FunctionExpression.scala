@@ -16,7 +16,8 @@ case class FunctionExpression(scope: TSymbolTable, params: Seq[Param], body: Blo
   override def generate: GeneratorContext = {
     val bodyCtx: GeneratorContext = if (returnable) body.generateReturn else body.generate
     val paramsCtx = GeneratorUtils.generateParamsString(eagerBaseTypes, params, withVars = true)
-    val content = s"[&]($paramsCtx) $bodyCtx"
+    val funTpe = GeneratorUtils.generateCppTypeName(eagerBaseTypes, eagerTpe)
+    val content = s"(($funTpe)[&]($paramsCtx) $bodyCtx)"
     GeneratorUtils.mergeGeneratorContexts(Vector(bodyCtx, paramsCtx), givenContent = content)
   }
 

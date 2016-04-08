@@ -145,7 +145,7 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TSymbolTable, i
     val methodCtx = generateMethod(scope, body, method)
     val mHandle = MethodHandle(methodCtx.value)
 
-    methodCtx.enhance("", Set(mHandle, mdHandle))
+    methodCtx ++ Set(mHandle, mdHandle)
   }
 
   private def generateInitMethodHandle(methodName: String, fieldTpe: TType) = {
@@ -164,7 +164,8 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TSymbolTable, i
 
   private def generateField(scope: TSymbolTable, v: ValDef): Seq[(String, GeneratorContext)] = {
     val field: Field = TypeUtils.findField(scope, v, tpe)
-    generateFieldBody(scope, v.rhs, field)
+    val accessors = ("public", GeneratorContext(GeneratorUtils.generateParamAccessor(baseTypes, field)))
+    generateFieldBody(scope, v.rhs, field) :+ accessors
   }
 
   private def generateFieldBody(scope: TSymbolTable, body: Tree, field: Field): Seq[(String, GeneratorContext)] = {
@@ -173,9 +174,10 @@ class CppTemplateFileGenerator(baseTypes: BaseTypes, classScope: TSymbolTable, i
       case b: Block =>
         val initMethodName = "__init__" + field.name.toUpperCase
         val initCall = initMethodName + "()"
-        val initCtx = generateInitMethod(scope, b, initMethodName, initCall, field.name, field.tpe).removeContent()
+        val initCtx = generateInitMethod(scope, b, initMethodName, initCall, field.name, field.tpe)
+        val handle: MethodHandle = MethodHandle(initCtx.value)
         val initMethod = ("private", initCtx)
-        val fieldDefinition = (field.visibility, GeneratorContext(definition + initCall + ";"))
+        val fieldDefinition = (field.visibility, GeneratorContext(definition + " = " + initCall + ";"))
         Seq(fieldDefinition, initMethod)
       case EmptyTree => Seq((field.visibility, GeneratorContext(definition + ";")))
       case _ =>

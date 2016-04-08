@@ -295,11 +295,11 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkDef(scope: TSymbolTable, d: DefDef): TType = {
     val expected: TType = TypeUtils.findType(scope, d.tpt)
     val m: Method = TypeUtils.createMethod(scope, d)
+    scope.addMethod(m)
     scope.scoped((s: TSymbolTable) => {
       TypeUtils.addParamsToScope(s, m.params)
       checkValOrDefBody(s, d.rhs, expected)
     }, MethodScope)
-    scope.addMethod(m)
     TypeUtils.unitType(scope)
   }
 
@@ -391,7 +391,7 @@ class ReflectTypeChecker(baseTypes: BaseTypes) extends TypeChecker with LazyLogg
   private def checkFunction(scope: TSymbolTable, f: Function) = {
     val params: Seq[Param] = TypeUtils.createParams(scope, f.vparams)
     val retType = scope.scoped((s: TSymbolTable) => {
-      TypeUtils.addParamsToScope(scope, params)
+      TypeUtils.addParamsToScope(s, params)
       checkBody(s, f.body)
     }, MethodScope)
     TypeUtils.createFunctionTypeFromParams(scope, params, retType, f.pos.line)

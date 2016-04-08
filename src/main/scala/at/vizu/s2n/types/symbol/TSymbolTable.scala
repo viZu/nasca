@@ -271,7 +271,13 @@ class TSymbolTable(private var parent: Option[TSymbolTable] = None, private val 
     profile(logger, "findApply-findObjectWithAlias", findObjectWithAlias(name), Trace) match {
       case Some(tpe) => tpe.findApply(thisTpe, args)
       case None => profile(logger, "findApply-findIdentifier", findIdentifier(name), Trace) match {
-        case Some(i) => i.tpe.findApply(thisTpe, args)
+        case Some(i) =>
+          try {
+            i.tpe.findApply(thisTpe, args)
+          } catch {
+            case e: Exception =>
+              throw e
+          }
         case None => thisTpe.findField(thisTpe, name) match {
           case Some(f) => f.tpe.findApply(thisTpe, args)
           case None => None

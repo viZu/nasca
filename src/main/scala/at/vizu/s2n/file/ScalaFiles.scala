@@ -10,15 +10,28 @@ import scala.io.Source
  * Phil on 21.09.15.
  */
 object ScalaFiles {
-  def readFiles(files: Seq[Path]): Seq[String] = {
-    files.map(readFile)
+  def readFiles(files: Seq[Path]): Seq[(String, String)] = {
+    files.flatMap(readPath)
   }
 
-  def readFile(path: Path): String = {
+  def readPath(path: Path): Seq[(String, String)] = {
+    checkPath(path)
+    if (Files.isDirectory(path)) {
+      readDir(path)
+    } else {
+      Vector(readFile(path))
+    }
+  }
+
+  def readDir(path: Path): Seq[(String, String)] = {
+    path.toFile.list().filter(_.endsWith(".scala")).map(f => readFile(path.resolve(f))).toVector
+  }
+
+  def readFile(path: Path): (String, String) = {
     checkFile(path)
     val source = Source.fromFile(path.toString, "utf-8")
     try {
-      manipulateFileContent(source)
+      (path.toString, manipulateFileContent(source))
     } finally {
       source.close()
     }
@@ -28,10 +41,14 @@ object ScalaFiles {
     Files.readAllBytes(path)
   }
 
-  def checkFile(path: Path): Unit = {
+  def checkPath(path: Path): Unit = {
     if (!Files.exists(path)) {
       throw new ArgumentException(s"Could not find file '${path.toString}'")
-    } else if (Files.isDirectory(path)) {
+    }
+  }
+
+  def checkFile(path: Path): Unit = {
+    if (Files.isDirectory(path)) {
       throw new ArgumentException(s"It was expected that '${path.toString}' is a file, but it was a directory")
     }
   }

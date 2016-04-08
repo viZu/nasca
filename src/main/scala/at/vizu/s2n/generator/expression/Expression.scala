@@ -47,10 +47,12 @@ object Expression extends LazyLogging {
         val literalStr = l.value.value match {
           case s: java.lang.String => s""""$s""""
           case null => "NULL"
+          case b: BoxedUnit => ""
           case _@v => v.toString
         }
         LiteralExpression(tpe, literalStr)
-      case t: This => LiteralExpression(scope.findThis(), "this")
+      case t: This =>
+        ThisExpression(baseTypes, scope.findThis())
       case a: Apply =>
         val path: Path = generateApplyExpression(baseTypes, scope, a, opts)
         ChainedExpression(handleUnary(path))
@@ -168,7 +170,7 @@ object Expression extends LazyLogging {
       scope.addMethod(nestedMethod)
       val block = wrapInBlock(d.rhs)
       val blockExpr = getBaseBlockExpression(baseTypes, childScope, block, returnable = true)
-      InlineDefExpression(baseTypes, nestedMethod, blockExpr)
+      InlineDefExpression(scope, nestedMethod, blockExpr)
     }, MethodScope)
   }
 
@@ -221,7 +223,7 @@ object Expression extends LazyLogging {
     TypeUtils.findIdent(scope, iName, withParams = argTypes) match {
       case m: Method =>
         val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
-        if (m.name == "apply") {
+        if (m.name == "apply" && iName != "apply") {
           val tpe = TypeUtils.findIdent(scope, iName).tpe
           val methodInvocation = generateMethodInvocation(scope, m, argExpr, tpe)
           val tmp = methodInvocation.enhance(s"$iName$methodInvocation")
@@ -237,14 +239,16 @@ object Expression extends LazyLogging {
       case f: Field => IdentExpression(f.tpe, s"this->$iName")
       case i: Identifier =>
         val argExpr: Seq[Expression] = args.map(arg => Expression.applyInternal(baseTypes, scope, arg))
-        if (TypeUtils.isFunctionType(i.tpe)) {
+        if (TypeUtils.isFunctionType(i.tpe) && argExpr.nonEmpty) {
+          // TODO function??
           val methodInvocation = generateMethodInvocation(scope, i, argExpr)
           IdentExpression(TypeUtils.getFunctionReturnType(i.tpe), methodInvocation)
         } else {
           scope.findMethod(i.name, argTypes) match {
             case Some(m) if m.name == "apply" =>
               val methodInvocation = generateMethodInvocation(scope, m, argExpr, i.tpe)
-              val tmp = methodInvocation.enhance(s"$iName$methodInvocation")
+              val tmp = if (methodInvocation.value.startsWith("->")) methodInvocation.enhance(s"$iName$methodInvocation")
+              else methodInvocation.enhance(s"$iName->$methodInvocation")
               IdentExpression(m.returnType, tmp)
             case None => IdentExpression(i.tpe, s"$iName")
           }
@@ -273,7 +277,7 @@ object Expression extends LazyLogging {
   }
 
   private def generateMethodInvocation(scope: TSymbolTable, ident: Identifier, params: Seq[Expression]): GeneratorContext = {
-    val paramsAsString = params.map(_.generate.value).mkString
+    val paramsAsString = params.map(_.generate.value).mkString(", ")
     val paramsAsContext = GeneratorUtils.mergeGeneratorContexts(params.map(_.generate), ",")
     paramsAsContext.enhance(s"${ident.name}($paramsAsString)")
   }

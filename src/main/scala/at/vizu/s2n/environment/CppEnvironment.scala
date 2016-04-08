@@ -34,7 +34,7 @@ class CppEnvironment(parser: Parser, typeSystem: TypeSystem, generator: Generato
     logger.debug(s"Reading file contents:")
     val pathStrings: Seq[String] = files.map(_.toString)
     pathStrings.foreach(s => logger.debug("    " + s))
-    pathStrings.zip(ScalaFiles.readFiles(files))
+    ScalaFiles.readFiles(files)
   }
 
 }

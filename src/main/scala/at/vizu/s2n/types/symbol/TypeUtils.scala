@@ -99,7 +99,7 @@ object TypeUtils extends LazyLogging {
         val tpeName: String = id.name.toString
         if (searchObject) scope.findObject(tpeName).getOrElse(throwTypeNotFound(tpeName))
         else scope.findClass(tpeName).getOrElse(throwTypeNotFound(tpeName))
-      case l: Literal => findTypeForLiteral(scope, l).getOrElse(throwTypeNotFound(l.value.value.getClass.getName))
+      case l: Literal => findTypeForLiteral(scope, l).getOrElse(throwTypeNotFound(l.value.value.getClass.getName.replaceAll("java.lang", RootScalaPackage)))
       case t: This => scope.findThis()
       case n: New => findType(scope, n.tpt)
       case att: AppliedTypeTree =>
@@ -139,7 +139,7 @@ object TypeUtils extends LazyLogging {
       case i: Integer => findTypeForInteger(i)
       case l: java.lang.Long => RootScalaPackage + ".Long"
       case s: String => RootScalaPackage + ".String"
-      case d: java.lang.Double => RootPackage + ".Double"
+      case d: java.lang.Double => RootScalaPackage + ".Double"
       case b: java.lang.Boolean => RootScalaPackage + ".Boolean"
       case c: Character => RootScalaPackage + ".Char"
       case u: BoxedUnit => RootScalaPackage + ".Unit"
@@ -392,11 +392,11 @@ object TypeUtils extends LazyLogging {
 
   def findIdent(scope: TSymbolTable, name: String, onType: TType = null, withParams: Seq[TType] = Vector()): Identifiable = {
     scope.findIdentifier(name) match {
-      case Some(ident) => ident
-      case None =>
+      case Some(ident) if onType == null => ident
+      case _ =>
         scope.findMethod(name, withParams) match {
-          case Some(m) => m
-          case None =>
+          case Some(m) if onType == null => m
+          case _ =>
             val thisTpe: TType = scope.findThis()
             val tpe = if (onType != null) onType else thisTpe
             tpe.findMethod(thisTpe, name, withParams) match {
@@ -407,7 +407,7 @@ object TypeUtils extends LazyLogging {
                   case None =>
                     scope.findObject(name) match {
                       case Some(obj) => obj
-                      case None => throw new RuntimeException("Todo")
+                      case None => TypeErrors.addError(scope, 0, s"value $name not found")
                     }
                 }
             }
@@ -514,7 +514,8 @@ object TypeUtils extends LazyLogging {
   }
 
   def createFunctionTypeFromParams(scope: TSymbolTable, params: Seq[Param], retType: TType, line: Int) = {
-    createFunctionType(scope, params.map(_.tpe), retType, line)
+    if (retType == null) createFunctionType(scope, params.map(_.tpe), unitType(scope), line)
+    else createFunctionType(scope, params.map(_.tpe), retType, line)
   }
 
   def createFunctionType(scope: TSymbolTable, paramTypes: Seq[TType], retType: TType, line: Int) = {

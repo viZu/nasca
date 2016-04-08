@@ -33,6 +33,7 @@ class CppMainFileGenerator(scope: TSymbolTable, impl: Implementation) extends Ma
         |#include <iostream>
         |#include <vector>
         |#include <string>
+        |#include <chrono>
         |
         |int main(int argc, char **argv) {
         |  std::shared_ptr<std::vector<std::string>> args = std::shared_ptr<std::vector<std::string>>(new std::vector<std::string>());
@@ -40,7 +41,13 @@ class CppMainFileGenerator(scope: TSymbolTable, impl: Implementation) extends Ma
         |      std::string val = std::string(argv[i]);
         |      args->push_back(val);
         |  }
-        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "", true)}::getInstance()->main(args);
+        |  typedef std::chrono::high_resolution_clock Clock;
+        |  auto time1 = Clock::now();
+        |  ${GeneratorUtils.getCppTypeName(tpe.pkg, tpe.simpleName, "", isObject = true)}::getInstance()->main(args);
+        |  auto time2 = Clock::now();
+        |  auto diff = std::chrono::duration_cast<std::chrono::nanoseconds>(time2-time1).count();
+        |
+        |  std::cout << "Running time: "<< diff << " ns" << std::endl;
         |  return 0;
         |}
      """.stripMargin

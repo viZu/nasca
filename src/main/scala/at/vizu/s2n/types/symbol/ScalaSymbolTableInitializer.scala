@@ -51,7 +51,7 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
 
     initRootMethods.foreach(symbolTable.addMethod)
     addFunctionTypes(symbolTable, 6)
-    createMath(symbolTable)
+    intitMath(symbolTable)
 
     symbolTable
   }
@@ -300,9 +300,15 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     tpe.addMethod(apply)
   }
 
-  private def createMath(scope: TSymbolTable) = {
+  private def intitMath(scope: TSymbolTable) = {
     val math = ConcreteType(ctx, "Math", RootScalaPackage, Vector(Trait, Sealed), isObject = true)
     math.addMethod(Method(ctx, "sqrt", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "hypot", double, Vector(Abstract), Vector(double, double)))
+    math.addMethod(Method(ctx, "abs", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "sin", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "cos", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "asin", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "acos", double, Vector(Abstract), Vector(double)))
     scope.addTypeAlias(math.simpleName, math.fullClassName)
     scope.addObject(math)
   }

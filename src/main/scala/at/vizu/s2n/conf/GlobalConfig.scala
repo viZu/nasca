@@ -70,7 +70,43 @@ object GlobalConfig {
     val math = new ClassInvocations(TypeUtils.RootScalaPackage + ".Math") {
       withInvocation(new MethodInvocationHandle("sqrt") {
         withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
-          GeneratorContext(s"sqrt(${params.head})", Set(IncludeHandle("math.h", AngleWrapper)))
+          GeneratorContext(s"std::sqrt(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("abs") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::abs(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("cos") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::cos(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("acos") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::acos(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("sin") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::sin(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("asin") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::asin(${params.head})", Set(IncludeHandle("cmath", AngleWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("hypot") {
+        withParams(TypeUtils.RootScalaPackage + ".Double", TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"std::hypot(${params.head}, ${params(1)})", Set(IncludeHandle("cmath", AngleWrapper)))
         }
       })
     }
@@ -120,7 +156,7 @@ object GlobalConfig {
       addClassRenamingHandle(new ClassRenamingHandle {
         withMatcher(t => t.fullClassName == TypeUtils.RootScalaPackage + ".Math")
         withRename(new Renamer((b, t) => ""))
-        withIncludeHandle(IncludeHandle("math.h", AngleWrapper))
+        withIncludeHandle(IncludeHandle("cmath", AngleWrapper))
       })
     }
   }
