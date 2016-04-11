@@ -48,6 +48,7 @@ object Expression extends LazyLogging {
           case s: java.lang.String => s""""$s""""
           case null => "NULL"
           case b: BoxedUnit => ""
+          case c: java.lang.Character => s"'$c'"
           case _@v => v.toString
         }
         LiteralExpression(tpe, literalStr)

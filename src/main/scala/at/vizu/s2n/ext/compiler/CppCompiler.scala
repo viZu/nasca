@@ -17,6 +17,7 @@ class CppCompiler extends ExtCompiler with LazyLogging {
   override def compile(args: Arguments): Unit = {
     profileFunc(logger, "Compiling C++ sources", () => {
       copyAnyFiles(args)
+      copyRootMethodFile(args)
       copyMakeFile(args)
       executeMakeFile(args)
     })
@@ -50,13 +51,13 @@ class CppCompiler extends ExtCompiler with LazyLogging {
     }).mkString(" ")
   }
 
-  private def createLibraryDependencies(args: Arguments) = {
-
-  }
-
   private def copyAnyFiles(args: Arguments): Any = {
     copyAnyFiles("AnyRef", args)
     copyAnyFiles("Any", args)
+  }
+
+  private def copyRootMethodFile(args: Arguments) = {
+    copyFromResource("root_helper.h", args.generatedDir)
   }
 
   private def copyAnyFiles(anyString: String, args: Arguments) = {

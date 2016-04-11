@@ -1,6 +1,6 @@
 package at.vizu.s2n.conf
 
-import at.vizu.s2n.generator.handles.{AngleWrapper, IncludeHandle}
+import at.vizu.s2n.generator.handles.{AngleWrapper, IncludeHandle, QuotationWrapper}
 import at.vizu.s2n.generator.{GeneratorContext, GeneratorUtils}
 import at.vizu.s2n.types.symbol._
 
@@ -28,6 +28,12 @@ object GlobalConfig {
       withInvocation(new MethodInvocationHandle("print") {
         withParams(Any) handleAs { (varName, params) =>
           getPrintCtx(s"""std::cout << ${params.head}""")
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("readFile") {
+        withParams(TypeUtils.RootScalaPackage + ".String") handleAs { (varName, params) =>
+          GeneratorContext(s"readFile(${params.head})", Set(IncludeHandle("root_helper.h", QuotationWrapper)))
         }
       })
     }
@@ -63,6 +69,24 @@ object GlobalConfig {
       withInvocation(new MethodInvocationHandle("toInt") {
         withParams() handleAs { (varName, params) =>
           GeneratorContext(s"std::stoi($varName)")
+        } ignoreVariableUse
+      })
+
+      withInvocation(new MethodInvocationHandle("toDouble") {
+        withParams() handleAs { (varName, params) =>
+          GeneratorContext(s"std::stod($varName)")
+        } ignoreVariableUse
+      })
+
+      withInvocation(new MethodInvocationHandle("toLong") {
+        withParams() handleAs { (varName, params) =>
+          GeneratorContext(s"std::stol($varName)")
+        } ignoreVariableUse
+      })
+
+      withInvocation(new MethodInvocationHandle("split") {
+        withParams(TypeUtils.RootScalaPackage + ".Char") handleAs { (varName, params) =>
+          GeneratorContext(s"splitString($varName, ${params.head})")
         } ignoreVariableUse
       })
     }

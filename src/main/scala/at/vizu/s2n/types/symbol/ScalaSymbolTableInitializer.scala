@@ -35,12 +35,12 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     val av: TType = initAnyVal()
 
     val anys = Vector(a, ar, av)
+    val array = initArray()
     val str = initString()
     val numericPrimitive = initNumericPrimitive()
     val pris = initPrimitives()
     val nullT = initNull()
     val nothing = initNothing((pris :+ nullT).map(Parent(_)))
-    val array = initArray()
     val allTypes = anys ++ pris ++ Vector(numericPrimitive, str, nullT, nothing, array)
 
     symbolTable.addAllClasses(allTypes)
@@ -60,7 +60,8 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     val println1 = Method(ctx, "println", unit, Vector(Final), Vector(), instanceMethod = false)
     val println2 = Method(ctx, "println", unit, Vector(Final), Vector(any), instanceMethod = false)
     val print = Method(ctx, "print", unit, Vector(Final), Vector(any), instanceMethod = false)
-    Vector(println1, println2, print)
+    val readFile = Method(ctx, "readFile", string, Vector(Final), Vector(string), instanceMethod = false)
+    Vector(println1, println2, print, readFile)
   }
 
   private def initAny() = {
@@ -94,6 +95,11 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     string.addMethod(Method(ctx, "length", int, Vector(Abstract), nonPointer = true))
     string.addMethod(Method(ctx, "contains", boolean, Vector(Abstract), Vector(Param(ctx, string, "x")), nonPointer = true))
     string.addMethod(Method(ctx, "toInt", int, Vector(Abstract), nonPointer = true))
+    string.addMethod(Method(ctx, "toDouble", double, Vector(Abstract), nonPointer = true))
+    string.addMethod(Method(ctx, "toLong", long, Vector(Abstract), nonPointer = true))
+
+    val stringArray = array.applyTypes(TSymbolTable(), Map(array.genericModifiers.head -> string))
+    string.addMethod(Method(ctx, "split", stringArray, Vector(Abstract), Vector(char)))
     string
   }
 
