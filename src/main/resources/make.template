@@ -1,6 +1,6 @@
 # Declaration of variables
 CC = clang++
-CC_FLAGS = -g -std=c++14
+CC_FLAGS = -g -std=c++14 -O3
 I_FLAGS = {{i_flags}}
 LIB_FLAGS = {{lib_flags}}
 AR = ar

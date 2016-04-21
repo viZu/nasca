@@ -1,3 +1,6 @@
+#ifndef ROOT_HELPER_H
+#define ROOT_HELPER_H
+
 #include <string>
 #include <sstream>
 #include <vector>
@@ -26,3 +29,5 @@ std::string readFile(const std::string filename) {
     buffer << t.rdbuf();
     return buffer.str();
 }
+
+#endif

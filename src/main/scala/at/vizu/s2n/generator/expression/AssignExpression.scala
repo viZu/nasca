@@ -33,7 +33,7 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
   private def generateSetter(rhsCtx: GeneratorContext) = {
     val (lhsCtx, field) = prepareSetterExpression()
     val fieldName = field.name.toUpperCase
-    val content = s"$lhsCtx->set$fieldName($rhsCtx)"
+    val content = s"$lhsCtx->set__$fieldName($rhsCtx)"
     GeneratorUtils.mergeGeneratorContexts(Vector(lhsCtx, rhsCtx), givenContent = content)
   }
 
@@ -58,7 +58,7 @@ case class AssignExpression(lhs: Expression, rhs: Expression) extends Expression
     case ChainedExpression(IndexedSeq()) => None
     case ChainedExpression(p +: IndexedSeq()) => p match {
       case NestedExpression(_, _, _, vn, f, _) => f match {
-        case f: Field if vn.nonEmpty && f.isProperty => Some(f)
+        case f: Field if vn.value.nonEmpty && f.isProperty => Some(f)
         case _ => None
       }
     }

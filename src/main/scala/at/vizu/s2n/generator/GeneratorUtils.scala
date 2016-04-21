@@ -281,7 +281,7 @@ object GeneratorUtils {
     if (field.isMutable) {
       val nameUpper = field.name.toUpperCase
       val setTpe = GeneratorUtils.generateCppTypeName(baseTypes, field.tpe)
-      s"void set$nameUpper($setTpe newVal) { ${field.name} = newVal; }"
+      s"void set__$nameUpper($setTpe newVal) { ${field.name} = newVal; }"
     } else {
       ""
     }

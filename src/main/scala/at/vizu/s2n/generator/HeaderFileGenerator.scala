@@ -59,7 +59,7 @@ trait HeaderFileGenerator extends LazyLogging {
   }
 
   protected def generateVisibilitySection(visibility: String, members: Seq[String]): String = {
-    val memberStr = if (members.isEmpty) "" else "\n" + members.mkString("\n")
+    val memberStr = if (members.isEmpty && !selfType.isObject) "" else "\n" + members.mkString("\n")
     s"""$visibility:$memberStr""".stripMargin
   }
 
@@ -106,7 +106,15 @@ trait HeaderFileGenerator extends LazyLogging {
     val methodDefinitions = getHandlesSeq(classOf[MethodDefinitionHandle]).map(_.method)
     val methods = selfType.methods ++ methodDefinitions
     val tuples = generateMethods(methods) ++ generateFields(selfType.fields)
-    tuples.groupBy(_._1).mapValues(sq => sq.map(_._2))
+    enhanceMemberMap(tuples.groupBy(_._1).mapValues(sq => sq.map(_._2)))
+  }
+
+  protected def enhanceMemberMap(map: Map[String, Seq[String]]) = {
+    var m = map
+    Seq("private", "protected", "public").foreach { s =>
+      if (!m.contains(s)) m = m + (s -> Seq())
+    }
+    m
   }
 
   protected def generateMethods(methods: Seq[Method]): Seq[(String, String)] = {

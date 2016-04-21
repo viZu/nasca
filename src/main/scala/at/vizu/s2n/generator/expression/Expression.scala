@@ -259,7 +259,8 @@ object Expression extends LazyLogging {
           val name: GeneratorContext = GlobalConfig.classConfig.getRenamingHandle(t).typeRenamer(baseTypes, t)
           IdentExpression(t, name)
         } else {
-          IdentExpression(t, s"${GeneratorUtils.getCppTypeName(baseTypes, t)}::getInstance()")
+          val tpeName = GeneratorUtils.getCppTypeName(baseTypes, t)
+          IdentExpression(t, tpeName.enhance(s"$tpeName::getInstance()"))
         }
       case _ => throw new RuntimeException("TODO")
     }
@@ -358,13 +359,13 @@ object Expression extends LazyLogging {
       case Select(i: Ident, n) =>
         val identCtx = generateIdentExpression(baseTypes, scope, i).generate
         val tpe = TypeUtils.findIdent(scope, i.name.toString).tpe
-        if (method != null) Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, method))
+        if (method != null) Vector(NestedExpression(baseTypes, scope, tpe, identCtx, method))
         else {
           val member = TypeUtils.findIdent(scope, n.toString, tpe)
           member match {
-            case m: Method => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, m))
-            case i: Identifier => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, TypeUtils.findMember(scope, n.toString, i.tpe)))
-            case f: Field => Vector(NestedExpression(baseTypes, scope, tpe, identCtx.value, f))
+            case m: Method => Vector(NestedExpression(baseTypes, scope, tpe, identCtx, m))
+            case i: Identifier => Vector(NestedExpression(baseTypes, scope, tpe, identCtx, TypeUtils.findMember(scope, n.toString, i.tpe)))
+            case f: Field => Vector(NestedExpression(baseTypes, scope, tpe, identCtx, f))
             case _ => throw new RuntimeException("Todo")
           }
         }

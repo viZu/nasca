@@ -7,7 +7,7 @@ import at.vizu.s2n.types.symbol._
 /**
   * Phil on 29.11.15.
   */
-case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: TType, varName: String,
+case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: TType, varName: GeneratorContext,
                             member: Member, params: Seq[Expression] = Vector()) extends Expression {
   lazy val exprTpe = member.tpe
 
@@ -29,13 +29,13 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     }
   }
 
-  private def generateMethodCallOnType(tpe: TType, varName: String, m: Method): GeneratorContext = {
+  private def generateMethodCallOnType(tpe: TType, varName: GeneratorContext, m: Method): GeneratorContext = {
     val paramsContext = generateParamsContext(m)
     val paramsContent: String = paramsContext.value
     if (hasInvocationHandle) {
       val callCtx = executeInvocationHandle()
       val ignore: Boolean = ignoreVariable
-      val content = if (ignore) callCtx.value else varName + callCtx
+      val content = if (ignore) callCtx.value else varName.value + callCtx
       GeneratorUtils.mergeGeneratorContexts(Vector(paramsContext, callCtx), givenContent = content)
     } else if (isUnaryOperator(m)) {
       val prettyOperator = prettifyUnaryOperator(m.name)
@@ -47,10 +47,11 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
       val mName = GeneratorUtils.prettifyMethod(m.name)
       paramsContext.enhance(s"$varName.$mName($paramsContent)")
     } else {
-      val call = if (tpe.isObject) s"$varName->getInstance()->" else s"$varName->"
+      //val callCtx = if (tpe.isObject) varName.enhance(s"$varName->getInstance()->") else varName.enhance(s"$varName->")
+      val callCtx = varName.enhance(s"$varName->")
       val typeParams: GeneratorContext = if (m.generics.nonEmpty) GeneratorUtils.generateTypeArgs(baseTypes, m.generics) else ""
       val mName = GeneratorUtils.prettifyMethod(m.name)
-      paramsContext.enhance(s"$call$mName$typeParams($paramsContent)", typeParams.handles)
+      paramsContext.enhance(s"$callCtx$mName$typeParams($paramsContent)", typeParams.handles ++ callCtx.handles)
     }
   }
 
@@ -64,7 +65,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     GeneratorUtils.mergeGeneratorContexts(ctxSeq, ", ")
   }
 
-  private def generateFieldCallOnType(tpe: TType, varName: String, f: Field): GeneratorContext = {
+  private def generateFieldCallOnType(tpe: TType, varName: GeneratorContext, f: Field): GeneratorContext = {
     val call = if (isNonPointerCall) "." else "->"
     val methodName = GeneratorUtils.generateFieldAccessor(f)
     s"$varName$call$methodName"
@@ -86,7 +87,7 @@ case class NestedExpression(baseTypes: BaseTypes, scope: TSymbolTable, prevTpe: 
     }
     val handle = GlobalConfig.invocationConfig.findInvocationHandle(scope, prevTpe.name, member.name, paramTypes)
     val paramsAsString = params.map(_.content.value)
-    handle(varName, paramsAsString)
+    handle(varName.value, paramsAsString)
   }
 
   private def ignoreVariable: Boolean = {

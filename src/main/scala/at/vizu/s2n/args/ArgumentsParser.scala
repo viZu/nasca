@@ -1,7 +1,6 @@
 package at.vizu.s2n.args
 
 import java.io.File
-import java.nio.file.Paths
 
 import at.vizu.s2n.Constants
 import at.vizu.s2n.log.{Error, Info, LogLevel}
@@ -17,16 +16,16 @@ object ArgumentsParser {
       head(Constants.CmdName, Constants.Version)
       opt[Seq[File]]('f', "files") required() valueName "<file1>,<file2>" action { (x, a) =>
         a.copy(files = x.map(_.toPath.toAbsolutePath))
-      } text "files to compile - required"
+      } text "files to compile, can be either files or directories. If a directory is given its childs in the first level are examined (no recursion takes place). - required"
       opt[Seq[File]]('l', "libs") optional() valueName "<lib1>,<lib2>" action { (x, a) =>
         a.copy(libs = x.map(_.toPath.toAbsolutePath))
-      }
+      } text "paths to libraries that are required for compiling the files specified in <files>"
       opt[String]('e', "environment") valueName "<environment>" optional() action { (x, a) =>
         a.copy(env = x)
       } text "compiler environment - default 'c++'"
       opt[File]('o', "out") valueName "<directory>" optional() action { (x, a) =>
         a.copy(out = x.toPath)
-      } text s"sets the output folder - default '${Paths.get("").toAbsolutePath.toString}'"
+      } text s"sets the output folder - default: current working directory"
       opt[String]('m', "mainclass") valueName "<mainclass>" optional() action { (x, a) =>
         a.copy(main = x)
       } text "main class for execution - must be set if <binarytype> is set to 'exe'"
@@ -41,10 +40,10 @@ object ArgumentsParser {
       } text "level for the log - default 'warn' - possible values 'trace,debug,info,warn,error'"
       opt[Unit]('v', "verbose") valueName "<verbose>" optional() action { (x, a) =>
         a.copy(logLevel = Info)
-      } text "verbose mode - sets the log level to 'info'"
+      } text "verbose mode - sets <loglevel> to 'info'"
       opt[Unit]('q', "quiet") valueName "<quiet>" optional() action { (x, a) =>
         a.copy(logLevel = Error)
-      } text "quiet mode - sets the log level to 'error'"
+      } text "quiet mode - sets <loglevel> to 'error'"
       opt[String]("stdout") valueName "<stdout>" optional() action { (x, a) =>
         a.copy(stdout = Some(x))
       } text "standard out - writes the standard output to the given file"

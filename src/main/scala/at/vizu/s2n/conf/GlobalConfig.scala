@@ -133,6 +133,18 @@ object GlobalConfig {
           GeneratorContext(s"std::hypot(${params.head}, ${params(1)})", Set(IncludeHandle("cmath", AngleWrapper)))
         }
       })
+
+      withInvocation(new MethodInvocationHandle("toDegrees") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"toDegrees(${params.head})", Set(IncludeHandle("math_helper.h", QuotationWrapper)))
+        }
+      })
+
+      withInvocation(new MethodInvocationHandle("toRadians") {
+        withParams(TypeUtils.RootScalaPackage + ".Double") handleAs { (varName, params) =>
+          GeneratorContext(s"toRadians(${params.head})", Set(IncludeHandle("math_helper.h", QuotationWrapper)))
+        }
+      })
     }
 
     MethodInvocationHandleConfig(Vector(root, array, string, math))

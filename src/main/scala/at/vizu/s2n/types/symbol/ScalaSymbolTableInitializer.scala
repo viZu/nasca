@@ -315,6 +315,8 @@ class ScalaSymbolTableInitializer extends SymbolTableInitializer with BaseTypes 
     math.addMethod(Method(ctx, "cos", double, Vector(Abstract), Vector(double)))
     math.addMethod(Method(ctx, "asin", double, Vector(Abstract), Vector(double)))
     math.addMethod(Method(ctx, "acos", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "toRadians", double, Vector(Abstract), Vector(double)))
+    math.addMethod(Method(ctx, "toDegrees", double, Vector(Abstract), Vector(double)))
     scope.addTypeAlias(math.simpleName, math.fullClassName)
     scope.addObject(math)
   }
